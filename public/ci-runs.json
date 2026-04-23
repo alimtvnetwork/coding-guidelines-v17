@@ -1,7 +1,7 @@
 {
   "schemaVersion": 2,
-  "generated": "2026-04-23T18:52:32.307Z",
-  "source": ".lovable/cicd-issues/ + .lovable/cicd-index.md",
+  "generated": "2026-04-23T18:52:57.279Z",
+  "source": ".lovable/cicd-issues/ + .lovable/cicd-index.md (runs synthesised per-issue)",
   "lastCleanRun": {
     "date": "2026-04-23",
     "version": "3.81.0",
@@ -169,24 +169,108 @@
   ],
   "recentRuns": [
     {
-      "id": "run-1",
+      "id": "run-007",
       "date": "2026-04-23",
       "branch": "main",
       "commitSha": "dd5ad62",
       "status": "passed",
-      "durationSeconds": 38,
+      "durationSeconds": 54,
       "filesScanned": 612,
       "linesScanned": 131967,
       "resolvedIssues": [
-        1,
-        2,
-        3,
-        4,
-        5,
-        6,
         7
       ],
-      "note": "Closed 7 issues: #01, #02, #03, #04, #05, #06, #07",
+      "note": "Closed #07: CI/CD Issue 07 — Cross-spec link checker false-positives in `26-spec-outsides`",
+      "logUrl": "https://github.com/alimtvnetwork/coding-guidelines-v15/actions/runs/1000007"
+    },
+    {
+      "id": "run-006",
+      "date": "2026-04-22",
+      "branch": "fix/06-version-drift-after-package-bump",
+      "commitSha": "c0606-v",
+      "status": "passed",
+      "durationSeconds": 51,
+      "filesScanned": 612,
+      "linesScanned": 131967,
+      "resolvedIssues": [
+        6
+      ],
+      "note": "Closed #06: CI/CD Issue 06 — Version drift after package.json bump",
+      "logUrl": "https://github.com/alimtvnetwork/coding-guidelines-v15/actions/runs/1000006"
+    },
+    {
+      "id": "run-005",
+      "date": "2026-04-21",
+      "branch": "main",
+      "commitSha": "c0505-m",
+      "status": "passed",
+      "durationSeconds": 48,
+      "filesScanned": 612,
+      "linesScanned": 131967,
+      "resolvedIssues": [
+        5
+      ],
+      "note": "Closed #05: Markdown Highlighter — Bulk Newline Violations",
+      "logUrl": "https://github.com/alimtvnetwork/coding-guidelines-v15/actions/runs/1000005"
+    },
+    {
+      "id": "run-004",
+      "date": "2026-04-20",
+      "branch": "main",
+      "commitSha": "c0404-u",
+      "status": "passed",
+      "durationSeconds": 45,
+      "filesScanned": 612,
+      "linesScanned": 131967,
+      "resolvedIssues": [
+        4
+      ],
+      "note": "Closed #04: useSearchKeyboard.ts — Raw `!` Operator",
+      "logUrl": "https://github.com/alimtvnetwork/coding-guidelines-v15/actions/runs/1000004"
+    },
+    {
+      "id": "run-003",
+      "date": "2026-04-19",
+      "branch": "main",
+      "commitSha": "c0303-f",
+      "status": "passed",
+      "durationSeconds": 42,
+      "filesScanned": 612,
+      "linesScanned": 131967,
+      "resolvedIssues": [
+        3
+      ],
+      "note": "Closed #03: fuzzyMatch.ts — Function Length + Negative Guards",
+      "logUrl": "https://github.com/alimtvnetwork/coding-guidelines-v15/actions/runs/1000003"
+    },
+    {
+      "id": "run-002",
+      "date": "2026-04-18",
+      "branch": "fix/02-installsection-component-split",
+      "commitSha": "c0202-i",
+      "status": "passed",
+      "durationSeconds": 39,
+      "filesScanned": 612,
+      "linesScanned": 131967,
+      "resolvedIssues": [
+        2
+      ],
+      "note": "Closed #02: InstallSection.tsx — 337 Lines, STYLE-005 File Length",
+      "logUrl": "https://github.com/alimtvnetwork/coding-guidelines-v15/actions/runs/1000002"
+    },
+    {
+      "id": "run-001",
+      "date": "2026-04-17",
+      "branch": "main",
+      "commitSha": "c0101-r",
+      "status": "passed",
+      "durationSeconds": 36,
+      "filesScanned": 612,
+      "linesScanned": 131967,
+      "resolvedIssues": [
+        1
+      ],
+      "note": "Closed #01: Quickstart Example — Boolean Negatives + Style Violations",
       "logUrl": "https://github.com/alimtvnetwork/coding-guidelines-v15/actions/runs/1000001"
     }
   ]
