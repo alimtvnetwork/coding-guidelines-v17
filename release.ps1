@@ -117,6 +117,8 @@ Write-Step "Copying release files"
 Copy-ReleaseFiles
 Write-Step "Creating archives"
 New-ReleaseArchives
+Write-Step "Baking release-install.{sh,ps1} with VERSION_PLACEHOLDER -> v$version"
+Invoke-BakeReleaseInstallers
 Write-Step "Generating checksums"
 New-Checksums
 Write-OK "Release artifacts created"
