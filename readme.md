@@ -792,11 +792,16 @@ Why this matters: callers ALWAYS see the same shape, so guard helpers (`HasError
   <img alt="Error Management" src="https://img.shields.io/badge/error--manage-included-EF4444?style=flat-square"/>
 </p>
 
+**🪟 Windows · PowerShell**
+
 ```powershell
-irm https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v15/main/error-manage-install.ps1 | iex   # 🪟 Windows
+irm https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v15/main/error-manage-install.ps1 | iex
 ```
+
+**🐧 macOS · Linux · Bash**
+
 ```bash
-curl -fsSL https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v15/main/error-manage-install.sh | bash   # 🐧 Linux/macOS
+curl -fsSL https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v15/main/error-manage-install.sh | bash
 ```
 
 <h3 align="center">🗄️ <code>splitdb</code> — Root · App · Session Database Bundle</h3>
@@ -806,11 +811,16 @@ curl -fsSL https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v15
   <img alt="Seedable Config" src="https://img.shields.io/badge/seedable--config-included-10B981?style=flat-square"/>
 </p>
 
+**🪟 Windows · PowerShell**
+
 ```powershell
-irm https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v15/main/splitdb-install.ps1 | iex   # 🪟 Windows
+irm https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v15/main/splitdb-install.ps1 | iex
 ```
+
+**🐧 macOS · Linux · Bash**
+
 ```bash
-curl -fsSL https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v15/main/splitdb-install.sh | bash   # 🐧 Linux/macOS
+curl -fsSL https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v15/main/splitdb-install.sh | bash
 ```
 
 <h3 align="center">🎬 <code>slides</code> — Teach-a-Team Bundle</h3>
@@ -819,11 +829,16 @@ curl -fsSL https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v15
   <img alt="Slides App" src="https://img.shields.io/badge/slides--app-included-F59E0B?style=flat-square"/>
 </p>
 
+**🪟 Windows · PowerShell**
+
 ```powershell
-irm https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v15/main/slides-install.ps1 | iex   # 🪟 Windows
+irm https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v15/main/slides-install.ps1 | iex
 ```
+
+**🐧 macOS · Linux · Bash**
+
 ```bash
-curl -fsSL https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v15/main/slides-install.sh | bash   # 🐧 Linux/macOS
+curl -fsSL https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v15/main/slides-install.sh | bash
 ```
 
 <p align="center"><sub>Ships a pre-built <code>slides-app/dist/</code> (no build step) and auto-opens it in your browser. Falls back to the <code>main</code> branch tarball when no version is pinned. Flags: <code>--no-open</code> / <code>-NoOpen</code>, <code>--offline</code> / <code>-Offline</code>. → <a href="docs/slides-installer.md">Full slides installer docs</a></sub></p>
@@ -834,11 +849,16 @@ curl -fsSL https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v15
   <img alt="Linters CI/CD" src="https://img.shields.io/badge/linters--cicd-included-22C55E?style=flat-square"/>
 </p>
 
+**🪟 Windows · PowerShell**
+
 ```powershell
-irm https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v15/main/linters-install.ps1 | iex   # 🪟 Windows
+irm https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v15/main/linters-install.ps1 | iex
 ```
+
+**🐧 macOS · Linux · Bash**
+
 ```bash
-curl -fsSL https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v15/main/linters-install.sh | bash   # 🐧 Linux/macOS
+curl -fsSL https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v15/main/linters-install.sh | bash
 ```
 
 <h3 align="center">⚙️ <code>cli</code> — Cross-Platform CLI Bundle</h3>
@@ -851,11 +871,16 @@ curl -fsSL https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v15
   <img alt="Release" src="https://img.shields.io/badge/release-included-22C55E?style=flat-square"/>
 </p>
 
+**🪟 Windows · PowerShell**
+
 ```powershell
-irm https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v15/main/cli-install.ps1 | iex   # 🪟 Windows
+irm https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v15/main/cli-install.ps1 | iex
 ```
+
+**🐧 macOS · Linux · Bash**
+
 ```bash
-curl -fsSL https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v15/main/cli-install.sh | bash   # 🐧 Linux/macOS
+curl -fsSL https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v15/main/cli-install.sh | bash
 ```
 
 <h3 align="center">🐘 <code>wp</code> — WordPress Plugin Bundle</h3>
@@ -863,11 +888,16 @@ curl -fsSL https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v15
   <img alt="WordPress Plugin How-To" src="https://img.shields.io/badge/wp--plugin--how--to-included-21759B?style=flat-square&logo=wordpress&logoColor=white"/>
 </p>
 
+**🪟 Windows · PowerShell**
+
 ```powershell
-irm https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v15/main/wp-install.ps1 | iex   # 🪟 Windows
+irm https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v15/main/wp-install.ps1 | iex
 ```
+
+**🐧 macOS · Linux · Bash**
+
 ```bash
-curl -fsSL https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v15/main/wp-install.sh | bash   # 🐧 Linux/macOS
+curl -fsSL https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v15/main/wp-install.sh | bash
 ```
 
 <h3 align="center">📚 <code>consolidated</code> — Everything-in-One Bundle</h3>
@@ -877,11 +907,16 @@ curl -fsSL https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v15
   <img alt="Consolidated Guidelines" src="https://img.shields.io/badge/consolidated--guidelines-included-F59E0B?style=flat-square"/>
 </p>
 
+**🪟 Windows · PowerShell**
+
 ```powershell
-irm https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v15/main/consolidated-install.ps1 | iex   # 🪟 Windows
+irm https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v15/main/consolidated-install.ps1 | iex
 ```
+
+**🐧 macOS · Linux · Bash**
+
 ```bash
-curl -fsSL https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v15/main/consolidated-install.sh | bash   # 🐧 Linux/macOS
+curl -fsSL https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v15/main/consolidated-install.sh | bash
 ```
 
 ### Verify & Uninstall
@@ -894,11 +929,16 @@ curl -fsSL https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v15
 
 Use the generic installer for **everything** (specs + linters + scripts):
 
+**🪟 Windows · PowerShell**
+
 ```powershell
-irm https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v15/main/install.ps1 | iex   # Windows
+irm https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v15/main/install.ps1 | iex
 ```
+
+**🐧 macOS · Linux · Bash**
+
 ```bash
-curl -fsSL https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v15/main/install.sh | bash   # Linux/macOS
+curl -fsSL https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v15/main/install.sh | bash
 ```
 
 Skip the latest-version probe with `-n` (PowerShell: `... | iex` wrapped in `& ([scriptblock]::Create(...)) -n`; Bash: `... | bash -s -- -n`). Local re-runs: `.\install.ps1` or `./install.sh`.
