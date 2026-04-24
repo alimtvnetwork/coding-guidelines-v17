@@ -127,23 +127,44 @@ if [ "$CONFIG_RC" -ne 0 ]; then
 fi
 eval "$CONFIG_OUT"
 
+# ---- Temp workspace ----
+TMP_DIR="$(mktemp -d)"
+STATUS_DIR="$TMP_DIR/_status"
+mkdir -p "$STATUS_DIR"
+WATCHDOG_PID=""
+
+cleanup() {
+    # Stop the watchdog first so it can't print a stale "exceeded" line
+    # after a fast/early completion. Suppress all signal noise.
+    if [ -n "$WATCHDOG_PID" ]; then
+        kill -TERM "$WATCHDOG_PID" 2>/dev/null || true
+        # Reap silently so bash doesn't print "Terminated".
+        wait "$WATCHDOG_PID" 2>/dev/null || true
+    fi
+    rm -rf "$TMP_DIR"
+}
+trap cleanup EXIT
+
 # ---- Wall-clock total timeout (B8) ----
 START_EPOCH=$(date +%s)
 if [ "$TOTAL_TIMEOUT" -gt 0 ]; then
-    # Background watchdog: kill the orchestrator's process group on overrun.
+    # Background watchdog: only fires if it survives past TOTAL_TIMEOUT.
+    # The EXIT trap (cleanup) kills it on early/normal completion, so the
+    # "exceeded" message never prints for a fast run. The subshell uses
+    # short sleep slices so SIGTERM from cleanup() takes effect promptly,
+    # and exits silently (rc=0) when interrupted.
     (
-        sleep "$TOTAL_TIMEOUT"
+        trap 'exit 0' TERM INT
+        remaining="$TOTAL_TIMEOUT"
+        while [ "$remaining" -gt 0 ]; do
+            sleep 1
+            remaining=$(( remaining - 1 ))
+        done
         echo "::error::--total-timeout (${TOTAL_TIMEOUT}s) exceeded — terminating run" >&2
         kill -TERM -$$ 2>/dev/null || true
     ) &
     WATCHDOG_PID=$!
-    trap 'kill "$WATCHDOG_PID" 2>/dev/null; rm -rf "$TMP_DIR"' EXIT
 fi
-
-TMP_DIR="$(mktemp -d)"
-STATUS_DIR="$TMP_DIR/_status"
-mkdir -p "$STATUS_DIR"
-trap 'rm -rf "$TMP_DIR"' EXIT
 
 EXIT=0
 RAN=0
