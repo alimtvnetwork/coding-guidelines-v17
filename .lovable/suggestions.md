@@ -1,6 +1,6 @@
 # Suggestions
 
-**Version:** 3.8.0
+**Version:** 3.9.0
 **Updated:** 2026-04-24
 
 ---
@@ -82,9 +82,9 @@
 - **Status:** Pending **Priority:** Medium **Added:** 2026-04-23
 - After the CODE-RED walkthrough insertion, several `h2 → h4` skips slipped through. A check would catch this before commit.
 
-### Fix the 54 SPEC-LINK-001 baseline warnings in spec/
-- **Status:** Pending **Priority:** Medium **Added:** 2026-04-24
-- Mostly stale renumbering in `14-update/` after section renames; `mem://` resolver gap; a few self-anchor drifts after section rewrites.
+### Fix the 17 remaining SPEC-LINK-001 anchor mismatches in spec/
+- **Status:** Pending **Priority:** Medium **Added:** 2026-04-24 (updated)
+- Per-file TOC drift in spec-index.md, consolidated-review-guide.md, 13-strict-typing.md, etc. Section-number anchors that no longer match heading text. Needs content review, not mechanical fix.
 
 ### Surface CODE-RED walkthrough in the in-app docs viewer
 - **Status:** Pending **Priority:** Low **Added:** 2026-04-23
@@ -93,6 +93,9 @@
 ---
 
 ## Implemented Suggestions
+
+### SPEC-LINK-001 baseline cleanup + slugify bugfix (linters-cicd v3.17.0) — 2026-04-24
+- 54 → 17 warnings. Slugify no longer collapses consecutive hyphens (em-dash/ampersand fix). `mem://` added to external skip. 14-update renumbered (9 files), 13-generic-cli overview renamed (3 files), 8 Mermaid placeholders created.
 
 ### SPEC-LINK-001 cross-link checker (linters-cicd v3.16.0) — 2026-04-24
 - New shared lib `_lib/markdown_links.py` (200 LOC). Fence-aware, GH-flavored slugs, inline-identifier filter. Surfaces 54 real broken cross-links in spec/. Warning-level. 18 new tests, 87/87 green.
@@ -166,4 +169,4 @@
 
 ---
 
-*Suggestions — v3.8.0 — 2026-04-24*
+*Suggestions — v3.9.0 — 2026-04-24*

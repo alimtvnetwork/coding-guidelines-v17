@@ -146,7 +146,7 @@ func GetLatestVersion(repo string) (string, error) {
 
 ## Network Requirements
 
-See [14-network-requirements.md](./14-network-requirements.md) for full details. Summary:
+See [14-network-requirements.md](./20-network-requirements.md) for full details. Summary:
 
 | Requirement | Value |
 |-------------|-------|
@@ -215,8 +215,8 @@ The updater embeds fewer constants than the main binary:
 - [Self-Update Overview](./01-self-update-overview.md) — Overall update flow and strategy selection
 - [Rename-First Deploy](./03-rename-first-deploy.md) — File replacement strategy used by the updater
 - [Handoff Mechanism](./05-handoff-mechanism.md) — How the main binary invokes the updater on Windows
-- [Network Requirements](./14-network-requirements.md) — HTTP client configuration and retry policies
-- [Release Assets](./07-release-assets.md) — Asset naming convention for updater archives
+- [Network Requirements](./20-network-requirements.md) — HTTP client configuration and retry policies
+- [Release Assets](./13-release-assets.md) — Asset naming convention for updater archives
 - [Complete Workflow Reference](../12-cicd-pipeline-workflows/02-go-binary-deploy/03-complete-workflow-reference.md) — How the updater is built in CI
 
 ---

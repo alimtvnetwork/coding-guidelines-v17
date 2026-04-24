@@ -141,8 +141,8 @@ Include a formatted checksum table in the release description:
 
 ## Cross-References
 
-- [Release Assets](./07-release-assets.md) — What files are checksummed
-- [Release Versioning](./09-release-versioning.md) — Version resolution for download URLs
+- [Release Assets](./13-release-assets.md) — What files are checksummed
+- [Release Versioning](./15-release-versioning.md) — Version resolution for download URLs
 - [CI/CD Shared Conventions](../12-cicd-pipeline-workflows/01-shared-conventions.md) — Checksum conventions in CI
 
 ---

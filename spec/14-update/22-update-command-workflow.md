@@ -364,9 +364,9 @@ The `--verbose` flag is forwarded from the parent to the worker so that detailed
 - [Build Scripts](./04-build-scripts.md) — `run.ps1` / `run.sh` invoked by the worker
 - [Handoff Mechanism](./05-handoff-mechanism.md) — Deep-dive on the copy-and-handoff pattern
 - [Cleanup](./06-cleanup.md) — Post-update artifact removal lifecycle
-- [Updater Binary](./13-updater-binary.md) — Standalone updater for binary-based updates
-- [Network Requirements](./14-network-requirements.md) — HTTP client and connectivity checks
-- [Configuration File](./15-config-file.md) — Where repo path and deploy defaults are stored
+- [Updater Binary](./19-updater-binary.md) — Standalone updater for binary-based updates
+- [Network Requirements](./20-network-requirements.md) — HTTP client and connectivity checks
+- [Configuration File](./21-config-file.md) — Where repo path and deploy defaults are stored
 
 ---
 

@@ -158,9 +158,9 @@ done
 
 ## Cross-References
 
-- [Checksums & Verification](./08-checksums-verification.md) — How checksums are generated and verified
-- [Release Versioning](./09-release-versioning.md) — Version resolution and tagging
-- [Updater Binary](./13-updater-binary.md) — Updater archive naming and distribution
+- [Checksums & Verification](./14-checksums-verification.md) — How checksums are generated and verified
+- [Release Versioning](./15-release-versioning.md) — Version resolution and tagging
+- [Updater Binary](./19-updater-binary.md) — Updater archive naming and distribution
 - [CI/CD Install Script Generation](../12-cicd-pipeline-workflows/04-install-script-generation.md) — How install scripts are built
 - [Complete Workflow Reference](../12-cicd-pipeline-workflows/02-go-binary-deploy/03-complete-workflow-reference.md) — Full release YAML with asset packaging
 

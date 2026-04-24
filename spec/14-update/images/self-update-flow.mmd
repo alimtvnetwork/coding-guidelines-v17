@@ -1,0 +1,11 @@
+%% Self-Update End-to-End Flow — placeholder.
+%% TODO: Sequence diagram covering install, probe, download, verify, rename, exec.
+sequenceDiagram
+    participant U as User
+    participant App as App Binary
+    participant GH as GitHub Releases
+    U->>App: app update
+    App->>GH: probe latest
+    GH-->>App: version + assets
+    App->>GH: download
+    App->>App: rename + handoff

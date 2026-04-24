@@ -105,7 +105,6 @@ file-lock errors and guarantees rollback is always one rename away.
 | File | Description |
 |------|-------------|
 | [99-consistency-report.md](./99-consistency-report.md) | Per-folder consistency audit |
-| [MERGE-PROPOSAL.md](./MERGE-PROPOSAL.md) | Historical record of the 14+15 merge decision |
 | [diagrams/](./diagrams/) | Mermaid flow diagrams (handoff, cleanup, deploy) |
 
 ---

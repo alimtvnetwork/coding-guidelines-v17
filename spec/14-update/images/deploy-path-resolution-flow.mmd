@@ -1,0 +1,6 @@
+%% Deploy Path Resolution — placeholder.
+%% TODO: Decision tree for resolving install root vs portable vs system path.
+flowchart TD
+    Start --> Portable{Portable layout?}
+    Portable -- yes --> CWD[Use exe dir]
+    Portable -- no --> Sys[Use system install dir]

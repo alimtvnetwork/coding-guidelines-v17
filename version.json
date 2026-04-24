@@ -1,18 +1,18 @@
 {
-  "version": "4.17.0",
+  "version": "4.18.0",
   "updated": "2026-04-24",
   "name": "coding-guidelines",
   "description": "Cross-language coding standards, error handling, CI/CD, and self-update specifications. Synced from package.json by scripts/sync-version.mjs.",
   "git": {
-    "sha": "2cd305aa252594f44a72fd0b7fad960799f57d47",
-    "shortSha": "2cd305a",
-    "branch": "edit/edt-a149358c-fc3d-4e66-b9a6-563bb7cae221"
+    "sha": "640735912ac51c09a8b0665506bbd933a54f91a7",
+    "shortSha": "6407359",
+    "branch": "edit/edt-4d3bfb28-8428-4c01-8dcd-ebe2926ff364"
   },
   "stats": {
     "totalFiles": 612,
-    "totalLines": 131969,
+    "totalLines": 131968,
     "totalFolders": 22,
-    "totalBytes": 4477533,
+    "totalBytes": 4477443,
     "rootFiles": 5
   },
   "folders": [
@@ -40,7 +40,7 @@
       "ambiguity": "None",
       "fileCount": 191,
       "lineCount": 32528,
-      "byteCount": 1016553
+      "byteCount": 1016556
     },
     {
       "path": "03-error-manage",
@@ -195,8 +195,8 @@
       "aiConfidence": "Production-Ready",
       "ambiguity": "None",
       "fileCount": 43,
-      "lineCount": 8678,
-      "byteCount": 280889
+      "lineCount": 8677,
+      "byteCount": 280796
     },
     {
       "path": "15-distribution-and-runner",

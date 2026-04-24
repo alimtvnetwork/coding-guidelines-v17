@@ -1,0 +1,6 @@
+%% Cleanup Flow — placeholder.
+%% TODO: Show the .bak removal logic on next successful start.
+flowchart LR
+    Start --> Check{Has .bak?}
+    Check -- yes --> Remove[Remove .bak]
+    Check -- no --> Done

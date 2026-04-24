@@ -1,0 +1,7 @@
+%% Handoff Mechanism — placeholder.
+%% TODO: Sequence diagram for parent->child exec handoff with stdin/stdout.
+sequenceDiagram
+    participant Old as Old Process
+    participant New as New Process
+    Old->>New: exec(new_path)
+    New-->>Old: exit 0

@@ -84,7 +84,7 @@ under `linters-cicd/action.yml`.
 
 ## Cross-References
 
-- [Code Red Guidelines](../17-consolidated-guidelines/00-overview.md)
+- [Code Red Guidelines](../../17-consolidated-guidelines/00-overview.md)
 - [CI/CD Pipeline Workflows](../../12-cicd-pipeline-workflows/00-overview.md)
 - [Linter Scripts](../../../linter-scripts/) — existing in-repo guards
 

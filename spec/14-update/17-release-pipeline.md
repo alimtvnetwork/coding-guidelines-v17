@@ -74,7 +74,7 @@ The resolved version is used for:
 
 ## Build Stage
 
-See [10-cross-compilation.md](./10-cross-compilation.md) for the full build process. The output is raw binaries in `dist/`.
+See [10-cross-compilation.md](./16-cross-compilation.md) for the full build process. The output is raw binaries in `dist/`.
 
 **Critical rule**: binaries are built **exactly once**. All subsequent stages operate on these artifacts. No stage may trigger a rebuild.
 
@@ -210,13 +210,13 @@ permissions:
 
 ## Cross-References
 
-- [Cross-Compilation](./10-cross-compilation.md) — Build targets and static linking
-- [Release Assets](./07-release-assets.md) — Asset naming and packaging conventions
-- [Checksums & Verification](./08-checksums-verification.md) — SHA-256 generation and verification
-- [Install Scripts](./12-install-scripts.md) — One-liner installer generation
-- [Release Versioning](./09-release-versioning.md) — Version resolution and tagging
-- [Updater Binary](./13-updater-binary.md) — Multi-module build for the updater
-- [Network Requirements](./14-network-requirements.md) — Download infrastructure for update consumers
+- [Cross-Compilation](./16-cross-compilation.md) — Build targets and static linking
+- [Release Assets](./13-release-assets.md) — Asset naming and packaging conventions
+- [Checksums & Verification](./14-checksums-verification.md) — SHA-256 generation and verification
+- [Install Scripts](./18-install-scripts.md) — One-liner installer generation
+- [Release Versioning](./15-release-versioning.md) — Version resolution and tagging
+- [Updater Binary](./19-updater-binary.md) — Multi-module build for the updater
+- [Network Requirements](./20-network-requirements.md) — Download infrastructure for update consumers
 - [CI/CD Pipeline Workflows](../12-cicd-pipeline-workflows/00-overview.md) — Server-side pipeline patterns
 - [Complete Workflow Reference](../12-cicd-pipeline-workflows/02-go-binary-deploy/03-complete-workflow-reference.md) — Full annotated YAML
 

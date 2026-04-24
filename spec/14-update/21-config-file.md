@@ -198,8 +198,8 @@ The **user-level** `config.json` described here is different from the **project-
 
 - [Deploy Path Resolution](./02-deploy-path-resolution.md) — Tier 3 uses config file defaults
 - [Self-Update Overview](./01-self-update-overview.md) — Source repo path from config
-- [Updater Binary](./13-updater-binary.md) — Reads repo and deploy path from config
-- [Install Scripts](./12-install-scripts.md) — May create initial config on install
+- [Updater Binary](./19-updater-binary.md) — Reads repo and deploy path from config
+- [Install Scripts](./18-install-scripts.md) — May create initial config on install
 
 ---
 

@@ -1,0 +1,8 @@
+%% Self-Update Unified Architecture — placeholder.
+%% TODO: Document the rename-first deploy + handoff loop.
+flowchart TD
+    A[Current Binary] --> B[Detect Update]
+    B --> C[Download to .new]
+    C --> D[Rename old -> .bak]
+    D --> E[Rename .new -> current]
+    E --> F[Re-exec]
