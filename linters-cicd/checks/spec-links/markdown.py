@@ -48,7 +48,7 @@ def scan(path: Path, root: str, slug_cache: dict[Path, set[str]]) -> list[Findin
         out.append(
             Finding(
                 rule_id=RULE.id,
-                level="warning",
+                level="error",
                 message=broken.message,
                 file_path=relpath(path, root),
                 start_line=broken.line,
@@ -61,7 +61,7 @@ def main() -> int:
     args = build_parser("SPEC-LINK-001 spec-links (markdown)").parse_args()
     run = SarifRun(
         tool_name="coding-guidelines-spec-links",
-        tool_version="1.0.0",
+        tool_version="1.1.0",
         rules=[RULE],
     )
     slug_cache: dict[Path, set[str]] = {}

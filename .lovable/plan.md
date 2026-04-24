@@ -1,7 +1,44 @@
 # Current Plan
 
-**Version:** 4.18.0
+**Version:** 4.19.0
 **Updated:** 2026-04-24
+
+---
+
+## v4.19.0 — SPEC-LINK-001 Zero Baseline + Promotion to Error Level (Task #11b)
+
+**Scope:** Drive SPEC-LINK-001 baseline from 17 → 0, then promote the rule from `warning` → `error` so future broken cross-links fail CI.
+
+### Done
+- **Diagnosis:** All 17 remaining findings shared the same root cause — hand-written anchors used single-hyphen slugs but the actual headings contain `&` or em-dashes, which (per GitHub-flavored slugify) collapse to **double-hyphen** slugs. Examples: `1. Workflow & Process` → `1-workflow--process`, not `1-workflow-process`.
+- **Fix script:** `/tmp/fix-anchors.py` with 17 explicit `(file, search, replace)` triples — no regex, just exact-string substitution. Each fix is unique enough to avoid collateral matches. Verified by re-running the linter.
+- **17/17 fixes applied** across 9 files:
+  - `spec-index.md` (×2) — Self-Update & App Update, App Design System & UI
+  - `02-coding-guidelines/consolidated-review-guide.md` (×5) — sections 1, 2, 3, 5, 6 with `&`
+  - `02-coding-guidelines/01-cross-language/01-issues-and-fixes-log.md` (×1) — Boolean & Negation Violations
+  - `02-coding-guidelines/01-cross-language/11-key-naming-pascalcase.md` (×1) — `1.2 — Abbreviation Standard`
+  - `02-coding-guidelines/01-cross-language/13-strict-typing.md` (×3) — `7.2`, `12.`, `6.1` headings
+  - `02-coding-guidelines/01-cross-language/02-boolean-principles/00-overview.md` (×1)
+  - `02-coding-guidelines/01-cross-language/02-boolean-principles/02-guards-and-extraction.md` (×1) — Rule 3 with em-dash
+  - `02-coding-guidelines/01-cross-language/02-boolean-principles/03-parameters-and-conditions.md` (×1) — Rule 2.8
+  - `02-coding-guidelines/01-cross-language/15-master-coding-guidelines/03-code-style-and-errors.md` (×1)
+  - `16-generic-release/07-known-issues-and-fixes.md` (×1) — Issue #5 with em-dash
+- **Promoted SPEC-LINK-001 from warning → error**:
+  - `linters-cicd/checks/registry.json` — `level: warning` → `level: error`
+  - `linters-cicd/checks/spec-links/markdown.py` — Finding `level="warning"` → `level="error"`, tool version `1.0.0` → `1.1.0`
+  - Linter now exits 1 on any new broken cross-link, blocking CI.
+- Bumped `linters-cicd/VERSION` 3.17.0 → 3.18.0.
+
+### Verification
+- SPEC-LINK-001 scan: **`✅ no findings` (exit 0)** across all 612 spec files.
+- 89/89 unit tests pass.
+- Codegen determinism harness still green.
+- All 3 installer harnesses still green.
+
+### Three-version SPEC-LINK-001 arc — recap
+- **v4.17.0**: linter created, 54 findings baseline.
+- **v4.18.0**: slugify bugfix + mechanical renumbering, 54 → 17.
+- **v4.19.0**: anchor cleanup + promote to error, 17 → 0.
 
 ---
 

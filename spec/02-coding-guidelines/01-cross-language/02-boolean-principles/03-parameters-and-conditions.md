@@ -175,7 +175,7 @@ if (isMatchFound) {
 }
 ```
 
-See [Go Boolean Standards P7](../../03-golang/02-boolean-standards.md#28-no-inline-statements-in-if-conditions-rule-p7) for Go-specific details.
+See [Go Boolean Standards P7](../../03-golang/02-boolean-standards.md#28--no-inline-statements-in-if-conditions-rule-p7) for Go-specific details.
 
 ---
 

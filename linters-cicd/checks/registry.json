@@ -95,7 +95,7 @@
   },
   "SPEC-LINK-001": {
     "name": "BrokenSpecCrossLink",
-    "level": "warning",
+    "level": "error",
     "spec": "04-database-conventions/01-naming-conventions.md",
     "languages": {
       "markdown": "checks/spec-links/markdown.py"

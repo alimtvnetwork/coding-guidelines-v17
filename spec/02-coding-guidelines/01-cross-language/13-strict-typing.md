@@ -83,7 +83,7 @@ Already statically typed. Key reinforcements:
 - Use concrete types or constrained generics (`[T any]` in generic signatures is acceptable)
 - All struct fields must use concrete types, not `map[string]interface{}`
 - **Single return value:** Functions return `apperror.Result[T]` — never `(T, error)` or multi-value tuples (see [§7.1](./15-master-coding-guidelines/04-type-safety.md#71-single-return-value-rule-go))
-- **No type assertions:** `.(Type)` casting is prohibited in business logic — use concrete structs (see [§7.2](./15-master-coding-guidelines/04-type-safety.md#72-no-type-assertions-casting-go))
+- **No type assertions:** `.(Type)` casting is prohibited in business logic — use concrete structs (see [§7.2](./15-master-coding-guidelines/04-type-safety.md#72-no-type-assertions--casting-go))
 
 ---
 
@@ -290,7 +290,7 @@ func (a *Adapter) GetById(ctx context.Context, id int64) (*models.Plugin, error)
 }
 ```
 
-> **Full examples with PHP/Go/TypeScript:** see [apperror § Result Guard Rule](../../03-error-manage/02-error-architecture/06-apperror-package/01-apperror-reference/06-serialization-and-guards.md#12-result-guard-rule-mandatory-error-check-before-value-access)
+> **Full examples with PHP/Go/TypeScript:** see [apperror § Result Guard Rule](../../03-error-manage/02-error-architecture/06-apperror-package/01-apperror-reference/06-serialization-and-guards.md#12-result-guard-rule--mandatory-error-check-before-value-access)
 
 ### Enforcement Checklist
 
@@ -311,7 +311,7 @@ func (a *Adapter) GetById(ctx context.Context, id int64) (*models.Plugin, error)
 - [Function Naming](./10-function-naming.md)
 - Generic Enforce <!-- external: spec/31-generic-enforce/00-overview.md -->
 - apperror Package — Result Guard Rule <!-- external: spec/03-error-manage/01-error-resolution/10-apperror-package/01-apperror-reference.md -->
-- [Master Guidelines — Section 6.1](./15-master-coding-guidelines/03-code-style-and-errors.md#61-result-guard-rule-zero-silent-failures)
+- [Master Guidelines — Section 6.1](./15-master-coding-guidelines/03-code-style-and-errors.md#61--result-guard-rule-zero-silent-failures)
 
 ---
 

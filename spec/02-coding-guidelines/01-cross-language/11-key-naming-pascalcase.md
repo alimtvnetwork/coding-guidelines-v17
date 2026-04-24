@@ -128,7 +128,7 @@ Abbreviations follow the same rule as identifiers — capitalize only the first 
 | `"apiURL"` | `"ApiUrl"` |
 | `"httpMethod"` | `"HttpMethod"` |
 
-See [Master Coding Guidelines §1.2](./15-master-coding-guidelines/01-naming-and-database.md#12-abbreviation-standard-all-languages) for the full abbreviation table.
+See [Master Coding Guidelines §1.2](./15-master-coding-guidelines/01-naming-and-database.md#12--abbreviation-standard-all-languages) for the full abbreviation table.
 
 ## 8. Cross-References
 

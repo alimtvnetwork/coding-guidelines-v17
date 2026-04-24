@@ -198,6 +198,6 @@ if (isNullish(response)) {
 const isReady = response.status === 200;
 ```
 
-See also: [code-style.md — Rule 3](../04-code-style/02-conditions-and-extraction.md#rule-3-extract-complex-conditions-no-inline-multi-part-checks)
+See also: [code-style.md — Rule 3](../04-code-style/02-conditions-and-extraction.md#rule-3-extract-complex-conditions--no-inline-multi-part-checks)
 
 ---

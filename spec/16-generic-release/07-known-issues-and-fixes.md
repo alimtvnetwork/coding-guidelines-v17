@@ -338,6 +338,6 @@ Apply before merging any change to `release.yml`:
 - [03-install-scripts.md](./03-install-scripts.md) — Install script generation
 - [04-checksums-verification.md](./04-checksums-verification.md) — SHA-256 manifest format
 - [spec/12-cicd-pipeline-workflows/10-release-pipeline-issues-rca.md](../12-cicd-pipeline-workflows/10-release-pipeline-issues-rca.md) — CI-pipeline issue catalog
-- [Issue #5 — `cd: dist: No such file or directory`](../12-cicd-pipeline-workflows/10-release-pipeline-issues-rca.md#issue-5-cd-dist-no-such-file-or-directory) — `dist` post-mortem
+- [Issue #5 — `cd: dist: No such file or directory`](../12-cicd-pipeline-workflows/10-release-pipeline-issues-rca.md#issue-5--cd-dist-no-such-file-or-directory) — `dist` post-mortem
 - [spec/14-update/11-windows-icon-embedding.md](../14-update/11-windows-icon-embedding.md) — winres icon post-mortem
 - [spec/17-consolidated-guidelines/15-cicd-pipeline-workflows.md](../17-consolidated-guidelines/15-cicd-pipeline-workflows.md) — Consolidated CI/CD guidelines
