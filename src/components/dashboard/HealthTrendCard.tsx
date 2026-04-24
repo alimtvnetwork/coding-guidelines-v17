@@ -1,5 +1,7 @@
+import { useEffect, useRef, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Activity } from "lucide-react";
+import { useCountUp } from "@/hooks/useCountUp";
 
 interface HealthTrendCardProps {
   score: number;
@@ -32,6 +34,23 @@ export function HealthTrendCard({ score, grade, blindAuditScore, handoffScore }:
   const sparkline = [62, 68, 71, 74, 78, 80, score];
   const tone = pickTone(score);
 
+  const animatedScore = useCountUp(score);
+  const animatedBlind = useCountUp(blindAuditScore);
+  const animatedHandoff = useCountUp(handoffScore);
+
+  const [flashKey, setFlashKey] = useState<number>(0);
+  const [strokeKey, setStrokeKey] = useState<number>(0);
+  const previousScoreRef = useRef<number>(score);
+
+  useEffect(() => {
+    if (previousScoreRef.current === score) {
+      return;
+    }
+    setFlashKey((prev) => prev + 1);
+    setStrokeKey((prev) => prev + 1);
+    previousScoreRef.current = score;
+  }, [score]);
+
   return (
     <Card className="lift-hover group h-full border-border/60">
       <CardHeader>
@@ -43,7 +62,13 @@ export function HealthTrendCard({ score, grade, blindAuditScore, handoffScore }:
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex items-end gap-3">
-          <span className={`animate-fade-in-up text-5xl font-heading font-semibold ${tone}`}>{score}</span>
+          <span
+            key={flashKey}
+            className={`tone-transition value-flash text-5xl font-heading font-semibold ${tone}`}
+            aria-live="polite"
+          >
+            {Math.round(animatedScore)}
+          </span>
           <span className="pb-2 text-lg text-muted-foreground">/ 100 · grade {grade}</span>
         </div>
         <svg viewBox="0 0 280 60" className="h-16 w-full" role="img" aria-label="Health trend sparkline">
@@ -53,8 +78,9 @@ export function HealthTrendCard({ score, grade, blindAuditScore, handoffScore }:
               <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity="0" />
             </linearGradient>
           </defs>
-          <path d={`${trendPath(sparkline)} L280,60 L0,60 Z`} fill="url(#trend-fill)" />
+          <path d={`${trendPath(sparkline)} L280,60 L0,60 Z`} fill="url(#trend-fill)" style={{ transition: "d 0.6s ease" }} />
           <path
+            key={strokeKey}
             d={trendPath(sparkline)}
             fill="none"
             stroke="hsl(var(--primary))"
@@ -65,8 +91,8 @@ export function HealthTrendCard({ score, grade, blindAuditScore, handoffScore }:
           />
         </svg>
         <div className="grid grid-cols-2 gap-3 text-sm">
-          <SubMetric label="Blind AI audit" value={`${blindAuditScore}%`} />
-          <SubMetric label="Handoff weighted" value={`${handoffScore}%`} />
+          <SubMetric label="Blind AI audit" value={`${Math.round(animatedBlind)}%`} />
+          <SubMetric label="Handoff weighted" value={`${Math.round(animatedHandoff)}%`} />
         </div>
       </CardContent>
     </Card>
@@ -77,7 +103,7 @@ function SubMetric({ label, value }: { label: string; value: string }) {
   return (
     <div className="lift-hover rounded-md border border-border/60 bg-secondary/40 px-3 py-2">
       <p className="text-xs text-muted-foreground">{label}</p>
-      <p className="font-mono text-base font-medium">{value}</p>
+      <p className="font-mono text-base font-medium tone-transition">{value}</p>
     </div>
   );
 }
