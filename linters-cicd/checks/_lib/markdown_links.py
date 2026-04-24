@@ -203,10 +203,20 @@ def _is_external(target: str) -> bool:
 
 
 def _slugify(heading: str) -> str:
+    """GitHub-flavored heading slug.
+
+    Algorithm (matches `gfm.kramdown` behaviour used by GitHub):
+      1. Lowercase
+      2. Strip everything except `[a-z0-9 _-]` (drops em-dash, `&`, etc.)
+      3. Replace spaces with hyphens
+    Note: consecutive hyphens are **preserved** — `Phase 1 — AI` becomes
+    `phase-1--ai` (em-dash strips to "", surrounding spaces both convert
+    to hyphens). Collapsing them was a bug that produced false positives
+    on every "X — Y" / "X & Y" heading in the spec.
+    """
     text = heading.lower()
     text = re.sub(r"[^a-z0-9 _-]", "", text)
     text = text.replace(" ", "-")
-    text = re.sub(r"-+", "-", text)
     return text.strip("-")
 
 
