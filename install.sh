@@ -2,15 +2,16 @@
 # ──────────────────────────────────────────────────────────────────────
 # install.sh — Download spec/linters/scripts from a GitHub repo
 #
+# Conforms to: spec/14-update/27-generic-installer-behavior.md
+#
 # Quick start (defaults from install-config.json):
 #   ./install.sh
 #   curl -fsSL https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v15/main/install.sh | bash
 #
 # Power-user flags:
-# Power-user flags:
 #   --repo owner/repo            Override source repo
 #   --branch main                Override branch (ignored if --version given)
-#   --version vX.Y.Z             Install a specific release tag
+#   --version vX.Y.Z             Install a specific release tag (PINNED MODE, §4)
 #   --folders spec,linters       Comma-separated folder list (subpaths OK: spec/14-update)
 #   --dest /path/to/dir          Install destination (default: cwd)
 #   --config my-config.json      Use custom config file
@@ -19,9 +20,19 @@
 #   --dry-run                    Show what would change; write nothing
 #   --list-versions              List available release tags and exit
 #   --list-folders               List available top-level folders for the chosen ref and exit
-#   -n | --no-latest             Skip the latest-version probe (use this installer as-is)
-#                                (alias: --no-probe)
+#   -n | --no-latest             Skip the latest-version probe (aliases: --no-probe)
+#   --no-discovery               Skip V→V+N parallel discovery (spec §5.3)
+#   --no-main-fallback           Skip main-branch fallback (spec §5.3)
+#   --offline                    Skip all network ops; require local archive (alias: --use-local-archive)
 #   -h | --help                  Show this help
+#
+# EXIT CODES (spec §8):
+#   0  success
+#   1  generic failure (missing tool, unknown flag, network exhausted)
+#   2  offline mode required a network operation (or handshake mismatch)
+#   3  pinned release / asset not found (PINNED MODE only)
+#   4  verification failed (checksum / required-paths)
+#   5  inner installer / handoff rejected
 # ──────────────────────────────────────────────────────────────────────
 
 set -euo pipefail
@@ -39,6 +50,9 @@ DRY_RUN=false
 LIST_VERSIONS=false
 LIST_FOLDERS=false
 PINNED_BY_RELEASE_INSTALL=""
+NO_DISCOVERY=false
+NO_MAIN_FALLBACK=false
+OFFLINE=false
 
 # ── Colors ────────────────────────────────────────────────────────
 RED='\033[0;31m'
@@ -154,11 +168,20 @@ while [[ $# -gt 0 ]]; do
     --list-versions)  LIST_VERSIONS=true; shift ;;
     --list-folders)   LIST_FOLDERS=true; shift ;;
     --no-probe|--no-latest|-n) shift ;;
+    --no-discovery)   NO_DISCOVERY=true; shift ;;
+    --no-main-fallback) NO_MAIN_FALLBACK=true; shift ;;
+    --offline|--use-local-archive) OFFLINE=true; shift ;;
     --pinned-by-release-install) PINNED_BY_RELEASE_INSTALL="$2"; shift 2 ;;
     -h|--help)        usage ;;
     *) err "Unknown option: $1"; exit 1 ;;
   esac
 done
+
+# Offline mode forbids any network operation (spec §5.3, §8 exit 2).
+if $OFFLINE; then
+  err "Offline mode is not yet supported by install.sh (no local-archive path). Exit 2 per spec §8."
+  exit 2
+fi
 
 # Pinning handshake: when invoked by release-install.sh, the version
 # arg MUST agree with the handshake value. Mismatch = exit 2 so the
@@ -263,17 +286,24 @@ for d in dirs: print(f'  • {d}')
 $LIST_VERSIONS && list_release_versions
 $LIST_FOLDERS && list_top_folders
 
-# ── Banner ────────────────────────────────────────────────────────
+# ── Banner (spec §7) ──────────────────────────────────────────────
+INSTALL_MODE="implicit"
+[[ -n "$VERSION" ]] && INSTALL_MODE="pinned"
+SOURCE_KIND="tag-tarball"
+[[ -z "$VERSION" ]] && SOURCE_KIND="branch-tarball"
 echo ""
-echo "════════════════════════════════════════════════════════"
-echo "  Spec & Scripts Installer"
-echo "  Source:  $REPO @ $REF"
-echo "  Folders: ${FOLDERS[*]}"
-echo "  Dest:    $DEST"
-$DRY_RUN     && echo "  Mode:    DRY-RUN (no writes)"
-$PROMPT_MODE && echo "  Mode:    Interactive prompts (y/n/a/s)"
-$FORCE       && echo "  Mode:    Force overwrite"
-echo "════════════════════════════════════════════════════════"
+echo "    📦 Spec & Scripts Installer"
+echo "       mode:    $INSTALL_MODE"
+echo "       repo:    $REPO"
+echo "       version: ${VERSION:-$BRANCH (implicit)}"
+echo "       source:  $SOURCE_KIND"
+echo "       folders: ${FOLDERS[*]}"
+echo "       dest:    $DEST"
+$DRY_RUN     && echo "       opts:    DRY-RUN (no writes)"
+$PROMPT_MODE && echo "       opts:    Interactive prompts (y/n/a/s)"
+$FORCE       && echo "       opts:    Force overwrite"
+$NO_DISCOVERY && echo "       opts:    --no-discovery (V→V+N forbidden)"
+$NO_MAIN_FALLBACK && echo "       opts:    --no-main-fallback"
 echo ""
 
 # ── Cleanup trap (with verification) ──────────────────────────────
