@@ -323,6 +323,43 @@ if [ "$EXIT" -ne 2 ] && [ "$POST_RC" -eq 1 ]; then
     EXIT=1
 fi
 
+# ---- --split-by severity (B11): write per-severity SARIF siblings ----
+if [ "$SPLIT_BY" = "severity" ] && [ "$FORMAT" = "sarif" ]; then
+    OUT_DIR=$(dirname "$OUTPUT")
+    OUT_BASE=$(basename "$OUTPUT" .sarif)
+    python3 - "$OUTPUT" "$OUT_DIR" "$OUT_BASE" <<'PY'
+import json, sys, copy
+src, out_dir, out_base = sys.argv[1], sys.argv[2], sys.argv[3]
+doc = json.load(open(src))
+# SARIF severity levels we split on. Anything else lands in "other".
+buckets = {"error": [], "warning": [], "note": [], "other": []}
+template = copy.deepcopy(doc)
+for run in template.get("runs", []):
+    run["results"] = []
+for run in doc.get("runs", []):
+    for r in run.get("results", []):
+        lvl = r.get("level", "warning")
+        key = lvl if lvl in buckets else "other"
+        buckets[key].append((run["tool"]["driver"]["name"], r))
+for sev, items in buckets.items():
+    if not items:
+        continue
+    bucket_doc = copy.deepcopy(template)
+    by_tool = {}
+    for tool, r in items:
+        by_tool.setdefault(tool, []).append(r)
+    for run in bucket_doc.get("runs", []):
+        tool = run["tool"]["driver"]["name"]
+        run["results"] = by_tool.get(tool, [])
+    path = f"{out_dir}/{out_base}.{sev}.sarif" if out_dir not in ("", ".") else f"{out_base}.{sev}.sarif"
+    with open(path, "w") as f:
+        json.dump(bucket_doc, f, indent=2)
+    print(f"    🪓 split → {path} ({len(items)} finding(s))")
+PY
+fi
+
+ELAPSED=$(( $(date +%s) - START_EPOCH ))
+echo "    ⏱  total wall time: ${ELAPSED}s"
 echo "    📄 merged → $OUTPUT"
 echo "    🏁 ran $RAN check(s) — exit $EXIT"
 exit "$EXIT"
