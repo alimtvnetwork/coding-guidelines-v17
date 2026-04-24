@@ -53,6 +53,7 @@ def scan_file(path: Path, root: str) -> list[Finding]:
 
 def main() -> int:
     args = build_parser("CODE-RED-003 magic-strings (Go)").parse_args()
+    _globs = parse_exclude_paths(args.exclude_paths)
     run = SarifRun(tool_name="coding-guidelines-magic-strings-go", tool_version="1.0.0", rules=[RULE])
     for f in walk_files(args.path, [".go"], exclude_globs=_globs):
         for finding in scan_file(f, args.path):

@@ -47,6 +47,7 @@ def scan(path: Path, root: str) -> list[Finding]:
 
 def main() -> int:
     args = build_parser("CODE-RED-008 positive-conditions (TS/JS)").parse_args()
+    _globs = parse_exclude_paths(args.exclude_paths)
     run = SarifRun(tool_name="coding-guidelines-positive-conditions-ts", tool_version="1.0.0", rules=[RULE])
     for f in walk_files(args.path, [".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"], exclude_globs=_globs):
         for finding in scan(f, args.path):

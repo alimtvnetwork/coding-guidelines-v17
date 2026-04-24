@@ -203,6 +203,7 @@ def scan(path: Path, root: str) -> list[Finding]:
 
 def main() -> int:
     args = build_parser("BOOL-NEG-001 boolean-column-negative (go)").parse_args()
+    _globs = parse_exclude_paths(args.exclude_paths)
     run = SarifRun(
         tool_name="coding-guidelines-boolean-column-negative-go",
         tool_version="2.0.0",

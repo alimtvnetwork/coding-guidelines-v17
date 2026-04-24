@@ -41,6 +41,7 @@ def scan(path: Path, root: str) -> Finding | None:
 
 def main() -> int:
     args = build_parser("CODE-RED-006 file-length (universal)").parse_args()
+    _globs = parse_exclude_paths(args.exclude_paths)
     run = SarifRun(tool_name="coding-guidelines-file-length", tool_version="1.0.0", rules=[RULE])
     for f in walk_files(args.path, EXTENSIONS, exclude_globs=_globs):
         finding = scan(f, args.path)

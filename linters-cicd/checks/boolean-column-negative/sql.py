@@ -111,6 +111,7 @@ def _scan_tier2(body: str, body_offset: int, text: str,
 
 def main() -> int:
     args = build_parser("BOOL-NEG-001 boolean-column-negative (sql)").parse_args()
+    _globs = parse_exclude_paths(args.exclude_paths)
     run = SarifRun(
         tool_name="coding-guidelines-boolean-column-negative",
         tool_version="2.0.0",

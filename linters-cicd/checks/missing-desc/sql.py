@@ -59,6 +59,7 @@ def scan(path: Path, root: str) -> list[Finding]:
 
 def main() -> int:
     args = build_parser("MISSING-DESC-001 missing-desc (sql)").parse_args()
+    _globs = parse_exclude_paths(args.exclude_paths)
     run = SarifRun(
         tool_name="coding-guidelines-missing-desc",
         tool_version="1.2.0",

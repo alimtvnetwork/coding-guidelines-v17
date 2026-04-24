@@ -59,6 +59,7 @@ def scan(path: Path, root: str, slug_cache: dict[Path, set[str]]) -> list[Findin
 
 def main() -> int:
     args = build_parser("SPEC-LINK-001 spec-links (markdown)").parse_args()
+    _globs = parse_exclude_paths(args.exclude_paths)
     run = SarifRun(
         tool_name="coding-guidelines-spec-links",
         tool_version="1.1.0",

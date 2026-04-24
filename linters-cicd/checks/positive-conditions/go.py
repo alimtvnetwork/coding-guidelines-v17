@@ -42,6 +42,7 @@ def scan(path: Path, root: str) -> list[Finding]:
 
 def main() -> int:
     args = build_parser("CODE-RED-008 positive-conditions (Go)").parse_args()
+    _globs = parse_exclude_paths(args.exclude_paths)
     run = SarifRun(tool_name="coding-guidelines-positive-conditions-go", tool_version="1.0.0", rules=[RULE])
     for f in walk_files(args.path, [".go"], exclude_globs=_globs):
         for finding in scan(f, args.path):

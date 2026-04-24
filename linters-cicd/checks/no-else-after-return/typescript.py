@@ -54,6 +54,7 @@ def scan(path: Path, root: str) -> list[Finding]:
 
 def main() -> int:
     args = build_parser("STYLE-002 no-else-after-return (TS/JS)").parse_args()
+    _globs = parse_exclude_paths(args.exclude_paths)
     run = SarifRun(tool_name="coding-guidelines-no-else-after-return-ts", tool_version="1.0.0", rules=[RULE])
     for f in walk_files(args.path, [".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"], exclude_globs=_globs):
         for finding in scan(f, args.path):
