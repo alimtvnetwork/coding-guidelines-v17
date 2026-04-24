@@ -2,12 +2,21 @@
 # ============================================================
 # linters-cicd installer (one-liner)
 #
+# Conforms to: spec/14-update/27-generic-installer-behavior.md
+#
 #   curl -fsSL https://github.com/alimtvnetwork/coding-guidelines-v15/releases/latest/download/install.sh | bash
 #
 # Flags:
 #   -d <dir>      install destination (default: ./linters-cicd)
-#   -v <version>  install a specific version (default: latest)
+#   -v <version>  install a specific version (PINNED MODE, §4) (default: latest)
 #   -n            skip checksum verification (NOT recommended)
+#
+# EXIT CODES (spec §8):
+#   0  success
+#   1  generic failure (download / extract / checksum mismatch)
+#   2  unknown flag
+#   3  pinned release / asset not found (PINNED MODE only)
+#   4  verification failed (checksum)
 # ============================================================
 
 set -euo pipefail
@@ -26,9 +35,18 @@ while getopts "d:v:n" opt; do
     esac
 done
 
+# Banner (spec §7)
+INSTALL_MODE="implicit"
+SOURCE_KIND="release-asset (latest)"
+if [ "$VERSION" != "latest" ]; then
+    INSTALL_MODE="pinned"
+    SOURCE_KIND="release-asset ($VERSION)"
+fi
 echo "    📦 coding-guidelines linters-cicd installer"
+echo "       mode:    $INSTALL_MODE"
 echo "       repo:    $REPO"
 echo "       version: $VERSION"
+echo "       source:  $SOURCE_KIND"
 echo "       dest:    $DEST"
 echo ""
 

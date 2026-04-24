@@ -226,17 +226,23 @@ function Show-TopFolders {
 if ($ListVersions) { Show-ReleaseVersions }
 if ($ListFolders)  { Show-TopFolders }
 
-# ── Banner ────────────────────────────────────────────────────────
+# ── Banner (spec §7) ──────────────────────────────────────────────
+$installMode = if ($Version) { "pinned" } else { "implicit" }
+$sourceKind  = if ($Version) { "tag-tarball" } else { "branch-tarball" }
+$versionLabel = if ($Version) { $Version } else { "$Branch (implicit)" }
 Write-Host ""
-Write-Plain "════════════════════════════════════════════════════════"
-Write-Plain "  Spec & Scripts Installer"
-Write-Plain "  Source:  $Repo @ $ref"
-Write-Plain "  Folders: $($Folders -join ', ')"
-Write-Plain "  Dest:    $Dest"
-if ($DryRun) { Write-Plain "  Mode:    DRY-RUN (no writes)" }
-if ($Prompt) { Write-Plain "  Mode:    Interactive prompts (y/n/a/s)" }
-if ($Force)  { Write-Plain "  Mode:    Force overwrite" }
-Write-Plain "════════════════════════════════════════════════════════"
+Write-Plain "    📦 Spec & Scripts Installer"
+Write-Plain "       mode:    $installMode"
+Write-Plain "       repo:    $Repo"
+Write-Plain "       version: $versionLabel"
+Write-Plain "       source:  $sourceKind"
+Write-Plain "       folders: $($Folders -join ', ')"
+Write-Plain "       dest:    $Dest"
+if ($DryRun)         { Write-Plain "       opts:    DRY-RUN (no writes)" }
+if ($Prompt)         { Write-Plain "       opts:    Interactive prompts (y/n/a/s)" }
+if ($Force)          { Write-Plain "       opts:    Force overwrite" }
+if ($NoDiscovery)    { Write-Plain "       opts:    -NoDiscovery (V→V+N forbidden)" }
+if ($NoMainFallback) { Write-Plain "       opts:    -NoMainFallback" }
 Write-Host ""
 
 # ── Download archive at ref ───────────────────────────────────────
