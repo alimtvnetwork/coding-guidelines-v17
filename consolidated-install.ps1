@@ -67,10 +67,10 @@
     editing the manifest.
 
 .EXAMPLE
-    irm https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v16/main/consolidated-install.ps1 | iex
+    irm https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v15/main/consolidated-install.ps1 | iex
 
 .EXAMPLE
-    & ([scriptblock]::Create((irm https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v16/main/consolidated-install.ps1))) -Version v3.77.0 -Target .\vendor
+    & ([scriptblock]::Create((irm https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v15/main/consolidated-install.ps1))) -Version v3.77.0 -Target .\vendor
 #>
 
 param(
@@ -89,8 +89,8 @@ $ProgressPreference = "SilentlyContinue"
 $BundleName = "consolidated"
 $BundleMapping = "spec/01-spec-authoring-guide|spec/01-spec-authoring-guide,spec/03-error-manage|spec/03-error-manage,spec/17-consolidated-guidelines|spec/17-consolidated-guidelines"
 $ArchiveStableName = "consolidated"
-$ReleaseBase = "https://github.com/alimtvnetwork/coding-guidelines-v16/releases"
-$RepoSlug = "alimtvnetwork/coding-guidelines-v16"
+$ReleaseBase = "https://github.com/alimtvnetwork/coding-guidelines-v15/releases"
+$RepoSlug = "alimtvnetwork/coding-guidelines-v15"
 $AutoOpenEntry = ""
 $PrebuiltSrc = ""
 $PrebuiltDest = ""

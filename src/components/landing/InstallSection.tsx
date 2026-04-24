@@ -17,22 +17,22 @@ const installCommands: InstallCommand[] = [
   {
     platform: "Windows",
     shell: "PowerShell",
-    command: "irm https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v16/main/install.ps1 | iex",
+    command: "irm https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v15/main/install.ps1 | iex",
   },
   {
     platform: "Windows (skip latest probe)",
     shell: "PowerShell",
-    command: "& ([scriptblock]::Create((irm https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v16/main/install.ps1))) -n",
+    command: "& ([scriptblock]::Create((irm https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v15/main/install.ps1))) -n",
   },
   {
     platform: "macOS / Linux",
     shell: "Bash",
-    command: "curl -fsSL https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v16/main/install.sh | bash",
+    command: "curl -fsSL https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v15/main/install.sh | bash",
   },
   {
     platform: "macOS / Linux (skip latest probe)",
     shell: "Bash",
-    command: "curl -fsSL https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v16/main/install.sh | bash -s -- -n",
+    command: "curl -fsSL https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v15/main/install.sh | bash -s -- -n",
   },
 ];
 

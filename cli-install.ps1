@@ -70,10 +70,10 @@
     editing the manifest.
 
 .EXAMPLE
-    irm https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v16/main/cli-install.ps1 | iex
+    irm https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v15/main/cli-install.ps1 | iex
 
 .EXAMPLE
-    & ([scriptblock]::Create((irm https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v16/main/cli-install.ps1))) -Version v3.77.0 -Target .\vendor
+    & ([scriptblock]::Create((irm https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v15/main/cli-install.ps1))) -Version v3.77.0 -Target .\vendor
 #>
 
 param(
@@ -92,8 +92,8 @@ $ProgressPreference = "SilentlyContinue"
 $BundleName = "cli"
 $BundleMapping = "spec/11-powershell-integration|spec/11-powershell-integration,spec/12-cicd-pipeline-workflows|spec/12-cicd-pipeline-workflows,spec/13-generic-cli|spec/13-generic-cli,spec/14-update|spec/14-update,spec/15-distribution-and-runner|spec/15-distribution-and-runner,spec/16-generic-release|spec/16-generic-release"
 $ArchiveStableName = "cli"
-$ReleaseBase = "https://github.com/alimtvnetwork/coding-guidelines-v16/releases"
-$RepoSlug = "alimtvnetwork/coding-guidelines-v16"
+$ReleaseBase = "https://github.com/alimtvnetwork/coding-guidelines-v15/releases"
+$RepoSlug = "alimtvnetwork/coding-guidelines-v15"
 $AutoOpenEntry = ""
 $PrebuiltSrc = ""
 $PrebuiltDest = ""

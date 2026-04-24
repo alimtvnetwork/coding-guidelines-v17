@@ -55,7 +55,6 @@ export interface CiRule {
 export interface CiRun {
   id: string;
   date: string;
-  branch: string;
   commitSha: string;
   status: RunStatus;
   durationSeconds: number;
@@ -63,7 +62,6 @@ export interface CiRun {
   linesScanned: number;
   resolvedIssues: number[];
   note: string;
-  logUrl: string;
 }
 
 export interface CiRunsPayload {

@@ -60,6 +60,11 @@
 15-domain-migration
 19-ai-reliability
 
+# --- Sibling-repo umbrella folder referenced only in CI/CD issue write-ups
+# (see .lovable/cicd-issues/07-cross-spec-missing-file-link-checker.md).
+# Lives in gitmap-v3, not in this repo. Documentation-only here. ---
+26-spec-outsides
+
 # --- Allowlist documentation example (used in spec/17-consolidated-guidelines/27-linter-authoring-guide.md §6.1 Format B) ---
 99-future-work
 

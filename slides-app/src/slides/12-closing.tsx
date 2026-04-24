@@ -9,7 +9,7 @@ export default function ClosingSlide() {
       subtitle="Small reviewable diffs beat heroic refactors. Pick one, ship it, move on."
       footer={
         <>
-          <span>github.com/alimtvnetwork/coding-guidelines-v16</span>
+          <span>github.com/alimtvnetwork/coding-guidelines-v15</span>
           <span>Md. Alim Ul Karim · Riseup Asia LLC</span>
         </>
       }

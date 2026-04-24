@@ -4,7 +4,6 @@ import { MetricCard } from "@/components/dashboard/MetricCard";
 import { HealthTrendCard } from "@/components/dashboard/HealthTrendCard";
 import { RuleStatusGrid } from "@/components/dashboard/RuleStatusGrid";
 import { RecentRunsTimeline } from "@/components/dashboard/RecentRunsTimeline";
-import { RecentRunsTable } from "@/components/dashboard/RecentRunsTable";
 import { IssueLogCard } from "@/components/dashboard/IssueLogCard";
 import { CheckCircle2, FileCode2, ScrollText, AlertTriangle } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -68,10 +67,6 @@ export default function Dashboard() {
           <div className="lg:col-span-2">
             <RecentRunsTimeline runs={ci.recentRuns} />
           </div>
-        </section>
-
-        <section>
-          <RecentRunsTable runs={ci.recentRuns} />
         </section>
 
         <section className="grid gap-6 lg:grid-cols-2">
