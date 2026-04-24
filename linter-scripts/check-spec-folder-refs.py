@@ -52,7 +52,9 @@ SPEC_ROOT = REPO_ROOT / "spec"
 ALLOWLIST_PATH = Path(__file__).resolve().parent / "spec-folder-refs.allowlist"
 
 NUMBERED_FOLDER_RE = re.compile(r"^\d{2}-[a-z0-9-]+$")
-ABSOLUTE_REF_RE = re.compile(r"\bspec/(\d{2}-[a-z0-9-]+)(?=[/)\s\"'#])")
+ABSOLUTE_REF_RE = re.compile(
+    r"(?<![\w\-])spec/(\d{2}-[a-z0-9-]+)(?=[/)\s\"'#])"
+)
 RELATIVE_REF_RE = re.compile(
     r"(?<![\w/])(\.{1,2}(?:/\.{2})*)/(\d{2}-[a-z0-9-]+)(?=[/)\s\"'#])"
 )
