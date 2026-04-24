@@ -363,6 +363,76 @@ All three variants exit with code `0`, print the same usage text, and make **zer
 
 SHA-256 verified, idempotent, releases-only — see [`linters-cicd/install.sh`](linters-cicd/install.sh) and [`linters-cicd/install.ps1`](linters-cicd/install.ps1).
 
+#### ⚠️ `-NoVerify` / `-n` Risks & Exit-Code Contract
+
+Both installers print a **prominent yellow warning banner** at runtime when SHA-256 verification is disabled. The text below is **byte-identical** to what the installer emits — keep this section in sync with `linters-cicd/install.ps1` and `linters-cicd/install.sh` so operators can match what they see in their terminal.
+
+**PowerShell** — exact runtime output of `install.ps1 -NoVerify`:
+
+```text
+    ╔══════════════════════════════════════════════════════════════════╗
+    ║  ⚠️  WARNING: -NoVerify — SHA-256 verification is DISABLED       ║
+    ╠══════════════════════════════════════════════════════════════════╣
+    ║  The downloaded archive will NOT be checked against              ║
+    ║  checksums.txt. Corrupted or tampered files will install         ║
+    ║  silently. This is NOT recommended for CI or production use.     ║
+    ║                                                                  ║
+    ║  Exit-code impact (spec §8):                                     ║
+    ║    • verification ON   →  checksum mismatch exits 4              ║
+    ║    • verification OFF  →  no exit 4 is ever raised               ║
+    ║                           (script exits 0 on download success,  ║
+    ║                            even for a tampered archive)         ║
+    ║                                                                  ║
+    ║  Re-run WITHOUT -NoVerify to restore integrity checking.         ║
+    ╚══════════════════════════════════════════════════════════════════╝
+```
+
+**Bash** — exact runtime output of `install.sh -n` (yellow ANSI on a TTY, plain text in CI logs):
+
+```text
+    ╔══════════════════════════════════════════════════════════════════╗
+    ║  ⚠️  WARNING: -n (NoVerify) — SHA-256 verification is DISABLED   ║
+    ╠══════════════════════════════════════════════════════════════════╣
+    ║  The downloaded archive will NOT be checked against              ║
+    ║  checksums.txt. Corrupted or tampered files will install         ║
+    ║  silently. This is NOT recommended for CI or production use.     ║
+    ║                                                                  ║
+    ║  Exit-code impact (spec §8):                                     ║
+    ║    • verification ON   →  checksum mismatch exits 4              ║
+    ║    • verification OFF  →  no exit 4 is ever raised               ║
+    ║                           (script exits 0 on download success,  ║
+    ║                            even for a tampered archive)         ║
+    ║                                                                  ║
+    ║  Re-run WITHOUT -n to restore integrity checking.                ║
+    ╚══════════════════════════════════════════════════════════════════╝
+```
+
+##### Exit-code contract (spec §8)
+
+| Exit | Meaning                                                    | With `-NoVerify` / `-n`                |
+|-----:|------------------------------------------------------------|----------------------------------------|
+| `0`  | Success                                                    | Returned even for a **tampered** archive — no integrity check ran |
+| `1`  | Generic failure (download / extract)                       | Same                                   |
+| `2`  | Unknown flag                                               | Same                                   |
+| `3`  | Pinned release / asset not found (PINNED MODE)             | Same                                   |
+| `4`  | **Verification failed (checksum mismatch)**                | **Never raised** — verification is off |
+
+##### ✅ Recommended: re-run WITH verification
+
+If you ran an installer with `-NoVerify` / `-n`, re-run it **without** the flag to restore SHA-256 checksum verification. Copy-paste the matching command:
+
+```powershell
+# PowerShell (Windows) — re-run with verification ON
+irm https://github.com/alimtvnetwork/coding-guidelines-v17/releases/latest/download/install.ps1 | iex
+```
+
+```bash
+# Bash (macOS / Linux) — re-run with verification ON
+curl -fsSL https://github.com/alimtvnetwork/coding-guidelines-v17/releases/latest/download/install.sh | bash
+```
+
+Help-flag invocations (`-Help`, `-h`, `--help`) **never** print the warning banner, even when combined with `-NoVerify`. This is regression-tested by [`tests/installer/check-install-ps1-noverify-help.sh`](tests/installer/check-install-ps1-noverify-help.sh) (T6 in the installer suite).
+
 <h2 align="center">📑 Table of Contents</h2>
 
 <p align="center">
