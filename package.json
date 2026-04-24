@@ -1,7 +1,7 @@
 {
   "name": "vite_react_shadcn_ts",
   "private": true,
-  "version": "4.1.0",
+  "version": "4.2.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -12,7 +12,8 @@
     "sync:health": "node scripts/sync-health-score.mjs",
     "lint:readme": "python3 linter-scripts/check-root-readme.py",
     "lint:readme:canonicals": "python3 linter-scripts/check-readme-canonicals.py",
-    "prebuild": "node scripts/sync-version.mjs && node scripts/sync-spec-tree.mjs && node scripts/sync-health-score.mjs && node scripts/sync-readme-stats.mjs && python3 linter-scripts/check-readme-canonicals.py",
+    "lint:readme:install": "python3 linter-scripts/check-readme-install-section.py",
+    "prebuild": "node scripts/sync-version.mjs && node scripts/sync-spec-tree.mjs && node scripts/sync-health-score.mjs && node scripts/sync-readme-stats.mjs && python3 linter-scripts/check-readme-canonicals.py && python3 linter-scripts/check-readme-install-section.py",
     "prepare": "husky",
     "build": "vite build",
     "build:dev": "vite build --mode development",
