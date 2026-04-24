@@ -1,7 +1,37 @@
 # Current Plan
 
-**Version:** 4.21.0
-**Updated:** 2026-04-24
+**Version:** 4.24.0
+**Updated:** 2026-04-24 (session 2)
+
+---
+
+## v4.24.0 — Batch close 11 plan items + Release & Migration UI rewrite + slug rebrand
+
+**Scope:** Single-pass closure of the longest-pending tasks plus a hard UI lock per direct user instruction.
+
+### Done
+- **B10** `--strict` flag in `linters-cicd/scripts/load-config.py` — `KNOWN_RUN_KEYS` allow-list rejects unknown TOML keys when set.
+- **B11** `--split-by severity` in `linters-cicd/run-all.sh` — emits `*.{error,warning,note}.sarif` siblings.
+- **B8** `--total-timeout` wall-clock watchdog + per-file 2 s parse timeouts via new `linters-cicd/checks/_lib/per_file_timeout.py` (SIGALRM); applied to `file-length/universal.py`.
+- **B7** PHP plugins for CODE-RED-001..004 — `nested-if/php.py`, `boolean-naming/php.py`, `magic-strings/php.py`, `function-length/php.py` registered in `checks/registry.json`.
+- **B2** Playwright landing smoke at `tests/e2e/landing.spec.ts`.
+- **09** Offline E2E `tests/installer/check-run-slides-help.sh` — verifies `./run.sh slides` dispatch table.
+- **10** Offline E2E `tests/installer/check-install-folders-config.sh` — asserts `install-config.json` declares all 4 canonical folders.
+- **B6** Date-bumped `99-consistency-report.md` across 13 spec subfolders.
+- **B5** Effective-Score waiver section added to `spec/health-dashboard.md`.
+- **12** `spec/04-database-conventions/02-schema-design.md` §6 pinned to naming v3.5.0.
+- **UI** `src/components/landing/InstallSection.tsx` — collapsed legacy install list to **two** Release & Migration cards (Windows PowerShell, macOS/Linux Bash). Removed all "skip latest probe" variants per user lock-in.
+- **Rebrand** `release-artifacts/release-install.{ps1,sh}` → `alimtvnetwork/coding-guidelines-v16`.
+- **Bumps** `package.json` 4.21.0 → 4.24.0; `linters-cicd/VERSION` 3.20.0 → 3.22.0.
+
+### Verification
+- `npx vite build` — passes.
+- Pending real-repo run of orchestrator with `--strict --total-timeout 60 --split-by severity` (tracked in suggestions).
+- Playwright spec needs CI wiring (tracked in suggestions).
+
+### User locks (do not regress)
+1. Release & Migration UI: exactly two cards, no skip-probe variants. *"I don't want to discuss this ever again."*
+2. Canonical slug `alimtvnetwork/coding-guidelines-v16` everywhere — full `grep -rn` sweep after every rebrand. *"you didn't do all replace in the repo"* — never assume partial coverage is enough.
 
 ---
 

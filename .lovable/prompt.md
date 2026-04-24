@@ -1,7 +1,7 @@
 # Prompt Index
 
-**Version:** 3.6.0
-**Updated:** 2026-04-23 (session 3)
+**Version:** 3.7.0
+**Updated:** 2026-04-24
 
 ---
 
@@ -30,4 +30,4 @@ Central index of all AI prompts available in this project. Reference this file t
 
 ---
 
-*Prompt index — v3.6.0 — 2026-04-23*
+*Prompt index — v3.7.0 — 2026-04-24*

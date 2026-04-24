@@ -1,7 +1,7 @@
 # Plan Tracker
 
-**Updated:** 2026-04-19  
-**Version:** 3.5.0
+**Updated:** 2026-04-24
+**Version:** 3.6.0
 
 > Mirrors `.lovable/plan.md`. The canonical roadmap lives there.
 
@@ -25,6 +25,9 @@
 | 34 | `01-naming-conventions.md` v3.4.0 — Rule 8 three-bucket table | 2026-04-19 |
 | 35 | `01-naming-conventions.md` v3.5.0 — Rules 10/11/12 (Description/Notes/Comments) | 2026-04-19 |
 | 36 | Restructured `.lovable/` to single-file convention; write-memory prompt v1.0.0 | 2026-04-19 |
+| 37 | Slug rebrand to `coding-guidelines-v16` (full repo sweep) | 2026-04-24 |
+| 38 | Release & Migration UI rewrite (2 cards, no skip-probe variants) — locked | 2026-04-24 |
+| 39 | Batch close v4.24.0 — B10 `--strict`, B11 `--split-by severity`, B8 `--total-timeout`, B7 PHP plugins, B2 Playwright spec, 09+10 offline E2E, B6 consistency dates, B5 effective-score waiver, 12 schema §6 alignment | 2026-04-24 |
 
 (For dates 2026-04-02 → 2026-04-16, see `.lovable/plan.md` Completed Plans Historical.)
 
@@ -42,16 +45,12 @@
 | 06 | Linter for missing `Description`/`Notes`/`Comments` | Medium | Rules 10–12 |
 | 07 | Strengthen BOOL-NEG-001 with replacement hints | Low | |
 | 08 | Cross-link link-checker over `spec/` | Low | |
-| 09 | Align `02-schema-design.md` §6 wording with naming v3.5.0 | Low | |
-| 10 | Publish the app | Medium | |
-| 11 | E2E browser testing | Medium | |
-| 12 | Mobile responsiveness | Low | |
-| 13 | Update `99-consistency-report.md` | Medium | |
-| 14 | Expand sub-90% guidelines | Medium | |
-| 15 | Bootstrap PHP plugins for CODE-RED-001..004 | Medium | |
-| 16 | `--total-timeout` + per-file 2s parse timeouts | Low | |
-| 17 | `exclude-paths` glob support | Medium | |
+| 09 | Mobile responsiveness | Low | |
+| 10 | Author 8 real Mermaid diagrams (13-generic-cli + 14-update) | Medium | Placeholders only |
+| 11 | Real-repo run of orchestrator with `--strict --total-timeout --split-by severity` | Medium | New flags need E2E validation |
+| 12 | Wire Playwright `landing.spec.ts` into CI | Low | Spec exists |
+| 13 | Publish click (button on Lovable UI) | Medium | App ready |
 
 ---
 
-*Plan tracker — v3.5.0 — 2026-04-19*
+*Plan tracker — v3.6.0 — 2026-04-24*
