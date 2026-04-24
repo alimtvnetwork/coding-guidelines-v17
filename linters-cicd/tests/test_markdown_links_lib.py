@@ -128,12 +128,19 @@ class TestCheckFile(unittest.TestCase):
         self.assertEqual(len(result), 1)
         self.assertIn("not found in this file", result[0].message)
 
-    def test_root_escape_blocked(self) -> None:
-        self._write("a.md", "[escape](../../../etc/passwd)")
+    def test_inline_identifier_pattern_skipped(self) -> None:
+        # `[val](apperror.AppError)` style prose — not a real link.
+        body = "Assign [val](AppError) to capture the error.\n"
+        self._write("a.md", body)
+        cache: dict[Path, set[str]] = {}
+        self.assertEqual(check_file(self.root / "a.md", root=self.root, slug_cache=cache), [])
+
+    def test_real_md_link_with_extension_not_skipped(self) -> None:
+        self._write("a.md", "[real](missing.md)\n")
         cache: dict[Path, set[str]] = {}
         result = check_file(self.root / "a.md", root=self.root, slug_cache=cache)
         self.assertEqual(len(result), 1)
-        self.assertIn("escapes repo root", result[0].message)
+        self.assertIn("not found", result[0].message)
 
     def test_non_md_target_skips_anchor_check(self) -> None:
         self._write("a.md", "[img](logo.png#anything)")
