@@ -1380,6 +1380,32 @@
     animation: pulse-glow 2.4s ease-in-out infinite;
   }
 
+  /* Smooth tone color crossfade for numeric metrics */
+  .tone-transition {
+    transition: color 0.6s cubic-bezier(0.22, 1, 0.36, 1),
+                text-shadow 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  /* Replay flash when a value updates — subtle glow + scale tick */
+  @keyframes value-flash {
+    0%   { transform: scale(1); text-shadow: 0 0 0 hsl(var(--primary) / 0); }
+    35%  { transform: scale(1.04); text-shadow: 0 0 18px hsl(var(--primary) / 0.35); }
+    100% { transform: scale(1); text-shadow: 0 0 0 hsl(var(--primary) / 0); }
+  }
+  .value-flash {
+    animation: value-flash 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+    will-change: transform, text-shadow;
+  }
+
+  /* Caption crossfade on update */
+  @keyframes caption-fade {
+    from { opacity: 0; transform: translateY(2px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .caption-fade {
+    animation: caption-fade 0.45s ease-out;
+  }
+
   /* Respect reduced motion */
   @media (prefers-reduced-motion: reduce) {
     .stagger-children > *,
@@ -1388,7 +1414,10 @@
     .bg-mesh-hero,
     .ring-gradient::before,
     .shine-on-hover::after,
-    .lift-hover {
+    .lift-hover,
+    .tone-transition,
+    .value-flash,
+    .caption-fade {
       animation: none !important;
       transition: none !important;
     }
