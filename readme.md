@@ -363,6 +363,39 @@ All three variants exit with code `0`, print the same usage text, and make **zer
 
 SHA-256 verified, idempotent, releases-only — see [`linters-cicd/install.sh`](linters-cicd/install.sh) and [`linters-cicd/install.ps1`](linters-cicd/install.ps1).
 
+#### ⚠️ `-NoVerify` Risks & Exit-Code Contract
+
+`-NoVerify` (PowerShell) and `-n` (bash) **disable SHA-256 checksum verification of the downloaded release archive**. The installer will accept any bytes the network returns — corrupted, truncated, or tampered — and write them to disk **without alerting the operator**. Use this flag **only** in offline disaster-recovery scenarios where verification is already performed out-of-band.
+
+Concretely, the spec §8 exit-code contract changes as follows when `-NoVerify` is set:
+
+| Scenario                              | Verification ON (default)     | Verification OFF (`-NoVerify`)                   |
+|---------------------------------------|-------------------------------|--------------------------------------------------|
+| Archive bytes match `checksums.txt`   | exit `0` (success)            | exit `0` (success — but *not* checked)           |
+| Archive bytes do **not** match        | exit `4` (verification failed)| exit `0` ⚠️ — **corrupted archive installs silently** |
+| Download / extract failure            | exit `1`                      | exit `1`                                         |
+| Pinned release / asset not found      | exit `3`                      | exit `3`                                         |
+| Unknown flag                          | exit `2`                      | exit `2`                                         |
+
+Because exit `4` is the *only* signal that integrity was checked and rejected, **operators MUST treat any `-NoVerify` install as unverified provenance** until they re-run with verification enabled.
+
+**📋 Operator recommendation — copy-paste this to re-run with verification enabled:**
+
+```powershell
+# Windows · PowerShell — re-run the installer WITH checksum verification.
+# Pin the same version you originally installed; omit -Version for "latest".
+& ([scriptblock]::Create((irm https://github.com/alimtvnetwork/coding-guidelines-v17/releases/latest/download/install.ps1))) -Version v3.79.0
+# Expected exit codes: 0 = OK, 4 = checksum mismatch (DO NOT use the install).
+```
+
+```bash
+# macOS · Linux · Bash — re-run the installer WITH checksum verification.
+curl -fsSL https://github.com/alimtvnetwork/coding-guidelines-v17/releases/download/v3.79.0/install.sh | bash -s -- -v v3.79.0
+# Expected exit codes: 0 = OK, 4 = checksum mismatch (DO NOT use the install).
+```
+
+If the verified re-run exits `4`, **delete the install destination and do not run any of the linter binaries** — the previous `-NoVerify` install was tampered with or corrupted in transit. File a security incident before retrying. The same banner is printed at runtime by `install.ps1` when `-NoVerify` is detected; this README section is the durable, copy-pastable companion to that warning.
+
 <h2 align="center">📑 Table of Contents</h2>
 
 <p align="center">
