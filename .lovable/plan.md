@@ -5,48 +5,46 @@
 
 ---
 
-## Latest Session — Fix `processUser` Blank-Line Style in readme.md
+## Latest Session — Lock README Install Order to UI
 
-**Scope:** Documentation example only. No production code, no CI changes.
+**Scope:** Root README install experience only. Keep install commands as single-line copy/paste commands and mirror the on-site install UI order exactly.
 
 ### Problem
 
-The `processUser` "Refactored" example in `readme.md` (lines 152–163) violates
-**Rule 5** of `release-artifacts/coding-guidelines-v1.4.0/spec/02-coding-guidelines/01-cross-language/04-code-style/03-blank-lines-and-spacing.md`:
+The root `readme.md` drifted from the actual install UI:
 
-> If code continues after a closing `}` (i.e., not followed by another `}`,
-> `else`, `catch`, or end of function), insert one blank line after it.
-
-Three consecutive `if` blocks were stacked with no blank lines between
-them and the trailing `return`.
+- the top install block did not clearly include the full named-bundle split the user expects,
+- bundle installers lived too far down the document,
+- prior README renderings mixed comments and multiple commands in one visible code block,
+- the CI check only enforced install-section-first and one-line fences, but not the required top-level order of `Install in One Line` → `Bundle Installers` → `Table of Contents`.
 
 ### Fix
 
-Insert one blank line after each closing `}` so each `if` and the final
-`return` are visually separated. Also satisfies Rule 4 (blank line before
-trailing `return` when preceded by other statements).
+- Move `Bundle Installers` directly under `Install in One Line` at the top of `readme.md`.
+- Keep every install fence to exactly one command line with platform headers outside the fence.
+- Mirror the UI bundle order exactly: `error-manage`, `splitdb`, `slides`, `linters`, `cli`, `wp`, `consolidated`.
+- Remove the duplicate lower README bundle section to prevent drift and confusion.
 
-### CI Linting Confirmation
+### Enforcement
 
-`.github/workflows/ci.yml` runs `validate-guidelines.go` and
-`validate-guidelines.py` against the `spec/` tree — these target **code
-patterns**, not markdown prose. Markdown remains intentionally un-linted
-for code style; example snippets in `readme.md` / `docs/` must be
-hand-validated against the spec. **No CI change required** (matches user
-preference: lint code in CI, not markdown).
+Strengthen `linter-scripts/check-readme-install-section.py` so CI now also fails when:
+
+1. `Bundle Installers` is missing,
+2. `Bundle Installers` is not immediately after `Install in One Line`,
+3. `Bundle Installers` appears after the Table of Contents.
 
 ### Memory
 
-Saved `mem://constraints/blank-line-between-if-guards` so this exact
-mistake is not repeated.
+Reinforce `mem://constraints/install-command-formatting` and add the reminder to `.lovable/memory/index.md` so future README edits preserve the top install layout.
 
 ### Files Touched
 
-- `readme.md` — fix `processUser` example
-- `.lovable/memory/constraints/blank-line-between-if-guards.md` — new
-- `.lovable/memory/index.md` — add reference
+- `readme.md` — move bundle installers to top and remove duplicate lower block
+- `linter-scripts/check-readme-install-section.py` — validate bundle section order too
+- `.lovable/memory/constraints/install-command-formatting.md` — clarify top-of-README ordering rule
+- `.lovable/memory/index.md` — add reminder entry
 - `.lovable/plan.md` — this entry
-- `package.json` — bump 3.97.0 → 3.98.0
+- `package.json` — bump 4.2.0 → 4.3.0
 - Run `npm run sync`
 
 ---

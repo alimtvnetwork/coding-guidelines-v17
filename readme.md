@@ -17,7 +17,7 @@
 </p>
 
 <p align="center">
-  <!-- STAMP:BADGES --><a href="https://github.com/alimtvnetwork/coding-guidelines-v15/releases"><img alt="Version" src="https://img.shields.io/badge/version-4.2.0-3B82F6?style=flat-square"/></a> <a href="spec/"><img alt="Spec Files" src="https://img.shields.io/badge/spec%20files-612-10B981?style=flat-square"/></a> <a href="spec/"><img alt="Folders" src="https://img.shields.io/badge/folders-22-8B5CF6?style=flat-square"/></a> <a href="version.json"><img alt="Lines" src="https://img.shields.io/badge/lines-131%2C967-F59E0B?style=flat-square"/></a> <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-22C55E?style=flat-square"/></a> <a href="llm.md"><img alt="AI Ready" src="https://img.shields.io/badge/AI%20ready-yes-FF6E3C?style=flat-square"/></a> <a href="version.json"><img alt="Updated" src="https://img.shields.io/badge/updated-2026--04--24-0EA5E9?style=flat-square"/></a><!-- /STAMP:BADGES -->
+  <!-- STAMP:BADGES --><a href="https://github.com/alimtvnetwork/coding-guidelines-v15/releases"><img alt="Version" src="https://img.shields.io/badge/version-4.3.0-3B82F6?style=flat-square"/></a> <a href="spec/"><img alt="Spec Files" src="https://img.shields.io/badge/spec%20files-612-10B981?style=flat-square"/></a> <a href="spec/"><img alt="Folders" src="https://img.shields.io/badge/folders-22-8B5CF6?style=flat-square"/></a> <a href="version.json"><img alt="Lines" src="https://img.shields.io/badge/lines-131%2C967-F59E0B?style=flat-square"/></a> <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-22C55E?style=flat-square"/></a> <a href="llm.md"><img alt="AI Ready" src="https://img.shields.io/badge/AI%20ready-yes-FF6E3C?style=flat-square"/></a> <a href="version.json"><img alt="Updated" src="https://img.shields.io/badge/updated-2026--04--24-0EA5E9?style=flat-square"/></a><!-- /STAMP:BADGES -->
 </p>
 
 <p align="center">
@@ -27,7 +27,7 @@
 <p align="center"><strong>By <a href="https://alimkarim.com/">Md. Alim Ul Karim</a></strong> — Chief Software Engineer, <a href="https://riseup-asia.com/">Riseup Asia LLC</a> · <a href="https://www.linkedin.com/in/alimkarim">LinkedIn</a> · <a href="https://stackoverflow.com/users/513511/md-alim-ul-karim">SO</a> · <a href="https://github.com/alimtvnetwork">GitHub</a> · <a href="docs/author.md">Full bio</a></p>
 
 <p align="center">
-  <em>Stats:</em> <!-- STAMP:FILES -->612<!-- /STAMP:FILES --> spec files · <!-- STAMP:FOLDERS -->22<!-- /STAMP:FOLDERS --> top-level folders · <!-- STAMP:LINES -->131,967<!-- /STAMP:LINES --> lines · v<!-- STAMP:VERSION -->4.2.0<!-- /STAMP:VERSION --> · updated <!-- STAMP:UPDATED -->2026-04-24<!-- /STAMP:UPDATED -->
+  <em>Stats:</em> <!-- STAMP:FILES -->612<!-- /STAMP:FILES --> spec files · <!-- STAMP:FOLDERS -->22<!-- /STAMP:FOLDERS --> top-level folders · <!-- STAMP:LINES -->131,967<!-- /STAMP:LINES --> lines · v<!-- STAMP:VERSION -->4.3.0<!-- /STAMP:VERSION --> · updated <!-- STAMP:UPDATED -->2026-04-24<!-- /STAMP:UPDATED -->
 </p>
 
 ---
@@ -66,6 +66,114 @@ curl -fsSL https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v15
 <p align="center"><sub>Version-pinned · SHA-256 verified · idempotent · temp-clean. Power-user flags (<code>--repo</code>, <code>--branch</code>, <code>--version</code>, <code>--folders</code>, <code>--dest</code>, <code>--config</code>, <code>--prompt</code>, <code>--force</code>, <code>--dry-run</code>) live in <a href="#%EF%B8%8F-full-repo-install-scripts">Full-Repo Install Scripts</a>.</sub></p>
 
 ---
+
+<h2 align="center">📦 Bundle Installers</h2>
+
+<p align="center">
+  Same order as the on-site install UI — seven named bundles, each with one Windows line and one Bash line.
+</p>
+
+### <code>error-manage</code> — Error Management Spec
+
+### 🪟 Windows · PowerShell
+
+```powershell
+irm https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v15/main/error-manage-install.ps1 | iex
+```
+
+### 🐧 macOS · Linux · Bash
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v15/main/error-manage-install.sh | bash
+```
+
+### <code>splitdb</code> — Split-DB Architecture Spec
+
+### 🪟 Windows · PowerShell
+
+```powershell
+irm https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v15/main/splitdb-install.ps1 | iex
+```
+
+### 🐧 macOS · Linux · Bash
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v15/main/splitdb-install.sh | bash
+```
+
+### <code>slides</code> — Slides App + Decks
+
+### 🪟 Windows · PowerShell
+
+```powershell
+irm https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v15/main/slides-install.ps1 | iex
+```
+
+### 🐧 macOS · Linux · Bash
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v15/main/slides-install.sh | bash
+```
+
+### <code>linters</code> — Linters + CI/CD Linter Pack
+
+### 🪟 Windows · PowerShell
+
+```powershell
+irm https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v15/main/linters-install.ps1 | iex
+```
+
+### 🐧 macOS · Linux · Bash
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v15/main/linters-install.sh | bash
+```
+
+### <code>cli</code> — CLI Toolchain Spec
+
+### 🪟 Windows · PowerShell
+
+```powershell
+irm https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v15/main/cli-install.ps1 | iex
+```
+
+### 🐧 macOS · Linux · Bash
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v15/main/cli-install.sh | bash
+```
+
+### <code>wp</code> — WordPress Plugin How-To Spec
+
+### 🪟 Windows · PowerShell
+
+```powershell
+irm https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v15/main/wp-install.ps1 | iex
+```
+
+### 🐧 macOS · Linux · Bash
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v15/main/wp-install.sh | bash
+```
+
+### <code>consolidated</code> — Consolidated Guidelines
+
+### 🪟 Windows · PowerShell
+
+```powershell
+irm https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v15/main/consolidated-install.ps1 | iex
+```
+
+### 🐧 macOS · Linux · Bash
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v15/main/consolidated-install.sh | bash
+```
+
+### Verify & Uninstall
+
+**Verify**: `sha256sum -c checksums.txt --ignore-missing` (Unix) · `Get-FileHash … -Algorithm SHA256` (Windows). **Uninstall**: delete the folders listed under each bundle's `folders[].dest` in [`bundles.json`](bundles.json). **Windows SmartScreen**: use `-ExecutionPolicy Bypass` for a single session if `irm | iex` is flagged.
 
 <h2 align="center">📑 Table of Contents</h2>
 
@@ -759,171 +867,8 @@ Why this matters: callers ALWAYS see the same shape, so guard helpers (`HasError
   <a href=".lovable/prompts/00-index.md"><img alt="Reusable prompts" src="https://img.shields.io/badge/Prompts-blind%20audit%20%C2%B7%20gap-EC4899?style=for-the-badge"/></a>
 </p>
 
+
 <p align="center"><strong>"Which bundle?"</strong> — fetch <code>bundles.json</code>, match <code>intent</code>+<code>audience</code> to a bundle <code>name</code>, return its one-liner.</p>
-
----
-
-<h2 align="center">📦 Bundle Installers</h2>
-
-<p align="center">
-  Each bundle is an <strong>independent one-line installer</strong> that pulls only the spec folders it needs.<br/>
-  Pick a card to jump to its install command — or use the full table below.
-</p>
-
-<p align="center">
-  <a href="#bundle-error-manage"><img alt="error-manage bundle" src="https://img.shields.io/badge/%F0%9F%9A%A8%20error--manage-Structured%20errors-EF4444?style=for-the-badge"/></a>
-  <a href="#bundle-splitdb"><img alt="splitdb bundle" src="https://img.shields.io/badge/%F0%9F%97%84%EF%B8%8F%20splitdb-Root%20%C2%B7%20App%20%C2%B7%20Session-3B82F6?style=for-the-badge"/></a>
-  <a href="#bundle-slides"><img alt="slides bundle" src="https://img.shields.io/badge/%F0%9F%8E%AC%20slides-Teach%20a%20team-EC4899?style=for-the-badge"/></a>
-  <a href="#bundle-linters"><img alt="linters bundle" src="https://img.shields.io/badge/%E2%9C%85%20linters-Polyglot%20CI-10B981?style=for-the-badge"/></a>
-  <br/>
-  <a href="#bundle-cli"><img alt="cli bundle" src="https://img.shields.io/badge/%E2%9A%99%EF%B8%8F%20cli-Cross--platform%20CLI-8B5CF6?style=for-the-badge"/></a>
-  <a href="#bundle-wp"><img alt="wp bundle" src="https://img.shields.io/badge/%F0%9F%90%98%20wp-WordPress%20plugin-21759B?style=for-the-badge"/></a>
-  <a href="#bundle-consolidated"><img alt="consolidated bundle" src="https://img.shields.io/badge/%F0%9F%93%9A%20consolidated-Everything%20in%20one-F59E0B?style=for-the-badge"/></a>
-  <a href="bundles.json"><img alt="bundles.json manifest" src="https://img.shields.io/badge/bundles.json-Manifest-14B8A6?style=for-the-badge&logo=json&logoColor=white"/></a>
-</p>
-
-<p align="center"><img src="public/images/install-flow.gif" alt="Terminal animation: curl-piped one-line bundle install, temp dir populated, spec folders copied, linter exits green." width="960"/><br/><em>One line. Any bundle. Anywhere — no clone required.</em></p>
-
-<p align="center">All bundles are <strong>independent</strong>, <strong>idempotent</strong>, <strong>temp-clean</strong>, <strong>versioned</strong> (with <code>checksums.txt</code>), and defined in <a href="bundles.json"><code>bundles.json</code></a>.</p>
-
-<h3 align="center">🚨 <code>error-manage</code> — Structured Errors Bundle</h3>
-<p align="center" id="bundle-error-manage">
-  <img alt="Spec Authoring Guide" src="https://img.shields.io/badge/spec--authoring--guide-included-3B82F6?style=flat-square"/>
-  <img alt="Error Management" src="https://img.shields.io/badge/error--manage-included-EF4444?style=flat-square"/>
-</p>
-
-**🪟 Windows · PowerShell**
-
-```powershell
-irm https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v15/main/error-manage-install.ps1 | iex
-```
-
-**🐧 macOS · Linux · Bash**
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v15/main/error-manage-install.sh | bash
-```
-
-<h3 align="center">🗄️ <code>splitdb</code> — Root · App · Session Database Bundle</h3>
-<p align="center" id="bundle-splitdb">
-  <img alt="Database Conventions" src="https://img.shields.io/badge/database--conventions-included-3B82F6?style=flat-square"/>
-  <img alt="Split DB Architecture" src="https://img.shields.io/badge/split--db--architecture-included-8B5CF6?style=flat-square"/>
-  <img alt="Seedable Config" src="https://img.shields.io/badge/seedable--config-included-10B981?style=flat-square"/>
-</p>
-
-**🪟 Windows · PowerShell**
-
-```powershell
-irm https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v15/main/splitdb-install.ps1 | iex
-```
-
-**🐧 macOS · Linux · Bash**
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v15/main/splitdb-install.sh | bash
-```
-
-<h3 align="center">🎬 <code>slides</code> — Teach-a-Team Bundle</h3>
-<p align="center" id="bundle-slides">
-  <img alt="Spec Slides" src="https://img.shields.io/badge/spec--slides-included-EC4899?style=flat-square"/>
-  <img alt="Slides App" src="https://img.shields.io/badge/slides--app-included-F59E0B?style=flat-square"/>
-</p>
-
-**🪟 Windows · PowerShell**
-
-```powershell
-irm https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v15/main/slides-install.ps1 | iex
-```
-
-**🐧 macOS · Linux · Bash**
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v15/main/slides-install.sh | bash
-```
-
-<p align="center"><sub>Ships a pre-built <code>slides-app/dist/</code> (no build step) and auto-opens it in your browser. Falls back to the <code>main</code> branch tarball when no version is pinned. Flags: <code>--no-open</code> / <code>-NoOpen</code>, <code>--offline</code> / <code>-Offline</code>. → <a href="docs/slides-installer.md">Full slides installer docs</a></sub></p>
-
-<h3 align="center">✅ <code>linters</code> — Polyglot CI Bundle</h3>
-<p align="center" id="bundle-linters">
-  <img alt="Linters" src="https://img.shields.io/badge/linters-included-10B981?style=flat-square"/>
-  <img alt="Linters CI/CD" src="https://img.shields.io/badge/linters--cicd-included-22C55E?style=flat-square"/>
-</p>
-
-**🪟 Windows · PowerShell**
-
-```powershell
-irm https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v15/main/linters-install.ps1 | iex
-```
-
-**🐧 macOS · Linux · Bash**
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v15/main/linters-install.sh | bash
-```
-
-<h3 align="center">⚙️ <code>cli</code> — Cross-Platform CLI Bundle</h3>
-<p align="center" id="bundle-cli">
-  <img alt="PowerShell" src="https://img.shields.io/badge/powershell-included-2D1F5F?style=flat-square&logo=powershell&logoColor=white"/>
-  <img alt="CI/CD" src="https://img.shields.io/badge/ci--cd-included-8B5CF6?style=flat-square"/>
-  <img alt="Generic CLI" src="https://img.shields.io/badge/generic--cli-included-3B82F6?style=flat-square"/>
-  <img alt="Self-Update" src="https://img.shields.io/badge/self--update-included-F59E0B?style=flat-square"/>
-  <img alt="Distribution" src="https://img.shields.io/badge/distribution-included-EC4899?style=flat-square"/>
-  <img alt="Release" src="https://img.shields.io/badge/release-included-22C55E?style=flat-square"/>
-</p>
-
-**🪟 Windows · PowerShell**
-
-```powershell
-irm https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v15/main/cli-install.ps1 | iex
-```
-
-**🐧 macOS · Linux · Bash**
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v15/main/cli-install.sh | bash
-```
-
-<h3 align="center">🐘 <code>wp</code> — WordPress Plugin Bundle</h3>
-<p align="center" id="bundle-wp">
-  <img alt="WordPress Plugin How-To" src="https://img.shields.io/badge/wp--plugin--how--to-included-21759B?style=flat-square&logo=wordpress&logoColor=white"/>
-</p>
-
-**🪟 Windows · PowerShell**
-
-```powershell
-irm https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v15/main/wp-install.ps1 | iex
-```
-
-**🐧 macOS · Linux · Bash**
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v15/main/wp-install.sh | bash
-```
-
-<h3 align="center">📚 <code>consolidated</code> — Everything-in-One Bundle</h3>
-<p align="center" id="bundle-consolidated">
-  <img alt="Spec Authoring Guide" src="https://img.shields.io/badge/spec--authoring--guide-included-3B82F6?style=flat-square"/>
-  <img alt="Error Management" src="https://img.shields.io/badge/error--manage-included-EF4444?style=flat-square"/>
-  <img alt="Consolidated Guidelines" src="https://img.shields.io/badge/consolidated--guidelines-included-F59E0B?style=flat-square"/>
-</p>
-
-**🪟 Windows · PowerShell**
-
-```powershell
-irm https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v15/main/consolidated-install.ps1 | iex
-```
-
-**🐧 macOS · Linux · Bash**
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v15/main/consolidated-install.sh | bash
-```
-
-### Verify & Uninstall
-
-**Verify**: `sha256sum -c checksums.txt --ignore-missing` (Unix) · `Get-FileHash … -Algorithm SHA256` (Windows). **Uninstall**: delete the folders listed under each bundle's `folders[].dest` in [`bundles.json`](bundles.json). **Windows SmartScreen**: use `-ExecutionPolicy Bypass` for a single session if `irm | iex` is flagged.
-
----
 
 ## 🛠️ Full-Repo Install Scripts
 

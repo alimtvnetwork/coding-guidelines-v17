@@ -48,10 +48,11 @@ curl -fsSL https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v15
 ## Placement in the README
 
 1. The install section is the **first content block** after the badges and stats line — **before** the Table of Contents anchors any other content.
-2. Order must match the on-site UI (`InstallSection.tsx`):
+2. Order must match the on-site UI (`InstallSection.tsx`) at the top of the README:
    1. **Full repo install** (4 commands): Windows · Windows skip-probe · Bash · Bash skip-probe.
    2. **Named bundle installers** (7): `error-manage`, `splitdb`, `slides`, `linters`, `cli`, `wp`, `consolidated` — each with one Windows + one Bash line.
-3. The `Run Commands` developer section (`npm run …`) comes **after** the install section, never before it.
+3. The **Bundle Installers** section must appear immediately after **Install in One Line** and before the Table of Contents.
+4. The `Run Commands` developer section (`npm run …`) comes **after** the install section, never before it.
 
 ## How to apply
 - When editing `readme.md`, audit every fenced block whose content begins with `irm`, `iwr`, `curl`, `wget`, or `npm install -g` and ensure it contains exactly one command and zero comment lines.
