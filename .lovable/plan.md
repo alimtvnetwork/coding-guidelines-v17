@@ -1,29 +1,29 @@
 # Current Plan
 
-**Version:** 4.12.0
+**Version:** 4.13.0
 **Updated:** 2026-04-24
 
 ---
 
-## v4.12.0 — BOOL-NEG-001 Unit Tests (Task #03)
+## v4.13.0 — Go-Aware BOOL-NEG-001 (Task #02)
 
-**Scope:** Lock in the BOOL-NEG-001 v1 contract with a stdlib unittest suite so future regex extensions (task #07) cannot silently regress behavior verified end-to-end in v4.11.0.
+**Scope:** Add a Go scanner for BOOL-NEG-001 so embedded migrations and ORM struct definitions are covered alongside `.sql` files.
 
 ### Done
-- **#03**: Added `linters-cicd/tests/test_boolean_column_negative.py` — 13 tests across 5 suites:
-  - `TestForbiddenPrefixes` — every Is/Has + Not/No combination flagged (5 tests)
-  - `TestAllowList` — 10 approved single-negative roots never flagged (2 tests, parametrized via subTest)
-  - `TestPositiveForms` — IsActive/HasAccess/IsVerified/HasLicense/IsEnabled clean (1 test, parametrized)
-  - `TestOutOfScope` — Cannot/Disabled/Un-/In- not flagged in v1 (documents task #07 boundary)
-  - `TestStructural` — line numbers, multiple tables, empty input, no-CREATE-TABLE
-- Added `linters-cicd/checks/boolean_column_negative_shim.py` — stdlib `importlib.util` loader to make the hyphenated check folder importable from tests.
-- Added `linters-cicd/tests/run.py` — stdlib `unittest.TestLoader.discover` runner.
-- Wired into `package.json` as `npm run test:linters` and into `.github/workflows/ci.yml` (lint job).
+- **#02**: Added `linters-cicd/checks/boolean-column-negative/go.py` with two complementary scanners:
+  - **Struct-tag scanner** — walks `type X struct { ... }` blocks, inspects `bool`/`*bool` fields. Priority: `gorm:"column:..."` → `db:"..."` → field name. Handles snake_case ↔ PascalCase normalization.
+  - **Embedded-SQL scanner** — finds back-tick raw strings containing `CREATE TABLE` and runs the same regex/allow-list as `sql.py`.
+- Allow-list (10 names) and `NEG_PREFIX_RE` kept in lock-step with `sql.py`.
+- Registered `"go": "checks/boolean-column-negative/go.py"` in `checks/registry.json`.
+- Added `boolean_column_negative_go_shim.py` (importlib loader for hyphenated folder).
+- Added `tests/test_boolean_column_negative_go.py` — 18 stdlib unittest cases across 8 suites covering snake/pascal conversion, struct field name, db-tag, gorm-tag priority, allow-list lock-step, embedded SQL, mixed sources, and v1 boundary.
 
 ### Verification
-- 13/13 tests pass in 0.001s (no pytest dependency added).
+- 31/31 unit tests pass (13 SQL + 18 Go).
+- E2E pipeline smoke test (`run-all.sh --languages go --rules BOOL-NEG-001`) on a realistic Go fixture detected exactly 5 findings across all 4 detection paths (struct-field, db-tag, gorm-tag, embedded-sql).
+- Allow-list respected; clean Go file produced 0 findings.
+- v1 boundary holds: Cannot/Disabled prefixes correctly out-of-scope.
 - All 3 installer harnesses still green (153 assertions).
-- Sync clean.
 
 ---
 

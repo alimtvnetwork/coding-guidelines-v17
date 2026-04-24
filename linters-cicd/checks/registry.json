@@ -73,7 +73,8 @@
     "level": "error",
     "spec": "04-database-conventions/01-naming-conventions.md",
     "languages": {
-      "sql": "checks/boolean-column-negative/sql.py"
+      "sql": "checks/boolean-column-negative/sql.py",
+      "go": "checks/boolean-column-negative/go.py"
     }
   },
   "DB-FREETEXT-001": {
