@@ -102,21 +102,29 @@ class TestPositiveForms(unittest.TestCase):
                 self.assertEqual(findings, [])
 
 
-class TestOutOfScope(unittest.TestCase):
-    """v1 scope: Cannot/Disabled/Un-/In-/Dis- roots are out of scope.
+class TestSuspectTier(unittest.TestCase):
+    """v2 (Task #07) — Cannot/Dis/Un single-negative roots are now flagged
+    at warning level (Tier 2). Approved single-negatives like IsDisabled
+    stay on the allow-list and remain unflagged."""
 
-    These tests document the v1 boundary so task #07 (regex extension)
-    can flip them deliberately.
-    """
+    SUSPECT = ["CannotEdit", "DisabledFlag", "UnreadStatus"]
 
-    OUT_OF_SCOPE = ["CannotEdit", "DisabledFlag", "UnreadStatus", "InactiveFlag"]
-
-    def test_out_of_scope_names_not_flagged_in_v1(self) -> None:
-        for name in self.OUT_OF_SCOPE:
+    def test_suspect_roots_flagged_as_warning(self) -> None:
+        for name in self.SUSPECT:
             with self.subTest(name=name):
                 findings = scan_text(_create_table("T", [f"{name} BOOLEAN NOT NULL"]))
-                self.assertEqual(findings, [],
-                                 f"v1 should not flag '{name}' (task #07 territory)")
+                tiers = [f["tier"] for f in findings]
+                self.assertEqual(
+                    tiers, ["suspect"],
+                    f"'{name}' should produce exactly one suspect-tier finding",
+                )
+
+    def test_allowlisted_disabled_still_clean(self) -> None:
+        # The single literal "IsDisabled" is the approved positive form
+        # and must NOT be flagged even though it matches the Dis* root.
+        findings = scan_text(_create_table("T", ["IsDisabled BOOLEAN NOT NULL"]))
+        self.assertEqual(findings, [])
+
 
 
 class TestStructural(unittest.TestCase):

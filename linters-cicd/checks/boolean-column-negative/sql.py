@@ -1,15 +1,19 @@
 #!/usr/bin/env python3
-"""BOOL-NEG-001 — Forbid Not/No-prefixed boolean DB column names.
+"""BOOL-NEG-001 — Forbid Not/No-prefixed boolean DB column names (SQL).
 
-Flags any column name matching ``^(Is|Has)(Not|No)[A-Z]`` inside a
-``CREATE TABLE`` body. Names like ``IsDisabled``, ``IsInvalid``,
-``IsUnverified``, and ``IsUnpublished`` are explicitly **allow-listed**
-because they describe positive domain states (see
-``spec/04-database-conventions/01-naming-conventions.md`` Rule 2, v3.3.0).
+Two-tier detection:
+  Tier 1 (error)   — Is/Has + Not/No prefix (IsNotActive, HasNoLicense).
+  Tier 2 (warning) — suspect single-negative roots (Cannot*, Dis*, Un*).
+                     Allow-listed approved inverses (IsDisabled, IsHidden,
+                     IsUnverified, ...) are never flagged.
+
+Each finding includes a replacement hint generated from the codegen
+inversion table when one is available, so the linter and Rule 9 codegen
+always agree on the canonical form.
 
 Scope: ``.sql`` files and any file under a path segment named
-``migrations``/``migration`` (Go ``embed.FS`` SQL strings are out of
-scope for v1 — use a Go-aware plugin if needed).
+``migrations``/``migration``. Embedded SQL inside Go is handled by the
+sibling ``go.py`` scanner (see Task #02 / v4.13.0).
 """
 
 from __future__ import annotations
@@ -19,6 +23,10 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from _lib.boolean_naming import (  # noqa: E402
+    NEG_PREFIX_RE, SUSPECT_ROOT_RE, format_message,
+    is_forbidden, is_suspect,
+)
 from _lib.cli import build_parser
 from _lib.sarif import Finding, Rule, SarifRun, emit
 from _lib.walker import relpath, walk_files
@@ -30,7 +38,8 @@ RULE = Rule(
     short_description=(
         "Database boolean columns must not use Not/No prefixes "
         "(e.g. IsNotActive, HasNoLicense). Use the positive form or "
-        "store one canonical state and derive the inverse in code."
+        "store one canonical state and derive the inverse in code. "
+        "Suspect Cannot*/Dis*/Un* roots are flagged as warnings."
     ),
     help_uri_relative="../04-database-conventions/01-naming-conventions.md",
 )
@@ -38,29 +47,6 @@ RULE = Rule(
 EXTENSIONS = [".sql"]
 MIGRATION_HINTS = ("migrations", "migration")
 
-# Match Is/Has + Not/No + UpperCamel (e.g. IsNotActive, HasNoLicense).
-NEG_PREFIX_RE = re.compile(r"\b((?:Is|Has)(?:Not|No)[A-Z][A-Za-z0-9]*)\b")
-
-# Allow-listed "Approved Inverse of Positive" names — single-negative roots,
-# NOT double negatives. Per Rule 2 + Rule 8 in
-# spec/04-database-conventions/01-naming-conventions.md (v3.4.0).
-# Note: the NEG_PREFIX_RE above only matches Not/No prefixes, so most of
-# these names would never trigger it. They are kept here for auditability
-# and for future extensions of the regex (e.g. catching Un-/In-/Dis- roots).
-ALLOWLIST = {
-    "IsDisabled",
-    "IsInvalid",
-    "IsIncomplete",
-    "IsUnavailable",
-    "IsUnread",
-    "IsHidden",
-    "IsBroken",
-    "IsLocked",
-    "IsUnpublished",
-    "IsUnverified",
-}
-
-# Detect CREATE TABLE blocks so we only inspect column definitions.
 CREATE_TABLE_RE = re.compile(
     r"CREATE\s+TABLE[^\(]*\((?P<body>.*?)\)\s*;",
     re.IGNORECASE | re.DOTALL,
@@ -74,40 +60,60 @@ def is_in_scope(path: Path) -> bool:
     return any(hint in parts for hint in MIGRATION_HINTS) and path.suffix.lower() in {".sql"}
 
 
+def _line_of(text: str, offset: int) -> int:
+    return text.count("\n", 0, offset) + 1
+
+
 def scan(path: Path, root: str) -> list[Finding]:
     text = path.read_text(encoding="utf-8", errors="replace")
     findings: list[Finding] = []
     for block in CREATE_TABLE_RE.finditer(text):
         body = block.group("body")
         body_offset = block.start("body")
-        for match in NEG_PREFIX_RE.finditer(body):
-            name = match.group(1)
-            if name in ALLOWLIST:
-                continue
-            abs_offset = body_offset + match.start()
-            line_no = text.count("\n", 0, abs_offset) + 1
-            findings.append(
-                Finding(
-                    rule_id=RULE.id,
-                    level="error",
-                    message=(
-                        f"Boolean column '{name}' uses a forbidden Not/No prefix. "
-                        "Rename to the positive form (e.g. IsActive, HasLicense) "
-                        "and derive the inverse as a computed field in code. "
-                        "See Rule 2 + Rule 9 in 04-database-conventions/01-naming-conventions.md."
-                    ),
-                    file_path=relpath(path, root),
-                    start_line=line_no,
-                )
-            )
+        findings.extend(_scan_tier1(body, body_offset, text, path, root))
+        findings.extend(_scan_tier2(body, body_offset, text, path, root))
     return findings
+
+
+def _scan_tier1(body: str, body_offset: int, text: str,
+                path: Path, root: str) -> list[Finding]:
+    out: list[Finding] = []
+    for match in NEG_PREFIX_RE.finditer(body):
+        name = match.group(1)
+        if not is_forbidden(name):
+            continue
+        out.append(Finding(
+            rule_id=RULE.id,
+            level="error",
+            message=format_message(name, tier="forbidden"),
+            file_path=relpath(path, root),
+            start_line=_line_of(text, body_offset + match.start()),
+        ))
+    return out
+
+
+def _scan_tier2(body: str, body_offset: int, text: str,
+                path: Path, root: str) -> list[Finding]:
+    out: list[Finding] = []
+    for match in SUSPECT_ROOT_RE.finditer(body):
+        name = match.group(0)
+        if not is_suspect(name):
+            continue
+        out.append(Finding(
+            rule_id=RULE.id,
+            level="warning",
+            message=format_message(name, tier="suspect"),
+            file_path=relpath(path, root),
+            start_line=_line_of(text, body_offset + match.start()),
+        ))
+    return out
 
 
 def main() -> int:
     args = build_parser("BOOL-NEG-001 boolean-column-negative (sql)").parse_args()
     run = SarifRun(
         tool_name="coding-guidelines-boolean-column-negative",
-        tool_version="1.0.0",
+        tool_version="2.0.0",
         rules=[RULE],
     )
     for f in walk_files(args.path, EXTENSIONS):

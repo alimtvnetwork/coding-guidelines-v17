@@ -14,15 +14,20 @@ Two complementary scanners run over every ``.go`` file:
    exact same regex/allow-list logic as ``sql.py`` over them. Covers
    ``embed.FS``-style migration constants and inline DDL.
 
-Allow-list and forbidden-prefix regex are kept in lock-step with
-``sql.py`` so the two scanners can never drift on what counts as a
-violation. Snake-case column names like ``is_not_active`` are
-normalized to PascalCase before matching so both naming styles are
-caught.
+Two-tier detection (v2 — Task #07):
+- Tier 1 (error)   — Is/Has + Not/No prefix.
+- Tier 2 (warning) — suspect Cannot*/Dis*/Un* roots.
+Replacement hints come from the codegen inversion table.
+
+All forbidden/suspect/allow-list/hint logic lives in
+``_lib/boolean_naming.py`` so the SQL and Go scanners stay in lock-step.
+
+Snake-case column names like ``is_not_active`` are normalized to
+PascalCase before matching so both naming styles are caught.
 
 Spec:
-- spec/04-database-conventions/01-naming-conventions.md  Rules 2 & 9
-- linters-cicd/checks/boolean-column-negative/sql.py     (lock-step)
+- spec/04-database-conventions/01-naming-conventions.md  Rules 2, 8 & 9
+- linters-cicd/checks/_lib/boolean_naming.py             (shared library)
 """
 
 from __future__ import annotations
@@ -32,6 +37,10 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from _lib.boolean_naming import (  # noqa: E402
+    ALLOWLIST, NEG_PREFIX_RE, SUSPECT_ROOT_RE, format_message,
+    is_forbidden, is_suspect,
+)
 from _lib.cli import build_parser
 from _lib.sarif import Finding, Rule, SarifRun, emit
 from _lib.walker import relpath, walk_files
@@ -44,24 +53,13 @@ RULE = Rule(
         "Database boolean columns must not use Not/No prefixes "
         "(e.g. IsNotActive, HasNoLicense). Detected in Go via "
         "db:\"...\" / gorm:\"column:...\" struct tags and inside "
-        "embedded SQL string literals."
+        "embedded SQL string literals. Suspect Cannot*/Dis*/Un* "
+        "roots are flagged as warnings."
     ),
     help_uri_relative="../04-database-conventions/01-naming-conventions.md",
 )
 
 EXTENSIONS = [".go"]
-
-# Match Is/Has + Not/No + UpperCamel — same regex as sql.py.
-NEG_PREFIX_RE = re.compile(r"\b((?:Is|Has)(?:Not|No)[A-Z][A-Za-z0-9]*)\b")
-
-# Allow-list — must match sql.py exactly. Single source of truth lives
-# in the spec; duplicated here only because the two scanners run as
-# standalone scripts (no shared state at runtime).
-ALLOWLIST = {
-    "IsDisabled", "IsInvalid", "IsIncomplete", "IsUnavailable",
-    "IsUnread", "IsHidden", "IsBroken", "IsLocked",
-    "IsUnpublished", "IsUnverified",
-}
 
 # `type Name struct { ... }` — non-greedy so adjacent structs don't merge.
 STRUCT_BLOCK_RE = re.compile(
@@ -70,7 +68,6 @@ STRUCT_BLOCK_RE = re.compile(
 )
 
 # Field line: `FieldName bool [optional ...] `tag:"..."``
-# Captures field name, whether it's bool, and the raw backtick tag block.
 FIELD_LINE_RE = re.compile(
     r"^\s*(?P<field>[A-Z][A-Za-z0-9_]*)\s+(?P<type>\*?\b\w+\b)"
     r"[^`\n]*(?:`(?P<tag>[^`]*)`)?\s*$",
@@ -97,11 +94,23 @@ def snake_to_pascal(snake: str) -> str:
 
 
 def is_violation(name: str) -> bool:
-    """True iff *name* matches the forbidden regex and is not allow-listed."""
+    """Tier 1 only — preserved for v1 callers (test suite + go shim).
+
+    Returns True iff *name* (snake or Pascal) is a forbidden Not/No
+    prefix and not allow-listed. Use ``classify`` for the v2 two-tier
+    result.
+    """
+    return classify(name) == "forbidden"
+
+
+def classify(name: str) -> str:
+    """Return 'forbidden' | 'suspect' | 'clean' for *name*."""
     pascal = snake_to_pascal(name)
-    if pascal in ALLOWLIST:
-        return False
-    return NEG_PREFIX_RE.search(pascal) is not None
+    if is_forbidden(pascal):
+        return "forbidden"
+    if is_suspect(pascal):
+        return "suspect"
+    return "clean"
 
 
 def line_of(text: str, offset: int) -> int:
@@ -109,8 +118,18 @@ def line_of(text: str, offset: int) -> int:
 
 
 def scan_struct_tags(text: str) -> list[tuple[str, int, str]]:
-    """Return (column_name, line_number, source_kind) for each violation."""
-    out: list[tuple[str, int, str]] = []
+    """Tier 1 only — preserved name & shape for the v1 test suite.
+
+    Returns ``(column_name, line_number, source_kind)`` for each
+    *forbidden* struct-tag finding. Tier 2 (suspect) findings come
+    from ``scan_struct_tags_v2``.
+    """
+    return [(n, l, k) for n, l, k, t in scan_struct_tags_v2(text) if t == "forbidden"]
+
+
+def scan_struct_tags_v2(text: str) -> list[tuple[str, int, str, str]]:
+    """v2 walker — emits ``(column, line, kind, tier)`` for forbidden + suspect."""
+    out: list[tuple[str, int, str, str]] = []
     for block in STRUCT_BLOCK_RE.finditer(text):
         body = block.group("body")
         body_offset = block.start("body")
@@ -121,8 +140,6 @@ def scan_struct_tags(text: str) -> list[tuple[str, int, str]]:
             field_name = field.group("field")
             abs_line = line_of(text, body_offset + field.start())
 
-            # Pick the column name in priority: gorm column → db tag → field name.
-            col = None
             kind = "struct-field"
             gorm_match = GORM_COLUMN_RE.search(tag)
             db_match = DB_TAG_RE.search(tag)
@@ -133,48 +150,54 @@ def scan_struct_tags(text: str) -> list[tuple[str, int, str]]:
             else:
                 col = field_name
 
-            if col and is_violation(col):
-                out.append((snake_to_pascal(col), abs_line, kind))
+            tier = classify(col)
+            if tier != "clean":
+                out.append((snake_to_pascal(col), abs_line, kind, tier))
     return out
 
 
 def scan_embedded_sql(text: str) -> list[tuple[str, int, str]]:
-    """Scan back-tick raw strings that hold ``CREATE TABLE`` blocks."""
-    out: list[tuple[str, int, str]] = []
+    """Tier 1 only — preserved for v1 test suite."""
+    return [(n, l, k) for n, l, k, t in scan_embedded_sql_v2(text) if t == "forbidden"]
+
+
+def scan_embedded_sql_v2(text: str) -> list[tuple[str, int, str, str]]:
+    """v2 embedded-SQL walker — emits ``(column, line, kind, tier)``."""
+    out: list[tuple[str, int, str, str]] = []
     for raw in RAW_STRING_RE.finditer(text):
         sql = raw.group(1)
         sql_offset = raw.start(1)
         for table in SQL_CREATE_TABLE_RE.finditer(sql):
             body = table.group("body")
             body_offset_in_sql = table.start("body")
+            base = sql_offset + body_offset_in_sql
             for match in NEG_PREFIX_RE.finditer(body):
                 name = match.group(1)
-                if name in ALLOWLIST:
+                if not is_forbidden(name):
                     continue
-                abs_line = line_of(text, sql_offset + body_offset_in_sql + match.start())
-                out.append((name, abs_line, "embedded-sql"))
+                out.append((name, line_of(text, base + match.start()),
+                            "embedded-sql", "forbidden"))
+            for match in SUSPECT_ROOT_RE.finditer(body):
+                name = match.group(0)
+                if not is_suspect(name):
+                    continue
+                out.append((name, line_of(text, base + match.start()),
+                            "embedded-sql", "suspect"))
     return out
 
 
 def scan(path: Path, root: str) -> list[Finding]:
     text = path.read_text(encoding="utf-8", errors="replace")
     findings: list[Finding] = []
-    for name, line, kind in scan_struct_tags(text) + scan_embedded_sql(text):
-        findings.append(
-            Finding(
-                rule_id=RULE.id,
-                level="error",
-                message=(
-                    f"Boolean column '{name}' uses a forbidden Not/No prefix "
-                    f"({kind}). Rename to the positive form (e.g. IsActive, "
-                    "HasLicense) and derive the inverse as a computed field "
-                    "in code. See Rule 2 + Rule 9 in "
-                    "04-database-conventions/01-naming-conventions.md."
-                ),
-                file_path=relpath(path, root),
-                start_line=line,
-            )
-        )
+    for name, line, kind, tier in scan_struct_tags_v2(text) + scan_embedded_sql_v2(text):
+        level = "error" if tier == "forbidden" else "warning"
+        findings.append(Finding(
+            rule_id=RULE.id,
+            level=level,
+            message=format_message(name, tier=tier, source_kind=kind),
+            file_path=relpath(path, root),
+            start_line=line,
+        ))
     return findings
 
 
@@ -182,7 +205,7 @@ def main() -> int:
     args = build_parser("BOOL-NEG-001 boolean-column-negative (go)").parse_args()
     run = SarifRun(
         tool_name="coding-guidelines-boolean-column-negative-go",
-        tool_version="1.0.0",
+        tool_version="2.0.0",
         rules=[RULE],
     )
     for f in walk_files(args.path, EXTENSIONS):
