@@ -6,6 +6,8 @@ Updated: today
 ## Core
 - 🔴 CODE RED: Never swallow errors. Zero-nesting (no nested if). Max 2 operands. Positively named guard functions.
 - 🔴 CODE RED: Strict metrics: functions 8-15 lines, files < 300 lines, React components < 100 lines.
+- 🔴 CODE RED: Standalone scripts — NO `!important`, NO `as unknown` / `as any`, NO error-swallowing `return null` in catch, NO magic strings (use enums in `types.ts`), NO bare top-level functions (class-based, DI). Hide via class toggle + CSS transition — never nested `requestAnimationFrame`. Always blank line before `return`.
+- 🔴 PRE-WRITE: Before producing any standalone-script code, read the target repo's coding-guideline spec AND the sibling `standalone-scripts/*/src/` files first. See mem://issues/payment-banner-hider-rca.
 - 🔴 README install commands: ONE line per command, NEVER `#` comments inside install code fences. Platform shown by header above the block. Install section comes FIRST after badges, before TOC. Match on-site `InstallSection.tsx` order (4 full-repo + 7 named bundles).
 - 🔴 NEVER sync 01-app, 02-app-issues, 03-general, 03-tasks, or 12-consolidated-guidelines from gitmap-v3. All maintained locally.
 - Naming: PascalCase for all internal IDs, DB, JSON, Types. Exceptions: Rust uses snake_case identifiers.
@@ -40,3 +42,5 @@ Updated: today
 - [Author Attribution](mem://project/author-attribution) — Md. Alim Ul Karim, Riseup Asia LLC, SEO/footer requirements.
 - [Avoid Gitmap Sync](mem://constraints/avoid-app-sync) — NEVER sync app, app-issues, general, tasks, or consolidated-guidelines from gitmap-v3.
 - [Install Command Formatting](mem://constraints/install-command-formatting) — README top install area must mirror UI order; one-line commands only; bundles before ToC.
+- [Standalone Script Standards](mem://constraints/standalone-script-standards) — Hard rules for browser/userscript files: no !important, no as-unknown, no error swallowing, class+DI, enums in types.ts, styles.ts, hide via class+transition.
+- [Payment Banner Hider RCA](mem://issues/payment-banner-hider-rca) — Root cause for the macro-ahk-v23 regression and the mandatory pre-write checklist that prevents repeats.
