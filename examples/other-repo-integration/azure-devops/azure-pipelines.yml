@@ -3,7 +3,7 @@
 #  Pack version targeted: v3.79.0
 #
 #  Prerequisite: install the SARIF SAST Scans Tab extension once per org
-#  (see ./README.md Step 1).
+#  (see ./readme.md Step 1).
 # ────────────────────────────────────────────────────────────────────────
 
 trigger:

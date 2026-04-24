@@ -22,7 +22,7 @@ Full per-file audit: [`rename-audit-v15-v16-to-v17.md`](rename-audit-v15-v16-to-
 |---|---:|---:|---|
 | `release-artifacts/` (v1.4.0 / v4.6.0 / v4.7.0 / v4.8.0 snapshots) | 84 | 247 | Historical release bundles updated for consistency |
 | Repo root | 27 | 123 | Including `readme.md`, `QUICKSTART.md`, `bundles.json`, `install-config.json`, `install.{sh,ps1}`, `release-install.{sh,ps1}`, `release.{sh,ps1}`, `run.{sh,ps1}`, all 7 `<bundle>-install.{sh,ps1}` pairs |
-| `linters-cicd/` | 13 | 52 | `README.md`, `install.sh`, `install.ps1`, all `ci/*` templates (Jenkinsfile, azure-pipelines.yml, github-actions.yml, gitlab-ci.yml, bitbucket-pipelines.yml, pre-commit-hook.sh), `coding-guidelines.sarif`, `checks/_lib/sarif.py`, `scripts/{emit-timeout,post-process}.py` |
+| `linters-cicd/` | 13 | 52 | `readme.md`, `install.sh`, `install.ps1`, all `ci/*` templates (Jenkinsfile, azure-pipelines.yml, github-actions.yml, gitlab-ci.yml, bitbucket-pipelines.yml, pre-commit-hook.sh), `coding-guidelines.sarif`, `checks/_lib/sarif.py`, `scripts/{emit-timeout,post-process}.py` |
 | `src/` | 2 | 47 | `src/components/landing/InstallSection.tsx`, `src/data/specTree.json` |
 | `spec/` | 19 | 44 | Spec docs referencing the slug (sarif-contract, ci-templates, distribution, install-contract, install-config, version-pinned-release-installers, install-script-version-probe, repo-major-version-migrator, generic-installer-behavior, distribution-and-runner, lovable-folder-structure, readme-improvement-suggestions, root-readme-conventions, etc.) |
 | `.lovable/` | 8 | 16 | `memory/index.md`, `memory/sessions/*`, `memory/constraints/install-command-formatting.md`, `memory/suggestions/*`, `memory/workflow/*`, `plan.md`, `strictly-avoid.md`, `suggestions.md` |
@@ -285,7 +285,7 @@ the canonical superset.
   `reason="..."` clause is **mandatory** — bare waivers are ignored so
   silent suppressions can't pass review. Documented in
   `spec/04-database-conventions/02-schema-design.md` §6.6 and
-  `linters-cicd/checks/missing-desc/README.md`.
+  `linters-cicd/checks/missing-desc/readme.md`.
 
 ### Audited & cleaned
 - **Spec tree audit (115 violations → 0 unwaived).** Every `CREATE TABLE`

@@ -4,7 +4,7 @@
 **Linter version:** 1.2.0 (refactored to share `_lib/free_text_columns.py`)
 **Spec:** [`spec/04-database-conventions/02-schema-design.md`](../../../spec/04-database-conventions/02-schema-design.md) §6 (v3.4.0)
 **Naming source:** [`01-naming-conventions.md`](../../../spec/04-database-conventions/01-naming-conventions.md) Rules 10 / 11 / 12 (v3.5.0)
-**Sibling:** [`DB-FREETEXT-001`](../free-text-columns/README.md) (presence-only, no waivers — back-compat shim)
+**Sibling:** [`DB-FREETEXT-001`](../free-text-columns/readme.md) (presence-only, no waivers — back-compat shim)
 
 ## What it flags
 

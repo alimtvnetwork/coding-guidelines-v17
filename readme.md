@@ -298,7 +298,7 @@ Installs: `spec/17-consolidated-guidelines`.
 
 <p align="center">
   Drop the runnable <code>linters-cicd/</code> SARIF tool into any repo from a signed GitHub Release — no clone, no spec files.<br/>
-  Pairs with <a href="QUICKSTART.md">QUICKSTART.md</a> and the <a href="linters-cicd/README.md"><code>linters-cicd/README.md</code></a>.
+  Pairs with <a href="QUICKSTART.md">QUICKSTART.md</a> and the <a href="linters-cicd/readme.md"><code>linters-cicd/readme.md</code></a>.
 </p>
 
 ### 🐧 macOS · Linux · Bash (latest)

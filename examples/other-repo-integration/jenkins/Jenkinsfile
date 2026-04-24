@@ -2,7 +2,7 @@
 //  Coding-Guidelines Linter Pack — Jenkins starter for external repos
 //  Pack version targeted: v3.79.0
 //
-//  Prerequisites (see ./README.md):
+//  Prerequisites (see ./readme.md):
 //    - Docker Pipeline plugin
 //    - Warnings Next Generation plugin
 //    - Agent with Docker available (or swap to `agent any`, see README Step 4)

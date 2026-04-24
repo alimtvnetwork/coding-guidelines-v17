@@ -19,7 +19,7 @@
 ## What it does NOT flag
 
 * **Rule 12** (NOT NULL / DEFAULT on the reserved columns) — that is
-  enforced by the sibling rule [`MISSING-DESC-001`](../missing-desc/README.md).
+  enforced by the sibling rule [`MISSING-DESC-001`](../missing-desc/readme.md).
 * **Waivers** — DB-FREETEXT-001 ignores `-- linter-waive` comments to
   preserve v1.0 CI behaviour. If you need the waiver mechanism, switch
   to MISSING-DESC-001.
