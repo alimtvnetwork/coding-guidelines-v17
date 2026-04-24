@@ -1,7 +1,7 @@
 # Suggestions
 
-**Version:** 3.7.0  
-**Updated:** 2026-04-23 (session 2)
+**Version:** 3.8.0
+**Updated:** 2026-04-24
 
 ---
 
@@ -82,6 +82,10 @@
 - **Status:** Pending **Priority:** Medium **Added:** 2026-04-23
 - After the CODE-RED walkthrough insertion, several `h2 → h4` skips slipped through. A check would catch this before commit.
 
+### Fix the 54 SPEC-LINK-001 baseline warnings in spec/
+- **Status:** Pending **Priority:** Medium **Added:** 2026-04-24
+- Mostly stale renumbering in `14-update/` after section renames; `mem://` resolver gap; a few self-anchor drifts after section rewrites.
+
 ### Surface CODE-RED walkthrough in the in-app docs viewer
 - **Status:** Pending **Priority:** Low **Added:** 2026-04-23
 - The walkthrough lives in `readme.md` only; consider rendering it as a dedicated docs page so the spec viewer can link to it.
@@ -89,6 +93,9 @@
 ---
 
 ## Implemented Suggestions
+
+### SPEC-LINK-001 cross-link checker (linters-cicd v3.16.0) — 2026-04-24
+- New shared lib `_lib/markdown_links.py` (200 LOC). Fence-aware, GH-flavored slugs, inline-identifier filter. Surfaces 54 real broken cross-links in spec/. Warning-level. 18 new tests, 87/87 green.
 
 ### Syntax highlighting for Source view — 2026-04-05
 ### Light/dark theme toggle — 2026-04-05
@@ -159,4 +166,4 @@
 
 ---
 
-*Suggestions — v3.7.0 — 2026-04-23*
+*Suggestions — v3.8.0 — 2026-04-24*

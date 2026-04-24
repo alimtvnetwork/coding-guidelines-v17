@@ -92,5 +92,13 @@
     "languages": {
       "sql": "checks/missing-desc/sql.py"
     }
+  },
+  "SPEC-LINK-001": {
+    "name": "BrokenSpecCrossLink",
+    "level": "warning",
+    "spec": "04-database-conventions/01-naming-conventions.md",
+    "languages": {
+      "markdown": "checks/spec-links/markdown.py"
+    }
   }
 }

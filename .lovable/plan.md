@@ -1,7 +1,38 @@
 # Current Plan
 
-**Version:** 4.16.0
+**Version:** 4.17.0
 **Updated:** 2026-04-24
+
+---
+
+## v4.17.0 — SPEC-LINK-001 Cross-Reference Link Checker (Task #11)
+
+**Scope:** Catch broken cross-references (file paths + heading anchors) across the entire `spec/` tree before they ship. Produces SARIF, integrates with the existing `_lib/` infrastructure, and exposes 54 real link-rot issues already present in the spec.
+
+### Done
+- **#11**: New shared library `linters-cicd/checks/_lib/markdown_links.py` (200 LOC):
+  - `extract_links()` — fence-aware (` ``` ` / `~~~`), title-attr aware, external-prefix skip (`http`/`https`/`mailto`/`tel`/`ftp`/`javascript`).
+  - `extract_heading_slugs()` — GitHub-flavored slug algorithm (lowercase, strip non-`[a-z0-9 _-]`, hyphenate spaces, `-1`/`-2` disambiguation for duplicates). ATX headings only (matches project standard).
+  - `check_file()` — resolves every relative link; for `.md` targets with anchors, validates against the cached heading-slug set of the target file.
+  - `_looks_like_inline_identifier()` — heuristic that filters out `[val](AppError)`-style prose patterns (no `/`, no real extension, identifier-shaped) to eliminate the dominant false-positive class. Halved scan output from 100 → 54 findings.
+  - Per-file slug cache so a target file is parsed exactly once even when 50 sources link into it.
+- New check `linters-cicd/checks/spec-links/markdown.py` (warning-level SARIF). Tool name `coding-guidelines-spec-links`, version `1.0.0`. Inherits `--path`/`--format`/`--output`/`--version` from `_lib/cli.py`.
+- Registered as `SPEC-LINK-001` in `linters-cicd/checks/registry.json` (level: warning, language: markdown).
+- New test file `linters-cicd/tests/test_markdown_links_lib.py` — 18 tests across 3 suites:
+  - `TestExtractLinks` (6) — anchors, pure-anchor, external skip, fenced-code immunity (both ` ``` ` and `~~~`), title-attr handling.
+  - `TestSlugify` (4) — basic, punctuation strip, duplicate disambiguation, fence-isolation.
+  - `TestCheckFile` (8) — valid cross-file anchor, missing target file, missing target anchor, valid + broken self-anchor, inline-identifier filter, real `.md` link still validated, slug-cache reuse.
+- Bumped `linters-cicd/VERSION` 3.15.0 → 3.16.0.
+
+### Verification
+- 87/87 unit tests pass (was 69 — +18 net from the new lib tests).
+- Real scan against `spec/` surfaces 54 SPEC-LINK-001 warnings — all legitimate (stale renumbering in `14-update/`, missing `mem://` resolver, broken self-anchors after section rewrites). These are documented as **deliberate non-blocker findings**; SPEC-LINK-001 is warning-level and does not fail CI.
+- All 3 installer harnesses still green (153 assertions).
+- Codegen determinism harness still green.
+- BOOL-NEG-001 v2 fixture still produces exactly 5 findings (no regression).
+
+### Unblocks
+- **#11 follow-up** — fix the 54 real cross-link warnings, file-by-file (separate cleanup pass).
 
 ---
 
