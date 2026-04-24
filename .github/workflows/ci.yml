@@ -204,7 +204,7 @@ jobs:
           if-no-files-found: ignore
 
   sync-drift:
-    name: Sync Drift Check (version.json + specTree.json)
+    name: Sync Drift Check (all generated files)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
