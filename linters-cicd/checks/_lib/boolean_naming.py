@@ -81,11 +81,17 @@ def replacement_hint(name: str) -> str | None:
     can be derived. Backed by the codegen inversion table so the linter
     and the Rule 9 codegen always agree on canonical forms.
     """
+    # Strip Is/Not + Has/No prefixes — the most common Tier 1 case
+    # (IsNotActive → IsActive, HasNoLicense → HasLicense). Then check
+    # the inversion table to surface the canonical pair if one exists.
+    if name.startswith("IsNot") and len(name) > 5 and name[5].isupper():
+        return "Is" + name[5:]
+    if name.startswith("HasNo") and len(name) > 5 and name[5].isupper():
+        return "Has" + name[5:]
+
     # Direct table lookup wins (e.g. IsInactive → IsActive).
     inverted = invert_name(name)
     if inverted != name and not inverted.endswith("Inverse"):
-        # Don't suggest a fallback that just adds "Not" / "No" — that
-        # would push the user further from the canonical form.
         if "NotNot" in inverted or "NoNo" in inverted:
             return None
         return inverted

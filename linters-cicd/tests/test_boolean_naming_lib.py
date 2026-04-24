@@ -100,16 +100,21 @@ class TestReplacementHints(unittest.TestCase):
         self.assertEqual(replacement_hint("IsDisabled"), "IsEnabled")
         self.assertEqual(replacement_hint("HasNoLicense"), "HasLicense")
 
+    def test_isnot_prefix_stripped_to_positive(self) -> None:
+        # The most common Tier 1 case — strip Not/No directly.
+        self.assertEqual(replacement_hint("IsNotActive"), "IsActive")
+        self.assertEqual(replacement_hint("IsNotVerified"), "IsVerified")
+        self.assertEqual(replacement_hint("HasNoAccess"), "HasAccess")
+
     def test_cannot_hint_strips_prefix(self) -> None:
         self.assertEqual(replacement_hint("CannotEdit"), "CanEdit")
         self.assertEqual(replacement_hint("CannotDelete"), "CanDelete")
 
     def test_useless_double_negative_hint_suppressed(self) -> None:
-        # Fallback would produce "IsNotNotFoo" — surfacing that as a
-        # rename target would only confuse users. None is the correct
-        # answer in that case.
-        self.assertIsNone(replacement_hint("IsNotFoo"))
-        self.assertIsNone(replacement_hint("HasNoBar"))
+        # Names that aren't recognised and would fallback to a Not/No
+        # double-negative produce None instead of a confusing suggestion.
+        self.assertIsNone(replacement_hint("Active"))
+        self.assertIsNone(replacement_hint("RandomThing"))
 
     def test_unknown_root_returns_none(self) -> None:
         self.assertIsNone(replacement_hint("Active"))
