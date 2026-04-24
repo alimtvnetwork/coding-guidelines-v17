@@ -177,6 +177,35 @@ curl -fsSL https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v16
 
 > **📖 Installer behavior contract:** Every installer in this repo (root `install.{sh,ps1}`, the 14 bundle installers, `linters-cicd/install.sh`, and the release-pinned `release-install.{sh,ps1}`) conforms to **[spec/14-update/27-generic-installer-behavior.md](spec/14-update/27-generic-installer-behavior.md)** — flags (`--no-discovery`, `--no-main-fallback`, `--offline`/`--use-local-archive`), the §7 startup banner with `mode:` / `source:` lines, and the §8 exit-code contract (0 = ok · 1 = generic · 2 = offline · 3 = pinned-asset-missing · 4 = verification · 5 = handoff). For the slides bundle's behavior, flags, and full troubleshooting matrix see **[docs/slides-installer.md](docs/slides-installer.md)**.
 
+<h2 align="center">🧪 CLI Linter Pack (release-asset installer)</h2>
+
+<p align="center">
+  Drop the runnable <code>linters-cicd/</code> SARIF tool into any repo from a signed GitHub Release — no clone, no spec files.<br/>
+  Pairs with <a href="QUICKSTART.md">QUICKSTART.md</a> and the <a href="linters-cicd/README.md"><code>linters-cicd/README.md</code></a>.
+</p>
+
+### 🐧 macOS · Linux · Bash (latest)
+
+```bash
+curl -fsSL https://github.com/alimtvnetwork/coding-guidelines-v16/releases/latest/download/install.sh | bash
+bash ./linters-cicd/run-all.sh --path . --format text
+```
+
+### 🐧 Pinned version (recommended for CI)
+
+```bash
+curl -fsSL https://github.com/alimtvnetwork/coding-guidelines-v16/releases/download/v3.79.0/install.sh | bash -s -- -v v3.79.0
+```
+
+### 🪟 Windows · PowerShell
+
+```powershell
+irm https://github.com/alimtvnetwork/coding-guidelines-v16/releases/latest/download/install.ps1 | iex
+bash ./linters-cicd/run-all.sh --path . --format text   # WSL / Git-Bash
+```
+
+**Flags** (`linters-cicd/install.sh`): `-d <dir>` install destination · `-v <version>` pin a release · `-n` skip checksum · `-h` / `--help` show usage. SHA-256 verified, idempotent, releases-only — see [`linters-cicd/install.sh`](linters-cicd/install.sh).
+
 <h2 align="center">📑 Table of Contents</h2>
 
 <p align="center">
