@@ -83,8 +83,19 @@ param(
     [switch]$Offline,
     [string]$UseLocalArchive = "",
     [switch]$NoDiscovery,
-    [switch]$NoMainFallback
+    [switch]$NoMainFallback,
+    [Alias("?")]
+    [switch]$Help
 )
+
+# ── -Help / -? short-circuit (spec §B.1.c.i) ──────────────────────
+# Surfaces the comment-based help block above without requiring the user
+# to know about Get-Help. Print to stdout and exit 0 BEFORE any side
+# effects (no folder creation, no banner, no download).
+if ($Help) {
+    Get-Help $PSCommandPath -Full
+    exit 0
+}
 
 $ErrorActionPreference = "Stop"
 $ProgressPreference = "SilentlyContinue"
