@@ -1,7 +1,30 @@
 # Current Plan
 
-**Version:** 4.13.0
+**Version:** 4.14.0
 **Updated:** 2026-04-24
+
+---
+
+## v4.14.0 — Codegen Inversion-Table Round-Trip Tests (Task #04)
+
+**Scope:** Lock the Rule 9 codegen contract — every (positive, negative) pair in the inversion table is bijective and the BOOL-NEG-001 allow-list stays in lock-step with codegen's canonical inverses.
+
+### Done
+- **#04**: Added `linters-cicd/tests/test_codegen_inversion_table.py` — 14 tests across 6 suites:
+  - `TestExplicitTableBijection` — `invert(invert(x)) == x` in BOTH directions for every entry; `_TABLE` size = 2× `_FORWARD` (no merge collisions).
+  - `TestNoCollisions` — unique negatives, unique positives, zero positive↔negative overlap.
+  - `TestNoSelfInverse` — no entry maps to itself.
+  - `TestFallbackContract` — pins the documented one-way fallback (`IsFoo→IsNotFoo`, `IsNotFoo→IsNotNotFoo` — no double-negative collapse). Covers `Is`/`Has`/non-`Is*`/`Has*` paths and short edge cases.
+  - `TestBoolNegAllowListLockstep` — every BOOL-NEG-001 allow-listed name appears as a value in `_FORWARD`, guaranteeing linter & codegen never drift.
+  - `TestDeterminism` — repeated invocations stable.
+
+### Verification
+- 45/45 unit tests pass (13 SQL + 18 Go + 14 inversion-table) in 0.004s.
+- All 3 installer harnesses still green (153 assertions).
+- Lock-step assertion confirmed BOOL-NEG-001 allow-list ⊂ canonical inverses; future drift fails CI loudly.
+
+### Unblocks
+- **#05** (wire codegen into CI with `git diff --exit-code` after regen) — round-trip stability now proven, so determinism check is safe.
 
 ---
 
