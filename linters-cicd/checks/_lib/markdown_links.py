@@ -33,7 +33,11 @@ EXTENSIONS = (".md",)
 _LINK_RE = re.compile(r"\[([^\]]*)\]\(([^)\s]+)(?:\s+\"[^\"]*\")?\)")
 _HEADING_RE = re.compile(r"^(#{1,6})\s+(.+?)\s*#*\s*$")
 _FENCE_RE = re.compile(r"^(`{3,}|~{3,})")
-_EXTERNAL_PREFIXES = ("http://", "https://", "mailto:", "tel:", "ftp://", "ftps://", "javascript:")
+_EXTERNAL_PREFIXES = (
+    "http://", "https://", "mailto:", "tel:", "ftp://", "ftps://", "javascript:",
+    # Lovable memory pseudo-protocol — referenced from prose, never resolved on disk.
+    "mem://",
+)
 # Heuristic: targets that look like inline code identifiers (no path separator,
 # no extension, no hash) are almost always prose patterns like `[err](err)`
 # from `[name](type)` documentation conventions, not real links.
