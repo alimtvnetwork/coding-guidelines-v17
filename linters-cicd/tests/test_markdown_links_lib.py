@@ -80,6 +80,19 @@ class TestSlugify(unittest.TestCase):
         body = "# Real\n```\n# Fake\n```\n"
         self.assertEqual(extract_heading_slugs(body), {"real"})
 
+    def test_em_dash_preserves_double_hyphen(self) -> None:
+        # GitHub does NOT collapse consecutive hyphens — `Phase 1 — AI`
+        # becomes `phase-1--ai` (em-dash strips, surrounding spaces both
+        # become hyphens). Regression test for the v1.0 bug that produced
+        # false positives on every "X — Y" heading in spec/.
+        slugs = extract_heading_slugs("# Phase 1 — AI Context Layer\n")
+        self.assertIn("phase-1--ai-context-layer", slugs)
+
+    def test_ampersand_preserves_double_hyphen(self) -> None:
+        # `4. Envelope Parsing & Enrichment` → `4-envelope-parsing--enrichment`
+        slugs = extract_heading_slugs("## 4. Envelope Parsing & Enrichment\n")
+        self.assertIn("4-envelope-parsing--enrichment", slugs)
+
 
 class TestCheckFile(unittest.TestCase):
     def setUp(self) -> None:
