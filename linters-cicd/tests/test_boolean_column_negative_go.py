@@ -194,16 +194,38 @@ class TestMixedSources(unittest.TestCase):
         self.assertEqual(cols, ["HasNoLicense", "IsNotActive"])
 
 
-class TestOutOfScope(unittest.TestCase):
-    """v1 boundary documentation — Cannot/Disabled/Un- not flagged."""
+class TestSuspectTier(unittest.TestCase):
+    """v2 (Task #07) — Cannot/Disabled/Un* roots are flagged at suspect
+    tier in Go via struct-tag detection.
 
-    def test_cannot_prefix_not_flagged_in_v1(self) -> None:
+    Uses the v2 ``scan_struct_tags_v2`` walker so we can inspect the tier;
+    the v1 ``scan_text`` shim only surfaces forbidden-tier findings.
+    """
+
+    def _v2_struct_findings(self, src: str) -> list[tuple[str, int, str, str]]:
+        import sys
+        from pathlib import Path
+        sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "checks"))
+        from boolean_column_negative_go_shim import _mod  # noqa: E402
+        return _mod.scan_struct_tags_v2(src)
+
+    def test_cannot_prefix_flagged_as_suspect(self) -> None:
         src = "type T struct {\n    CannotEdit bool\n}\n"
-        self.assertEqual(scan_text(src), [])
+        findings = self._v2_struct_findings(src)
+        self.assertEqual(len(findings), 1)
+        self.assertEqual(findings[0][3], "suspect")
 
-    def test_disabled_flag_not_flagged_in_v1(self) -> None:
+    def test_disabled_flag_flagged_as_suspect(self) -> None:
         src = "type T struct {\n    DisabledFlag bool\n}\n"
-        self.assertEqual(scan_text(src), [])
+        findings = self._v2_struct_findings(src)
+        self.assertEqual(len(findings), 1)
+        self.assertEqual(findings[0][3], "suspect")
+
+    def test_allowlisted_isdisabled_stays_clean(self) -> None:
+        src = "type T struct {\n    IsDisabled bool\n}\n"
+        findings = self._v2_struct_findings(src)
+        self.assertEqual(findings, [])
+
 
 
 if __name__ == "__main__":
