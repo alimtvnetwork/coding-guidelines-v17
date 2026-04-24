@@ -119,6 +119,21 @@ print_summary() {
   Raw PS URL:  https://raw.githubusercontent.com/$REPO/main/install.ps1
   Raw SH URL:  https://raw.githubusercontent.com/$REPO/main/install.sh
 ════════════════════════════════════════════════════════
+
+  Pinned one-liners (paste into the GitHub Release body):
+
+  PowerShell:
+    irm https://github.com/$REPO/releases/download/v$VERSION/release-install.ps1 | iex
+
+  Bash:
+    curl -fsSL https://github.com/$REPO/releases/download/v$VERSION/release-install.sh | bash
+
+  Upload these assets to the v$VERSION release:
+    - $ARCHIVE_BASENAME.zip
+    - $ARCHIVE_BASENAME.tar.gz
+    - release-install.sh         (baked, pinned to v$VERSION)
+    - release-install.ps1        (baked, pinned to v$VERSION)
+    - checksums.txt
 EOF
 }
 

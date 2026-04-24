@@ -131,3 +131,18 @@ Write-Host "  Output:      $distDir" -ForegroundColor White
 Write-Host "  Raw PS URL:  https://raw.githubusercontent.com/$Repo/main/install.ps1" -ForegroundColor White
 Write-Host "  Raw SH URL:  https://raw.githubusercontent.com/$Repo/main/install.sh" -ForegroundColor White
 Write-Host "════════════════════════════════════════════════════════" -ForegroundColor White
+Write-Host ""
+Write-Host "  Pinned one-liners (paste into the GitHub Release body):" -ForegroundColor Yellow
+Write-Host ""
+Write-Host "  PowerShell:" -ForegroundColor White
+Write-Host "    irm https://github.com/$Repo/releases/download/v$version/release-install.ps1 | iex" -ForegroundColor Gray
+Write-Host ""
+Write-Host "  Bash:" -ForegroundColor White
+Write-Host "    curl -fsSL https://github.com/$Repo/releases/download/v$version/release-install.sh | bash" -ForegroundColor Gray
+Write-Host ""
+Write-Host "  Upload these assets to the v$version release:" -ForegroundColor White
+Write-Host "    - $releaseName.zip"            -ForegroundColor Gray
+Write-Host "    - $releaseName.tar.gz"         -ForegroundColor Gray
+Write-Host "    - release-install.sh         (baked, pinned to v$version)" -ForegroundColor Gray
+Write-Host "    - release-install.ps1        (baked, pinned to v$version)" -ForegroundColor Gray
+Write-Host "    - checksums.txt"               -ForegroundColor Gray
