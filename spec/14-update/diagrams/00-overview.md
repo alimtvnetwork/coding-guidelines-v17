@@ -36,7 +36,7 @@ These `.mmd` files use Mermaid flowchart syntax. To render:
 
 | Reference | Location |
 |-----------|----------|
-| Update Command Workflow (references these diagrams) | [../16-update-command-workflow.md](../16-update-command-workflow.md) |
+| Update Command Workflow (references these diagrams) | [../16-update-command-workflow.md](../22-update-command-workflow.md) |
 | Self-Update Overview | [../01-self-update-overview.md](../01-self-update-overview.md) |
 | Cleanup Specification | [../06-cleanup.md](../06-cleanup.md) |
 

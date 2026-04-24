@@ -230,10 +230,10 @@ The HTTP client must follow redirects (up to 10). Go's default `http.Client` fol
 
 ## Cross-References
 
-- [Updater Binary](./13-updater-binary.md) — Main consumer of network operations
+- [Updater Binary](./19-updater-binary.md) — Main consumer of network operations
 - [Self-Update Overview](./01-self-update-overview.md) — Binary-based update flow
-- [Checksums & Verification](./08-checksums-verification.md) — Post-download verification
-- [Install Scripts](./12-install-scripts.md) — Bash/PowerShell download patterns
+- [Checksums & Verification](./14-checksums-verification.md) — Post-download verification
+- [Install Scripts](./18-install-scripts.md) — Bash/PowerShell download patterns
 
 ---
 
