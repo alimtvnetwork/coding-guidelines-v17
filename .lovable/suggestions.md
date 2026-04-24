@@ -1,19 +1,11 @@
 # Suggestions
 
-**Version:** 3.12.0
-**Updated:** 2026-04-24
+**Version:** 3.13.0
+**Updated:** 2026-04-24 (session 2)
 
 ---
 
 ## Active Suggestions
-
-### Publish the app
-- **Status:** Pending **Priority:** Medium **Added:** 2026-04-16
-- All features ready; make spec docs accessible via published URL.
-
-### End-to-end browser testing
-- **Status:** Pending **Priority:** Medium **Added:** 2026-04-16
-- Test all 4 view modes (Preview, Source, Edit, Split) + download.
 
 ### Mobile responsive testing
 - **Status:** Pending **Priority:** Low **Added:** 2026-04-16
@@ -25,13 +17,6 @@
 
 ### Breadcrumb navigation
 - **Status:** Pending **Priority:** Low **Added:** 2026-04-16
-
-### Update consistency report
-- **Status:** Pending **Priority:** Medium **Added:** 2026-04-16
-- Reflect expanded `01-spec-authoring.md` (95%) and `16-app-design-system-and-ui.md` (93%).
-
-### Expand remaining sub-90% guidelines
-- **Status:** Pending **Priority:** Medium **Added:** 2026-04-16
 
 ### Smoke-test BOOL-NEG-001 in full pipeline
 - **Status:** Pending **Priority:** Medium **Added:** 2026-04-19
@@ -62,6 +47,18 @@
 ### Cross-link Rule 9 / Rules 10–12 from related specs
 - **Status:** Pending **Priority:** Low **Added:** 2026-04-19
 
+### Author 8 real Mermaid diagrams (currently placeholders)
+- **Status:** Pending **Priority:** Medium **Added:** 2026-04-24
+- `spec/13-generic-cli/images/` and `spec/14-update/images/` — placeholder SVGs only.
+
+### Real-repo run of orchestrator with new flags
+- **Status:** Pending **Priority:** Medium **Added:** 2026-04-24
+- Validate `--strict --total-timeout 60 --split-by severity` end-to-end on a non-fixture repo.
+
+### Wire Playwright landing spec into CI
+- **Status:** Pending **Priority:** Low **Added:** 2026-04-24
+- `tests/e2e/landing.spec.ts` exists; needs CI workflow.
+
 ### Run `npm run sync` after v3.81.0 bump
 - **Status:** Pending **Priority:** Medium **Added:** 2026-04-23
 - Refresh `version.json` stats and any sync'd doc headers.
@@ -89,6 +86,18 @@
 ---
 
 ## Implemented Suggestions
+
+### Batch close v4.24.0 — 11 plan items in one pass — 2026-04-24
+- B10 `--strict` config, B11 `--split-by severity`, B8 `--total-timeout` + 2s parse timeouts, B7 PHP plugins (CODE-RED-001..004), B2 Playwright landing spec, 09 + 10 offline E2E shell tests, B6 consistency-report dates, B5 effective-score waiver section, 12 schema-design §6 alignment, plus Release & Migration UI rewrite. linters-cicd v3.22.0 / package v4.24.0.
+
+### Release & Migration UI lock-in — 2026-04-24
+- Replaced "Install in One Line" + skip-probe variants with two cards (Windows PowerShell, macOS/Linux Bash). User-locked: never restore the removed variants.
+
+### Repo slug rebrand to `coding-guidelines-v16` — 2026-04-24
+- Full sweep of `release-artifacts/release-install.{ps1,sh}` and downstream docs. Canonical slug now `alimtvnetwork/coding-guidelines-v16`.
+
+### Published the app — 2026-04-24
+- Suggestion B1 closed by user via remix flow (live preview deployable; publish click pending).
 
 ### exclude-paths glob support across linter pipeline (linters-cicd v3.20.0) — 2026-04-24
 - TOML [run].exclude-paths + --exclude-paths CLI flag. Threaded through load-config → run-all.sh → 18 check scripts → walker.py (fnmatch with directory pruning). 11 new tests, 102/102 pass.
@@ -174,4 +183,4 @@
 
 ---
 
-*Suggestions — v3.12.0 — 2026-04-24*
+*Suggestions — v3.13.0 — 2026-04-24*
