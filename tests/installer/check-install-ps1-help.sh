@@ -93,7 +93,7 @@ for flag in "-Help" "-h" "--help"; do
 
     set +e
     # shellcheck disable=SC2086
-    output=$(_NET_MARKER="$NET_MARKER" $PWSH -NoProfile -File "$WRAPPER_FILE" \
+    output=$(env _NET_MARKER="$NET_MARKER" $PWSH -NoProfile -File "$WRAPPER_FILE" \
         -Installer "$INSTALLER" \
         -Flag "$flag" 2>&1)
     flag_rc=$?
