@@ -441,6 +441,7 @@ Auto-set diagnostic fields so examples do not forget context and do not rely on 
 
 ```go
 pathValidation := validation.ValidatePath(configPath)
+
 if pathValidation.IsInvalid {
     return apperror.FailSettings(
         apperror.PathError(apperrtype.PathInvalid, configPath),
@@ -448,6 +449,7 @@ if pathValidation.IsInvalid {
 }
 
 data, readFileError := os.ReadFile(configPath)
+
 if readFileError != nil {
     return apperror.FailBytes(
         apperror.WrapPathError(readFileError, apperrtype.PathFailedToRead, configPath),
@@ -455,6 +457,7 @@ if readFileError != nil {
 }
 
 response, requestError := http.Get(siteURL)
+
 if requestError != nil {
     return apperror.FailSettings(
         apperror.WrapUrlError(requestError, apperrtype.WPConnectionFailed, siteURL),
