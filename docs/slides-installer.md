@@ -1,5 +1,13 @@
 # Slides Installer — Behavior &amp; Flags
 
+> **Spec:** This document describes the `slides` bundle's installer.
+> Both `slides-install.sh` and `slides-install.ps1` conform to
+> **[spec/14-update/27-generic-installer-behavior.md](../spec/14-update/27-generic-installer-behavior.md)** —
+> the cross-bundle contract for flags (`--no-discovery`, `--no-main-fallback`,
+> `--offline` / `--use-local-archive`), the §7 startup banner (`mode:` / `source:`
+> lines), and the §8 exit-code policy (0–5). The slides-specific extensions
+> below (auto-open, main-branch fallback) layer on top of that contract.
+
 The `slides` bundle is delivered by `slides-install.sh` (Linux/macOS) and `slides-install.ps1` (Windows). Both scripts share the same behavior, generated from `bundles.json` via `scripts/generate-bundle-installers.mjs`.
 
 ## What you get
