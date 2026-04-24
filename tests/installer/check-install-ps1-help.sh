@@ -116,14 +116,24 @@ for flag in "-Help" "-h" "--help"; do
         continue
     fi
 
-    if ! echo "$output" | grep -q "Usage:"; then
-        echo "❌ FAIL: $flag output missing 'Usage:' marker"
+    # The PowerShell help output is aligned to bash `install.sh --help`
+    # (same structure, same EXIT CODES section). Assert markers that exist
+    # in BOTH installer flavors so this test stays in sync if we re-align
+    # again.
+    if ! echo "$output" | grep -q "============================================================"; then
+        echo "❌ FAIL: $flag output missing banner rule (===…===) marker"
         overall_rc=1
         continue
     fi
 
-    if ! echo "$output" | grep -q "install.ps1"; then
-        echo "❌ FAIL: $flag output missing 'install.ps1' marker"
+    if ! echo "$output" | grep -q "^Flags:"; then
+        echo "❌ FAIL: $flag output missing 'Flags:' section marker"
+        overall_rc=1
+        continue
+    fi
+
+    if ! echo "$output" | grep -q "EXIT CODES (spec §8):"; then
+        echo "❌ FAIL: $flag output missing 'EXIT CODES (spec §8):' section marker"
         overall_rc=1
         continue
     fi
