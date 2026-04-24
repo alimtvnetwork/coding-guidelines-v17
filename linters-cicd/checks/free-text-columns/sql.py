@@ -18,7 +18,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from _lib.cli import build_parser
+from _lib.cli import build_parser, parse_exclude_paths
 from _lib.free_text_columns import EXTENSIONS, is_in_scope, scan_text
 from _lib.sarif import Finding, Rule, SarifRun, emit
 from _lib.walker import relpath, walk_files
@@ -53,12 +53,13 @@ def scan(path: Path, root: str) -> list[Finding]:
 
 def main() -> int:
     args = build_parser("DB-FREETEXT-001 free-text-columns (sql)").parse_args()
+    _globs = parse_exclude_paths(args.exclude_paths)
     run = SarifRun(
         tool_name="coding-guidelines-free-text-columns",
         tool_version="1.1.0",
         rules=[RULE],
     )
-    for f in walk_files(args.path, list(EXTENSIONS)):
+    for f in walk_files(args.path, list(EXTENSIONS), exclude_globs=_globs):
         if not is_in_scope(f):
             continue
         for finding in scan(f, args.path):

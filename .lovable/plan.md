@@ -1,7 +1,55 @@
 # Current Plan
 
-**Version:** 4.20.0
+**Version:** 4.21.0
 **Updated:** 2026-04-24
+
+---
+
+## v4.21.0 — `exclude-paths` Glob Support in `.codeguidelines.toml` + walker.py (Task B9)
+
+**Scope:** Add user-controllable path exclusion across the entire linter pipeline so projects can skip vendored/generated/legacy directories without per-file suppressions. Glob syntax is fnmatch-style (`vendor/**`, `**/*.gen.go`).
+
+### Architecture
+- **walker.py** (`checks/_lib/walker.py`): Added optional `exclude_globs: Sequence[str] | None` parameter to `walk_files()` and `walk_files_middle_out()`. Matched against repo-relative posix paths. Directory subtrees are pruned at `os.walk` time so excluded trees pay zero recursion cost. Backward-compatible — defaults to None.
+- **cli.py** (`checks/_lib/cli.py`): Added `--exclude-paths` flag (CSV) to the shared `build_parser()` so every check inherits it automatically. New helper `parse_exclude_paths(raw)` splits CSV → clean glob list.
+- **load-config.py** (`scripts/load-config.py`): Reads `[run].exclude-paths` from `.codeguidelines.toml` and emits `EXCLUDE_PATHS=...` line. CLI flag overrides TOML.
+- **run-all.sh**: New `--exclude-paths` flag, threads through to load-config and to every check invocation. `EXCLUDE_PATHS` exported for xargs subshells. Logged in the run banner.
+- **18 check scripts patched** (bulk script with balanced-paren matcher): each `walk_files(args.path, EXTS)` call now becomes `walk_files(args.path, EXTS, exclude_globs=_globs)` where `_globs = parse_exclude_paths(args.exclude_paths)` is injected after `args = ...parse_args()`.
+
+### Done
+- `linters-cicd/checks/_lib/walker.py` — fnmatch glob support, directory pruning, helper functions.
+- `linters-cicd/checks/_lib/cli.py` — `--exclude-paths` flag + `parse_exclude_paths()` helper.
+- `linters-cicd/scripts/load-config.py` — TOML key `[run].exclude-paths`, CLI override precedence.
+- `linters-cicd/run-all.sh` — flag parsing, banner line, threading to every check.
+- 18 check scripts patched mechanically:
+  - boolean-column-negative/{go,sql}.py, boolean-naming/{go,typescript}.py
+  - file-length/universal.py, free-text-columns/sql.py, function-length/{go,typescript}.py
+  - magic-strings/{go,typescript}.py, missing-desc/sql.py, nested-if/{go,typescript}.py
+  - no-else-after-return/{go,typescript}.py, positive-conditions/{go,typescript}.py
+  - spec-links/markdown.py
+- 2 new test files (11 new tests):
+  - `tests/test_walker_exclude_globs.py` — 8 tests covering directory exclusion, filename globs, multi-glob combination, no-op behavior, extension filter coexistence, middle-out compatibility.
+  - `tests/test_load_config_exclude_paths.py` — 3 tests for default empty, TOML pickup, CLI-overrides-TOML precedence.
+- `linters-cicd/VERSION` 3.19.0 → 3.20.0.
+- `package.json` 4.20.0 → 4.21.0.
+
+### Verification
+- **102/102 tests pass** (was 91 before).
+- `bash run-all.sh --path spec --rules SPEC-LINK-001 --exclude-paths "spec/14-update/**"` → `✅ clean`, banner shows `exclude-paths: spec/14-update/**`.
+- All 18 check scripts parse cleanly (AST validation pass).
+- Backward-compat: existing invocations without `--exclude-paths` work identically.
+
+### Migration notes for users
+Add to project's `.codeguidelines.toml`:
+```toml
+[run]
+exclude-paths = [
+    "vendor/**",
+    "**/*.gen.go",
+    "third_party/**",
+]
+```
+Or pass on CLI: `--exclude-paths "vendor/**,**/*.gen.go"`.
 
 ---
 

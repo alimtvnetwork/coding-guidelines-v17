@@ -1,6 +1,6 @@
 # Suggestions
 
-**Version:** 3.11.0
+**Version:** 3.12.0
 **Updated:** 2026-04-24
 
 ---
@@ -90,6 +90,9 @@
 
 ## Implemented Suggestions
 
+### exclude-paths glob support across linter pipeline (linters-cicd v3.20.0) — 2026-04-24
+- TOML [run].exclude-paths + --exclude-paths CLI flag. Threaded through load-config → run-all.sh → 18 check scripts → walker.py (fnmatch with directory pruning). 11 new tests, 102/102 pass.
+
 ### SPEC-LINK-001 wired into run-all.sh + regression-locked (linters-cicd v3.19.0) — 2026-04-24
 - Confirmed orchestrator already dispatches SPEC-LINK-001 via registry-driven loop. Added 2 integration tests (test_runall_spec_link_wiring.py) so the wiring cannot silently regress. 91/91 tests pass.
 
@@ -171,4 +174,4 @@
 
 ---
 
-*Suggestions — v3.11.0 — 2026-04-24*
+*Suggestions — v3.12.0 — 2026-04-24*

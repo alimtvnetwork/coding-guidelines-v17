@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from _lib.cli import build_parser
+from _lib.cli import build_parser, parse_exclude_paths
 from _lib.sarif import Finding, Rule, SarifRun, emit
 from _lib.walker import relpath, walk_files
 
@@ -42,8 +42,9 @@ def scan(path: Path, root: str) -> list[Finding]:
 
 def main() -> int:
     args = build_parser("CODE-RED-008 positive-conditions (Go)").parse_args()
+    _globs = parse_exclude_paths(args.exclude_paths)
     run = SarifRun(tool_name="coding-guidelines-positive-conditions-go", tool_version="1.0.0", rules=[RULE])
-    for f in walk_files(args.path, [".go"]):
+    for f in walk_files(args.path, [".go"], exclude_globs=_globs):
         for finding in scan(f, args.path):
             run.add(finding)
     return emit(run, args.format, args.output)

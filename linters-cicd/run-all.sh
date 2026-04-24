@@ -31,6 +31,7 @@ PATH_ARG="."
 LANGUAGES=""
 RULES=""
 EXCLUDE_RULES=""
+EXCLUDE_PATHS=""
 BASELINE=""
 REFRESH_BASELINE=""
 CONFIG_FILE=".codeguidelines.toml"
@@ -45,6 +46,7 @@ while [ $# -gt 0 ]; do
         --languages)         LANGUAGES="$2"; shift 2 ;;
         --rules)             RULES="$2"; shift 2 ;;
         --exclude-rules)     EXCLUDE_RULES="$2"; shift 2 ;;
+        --exclude-paths)     EXCLUDE_PATHS="$2"; shift 2 ;;
         --baseline)          BASELINE="$2"; shift 2 ;;
         --refresh-baseline)  REFRESH_BASELINE="$2"; shift 2 ;;
         --config)            CONFIG_FILE="$2"; shift 2 ;;
@@ -98,7 +100,8 @@ CONFIG_OUT=$(python3 "$SCRIPT_DIR/scripts/load-config.py" \
     --config "$CONFIG_PATH" \
     --languages "$LANGUAGES" \
     --rules "$RULES" \
-    --exclude-rules "$EXCLUDE_RULES")
+    --exclude-rules "$EXCLUDE_RULES" \
+    --exclude-paths "$EXCLUDE_PATHS")
 eval "$CONFIG_OUT"
 
 TMP_DIR="$(mktemp -d)"
@@ -117,6 +120,7 @@ echo "       format:         $FORMAT"
 echo "       languages:      ${LANGUAGES:-auto}"
 echo "       rules:          ${RULES:-all}"
 echo "       exclude-rules:  ${EXCLUDE_RULES:-none}"
+echo "       exclude-paths:  ${EXCLUDE_PATHS:-none}"
 echo "       jobs:           $JOBS"
 echo "       check-timeout:  ${CHECK_TIMEOUT}s"
 [ -n "$BASELINE" ]         && echo "       baseline:       $BASELINE"
@@ -148,10 +152,10 @@ run_check() {
     local rc
     if [ -n "$TIMEOUT_BIN" ]; then
         "$TIMEOUT_BIN" -k 2 "$CHECK_TIMEOUT" \
-            python3 "$script_path" --path "$PATH_ARG" --format sarif --output "$out_path"
+            python3 "$script_path" --path "$PATH_ARG" --format sarif --output "$out_path" --exclude-paths "$EXCLUDE_PATHS"
         rc=$?
     else
-        python3 "$script_path" --path "$PATH_ARG" --format sarif --output "$out_path"
+        python3 "$script_path" --path "$PATH_ARG" --format sarif --output "$out_path" --exclude-paths "$EXCLUDE_PATHS"
         rc=$?
     fi
     # 124 = GNU timeout overrun, 137 = SIGKILL grace, 143 = SIGTERM grace
@@ -163,7 +167,7 @@ run_check() {
     echo "$rc" > "$status_path"
 }
 export -f run_check
-export PATH_ARG SCRIPT_DIR CHECK_TIMEOUT TIMEOUT_BIN VERSION
+export PATH_ARG SCRIPT_DIR CHECK_TIMEOUT TIMEOUT_BIN VERSION EXCLUDE_PATHS
 
 # ---- Build the work list ----
 WORK_LIST="$TMP_DIR/_worklist.txt"
