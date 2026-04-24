@@ -1,7 +1,33 @@
 # Current Plan
 
-**Version:** 4.14.0
+**Version:** 4.15.0
 **Updated:** 2026-04-24
+
+---
+
+## v4.15.0 — Codegen Wired Into CI (Task #05)
+
+**Scope:** Re-run inverted-field codegen on every CI build and fail loudly on any drift from the committed fixtures. Backed by the bijection + determinism guarantees proven in v4.14.0 (#04).
+
+### Done
+- **#05**: New harness under `linters-cicd/codegen/`:
+  - `fixtures/sources/User.{go,php,ts}` — 3 hand-written sources covering canonical-table inverse (`IsActive`→`IsInactive`), fallback (`HasLicense`→`HasNoLicense`), and multi-block emit (User + Subscription).
+  - `fixtures/expected/User.generated.{go,php,ts}` — committed artifacts (104 lines total) regenerated from sources via the script below.
+  - `scripts/regen-codegen-fixtures.sh` — single-command rebuild of expected/ when the inversion table or any emitter intentionally changes.
+  - `scripts/verify-codegen-determinism.sh` — re-emits into a temp dir, compares byte-for-byte using a portable Python `difflib` (no `diff` binary dependency), prints unified diff on drift, exits 1.
+- Wired into `.github/workflows/ci.yml` lint job as the step **immediately after** `test:linters` so unit-level guarantees and end-to-end drift detection run together.
+- Added `npm run codegen:verify` and `npm run codegen:regen` for local use.
+- Added `linters-cicd/tests/test_codegen_determinism_harness.py` (5 tests) — exercises the verify script as a black box: happy path, mutated expected/Go fails, mutated expected/PHP fails, regen idempotency.
+
+### Verification
+- 50/50 unit tests pass (was 45 — 5 new harness tests).
+- `verify-codegen-determinism.sh` runs cleanly on committed fixtures (go=25 lines, php=42 lines, ts=37 lines).
+- Drift simulation: mutating `User.generated.go` makes verify exit 1 with a unified diff in stdout (validated in test).
+- Idempotency: two back-to-back regens produce byte-identical files.
+- All 3 installer harnesses still green (153 assertions).
+
+### Unblocks
+- **#07** (extend BOOL-NEG-001 regex to `Cannot`/`Dis-`/`Un-` roots) — codegen is now safely refactorable end-to-end.
 
 ---
 
