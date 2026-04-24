@@ -5,6 +5,7 @@ Output format (KEY=value, one per line, shell-eval safe):
     LANGUAGES=go,typescript
     EXCLUDE_RULES=STYLE-002
     RULES=
+    EXCLUDE_PATHS=vendor/**,**/*.gen.go
     FAIL_ON_WARNING=false
 
 Precedence: CLI flag > TOML > built-in default.
@@ -29,6 +30,7 @@ def main() -> int:
     print(f"LANGUAGES={_pick_csv(args.languages, run_section.get('languages'))}")
     print(f"RULES={_pick_csv(args.rules, run_section.get('rules'))}")
     print(f"EXCLUDE_RULES={_pick_csv(args.exclude_rules, run_section.get('exclude-rules'))}")
+    print(f"EXCLUDE_PATHS={_pick_csv(args.exclude_paths, run_section.get('exclude-paths'))}")
     print(f"FAIL_ON_WARNING={_pick_bool(args.fail_on_warning, run_section.get('fail-on-warning'))}")
     return 0
 
@@ -39,6 +41,7 @@ def _parse_args() -> argparse.Namespace:
     p.add_argument("--languages", default="")
     p.add_argument("--rules", default="")
     p.add_argument("--exclude-rules", default="")
+    p.add_argument("--exclude-paths", default="")
     p.add_argument("--fail-on-warning", default="")
     return p.parse_args()
 

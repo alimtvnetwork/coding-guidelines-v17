@@ -1,9 +1,12 @@
 """Common CLI parser used by every check script.
 
-Every check inherits a `--version` flag automatically. The version
-string is `coding-guidelines/<rule-slug> <X.Y.Z>` where `<rule-slug>`
-is the parent-directory name of the calling script (e.g. `nested-if`)
-and `<X.Y.Z>` is read from `linters-cicd/VERSION`.
+Every check inherits `--version` and `--exclude-paths` automatically.
+The version string is `coding-guidelines/<rule-slug> <X.Y.Z>` where
+`<rule-slug>` is the parent-directory name of the calling script
+(e.g. `nested-if`) and `<X.Y.Z>` is read from `linters-cicd/VERSION`.
+
+`--exclude-paths` accepts a CSV of fnmatch globs (e.g.
+`vendor/**,**/*.gen.go`) which checks pass through to `walk_files`.
 
 Spec: spec/02-coding-guidelines/06-cicd-integration/98-faq.md §4
 """
@@ -21,12 +24,24 @@ def build_parser(description: str) -> argparse.ArgumentParser:
     p.add_argument("--format", choices=["sarif", "text"], default="sarif")
     p.add_argument("--output", default=None, help="Write to file instead of stdout")
     p.add_argument(
+        "--exclude-paths",
+        default="",
+        help="CSV of fnmatch globs to skip (e.g. 'vendor/**,**/*.gen.go')",
+    )
+    p.add_argument(
         "--version",
         action="version",
         version=_version_string(),
         help="Print 'coding-guidelines/<rule-slug> <X.Y.Z>' and exit",
     )
     return p
+
+
+def parse_exclude_paths(raw: str) -> list[str]:
+    """Split the --exclude-paths CSV into a clean list of globs."""
+    if not raw:
+        return []
+    return [g.strip() for g in raw.split(",") if g.strip()]
 
 
 def _version_string() -> str:
