@@ -6,7 +6,9 @@ the root `readme.md`:
   1. The "Install in One Line" section is the FIRST content section after the
      badges block (i.e. the first `<h2>` / `##` heading after the
      `<!-- /STAMP:PLATFORM_BADGES -->` marker).
-  2. Every install code fence (powershell / bash / sh / pwsh) inside that
+  2. The "Bundle Installers" section appears immediately after the install
+     section and before the Table of Contents, mirroring the UI order.
+  3. Every install code fence (powershell / bash / sh / pwsh) inside that
      section, AND every fence inside any "Bundle Installers" section,
      contains EXACTLY ONE non-empty command line, with NO inline `#`
      comments, NO blank lines, and NO multi-line `\\` continuations.
@@ -38,6 +40,7 @@ EXIT_ERROR = 2
 
 INSTALL_HEADING_PATTERN = re.compile(r"install\s+in\s+one\s+line", re.IGNORECASE)
 BUNDLE_HEADING_PATTERN = re.compile(r"bundle\s+installers?", re.IGNORECASE)
+TOC_HEADING_PATTERN = re.compile(r"table\s+of\s+contents", re.IGNORECASE)
 HEADING_PATTERN = re.compile(
     r"^\s*(?:##\s+(?P<md>.+?)|<h2\b[^>]*>(?P<html>.+?)</h2>)\s*$"
 )
@@ -63,6 +66,7 @@ def main() -> int:
     lines = text.splitlines()
     violations: list[Violation] = []
     violations.extend(check_section_position(lines))
+    violations.extend(check_bundle_section_position(lines))
     violations.extend(check_install_fences(lines))
 
     if not violations:
@@ -123,6 +127,58 @@ def find_first_h2_after(lines: list[str], start_line: int) -> tuple[int, str] | 
         if match is None:
             continue
         return index + 1, strip_heading_decoration(heading_text_from(match))
+    return None
+
+
+def find_all_h2(lines: list[str]) -> list[tuple[int, str]]:
+    headings: list[tuple[int, str]] = []
+    for index, raw in enumerate(lines, start=1):
+        match = HEADING_PATTERN.match(raw)
+        if match is None:
+            continue
+        headings.append((index, strip_heading_decoration(heading_text_from(match))))
+    return headings
+
+
+def check_bundle_section_position(lines: list[str]) -> list[Violation]:
+    headings = find_all_h2(lines)
+    install_index = find_heading_index(headings, INSTALL_HEADING_PATTERN)
+    if install_index is None:
+        return []
+
+    bundle_index = find_heading_index(headings, BUNDLE_HEADING_PATTERN)
+    if bundle_index is None:
+        install_line, _ = headings[install_index]
+        return [Violation(
+            line=install_line,
+            rule="MISSING_BUNDLE_SECTION",
+            detail="missing 'Bundle Installers' section after 'Install in One Line'",
+        )]
+
+    toc_index = find_heading_index(headings, TOC_HEADING_PATTERN)
+    bundle_line, _ = headings[bundle_index]
+
+    if bundle_index != install_index + 1:
+        return [Violation(
+            line=bundle_line,
+            rule="BUNDLE_SECTION_ORDER",
+            detail="'Bundle Installers' must appear immediately after 'Install in One Line'",
+        )]
+
+    if toc_index is not None and bundle_index > toc_index:
+        return [Violation(
+            line=bundle_line,
+            rule="BUNDLE_AFTER_TOC",
+            detail="'Bundle Installers' must appear before 'Table of Contents'",
+        )]
+
+    return []
+
+
+def find_heading_index(headings: list[tuple[int, str]], pattern: re.Pattern[str]) -> int | None:
+    for index, (_, heading) in enumerate(headings):
+        if pattern.search(heading):
+            return index
     return None
 
 
