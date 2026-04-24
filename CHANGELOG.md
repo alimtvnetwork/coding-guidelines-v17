@@ -213,7 +213,7 @@ Full per-file audit: [`rename-audit-v15-v16-to-v17.md`](rename-audit-v15-v16-to-
 - **`STALE-MODULE-PATH` forbidden-strings rule.** Guards against legacy module
   path references (`movie-cli-v1`) that should be `movie-cli-v2` per the
   global namespace standard.
-  - Pattern: `movie-cli-v1\\b`
+  - Pattern: `movie-cli-v1\b`
   - Allowlist: `spec/14-update/23-install-script-version-probe.md` (legitimate
     historical migration docs).
   - Added to `linter-scripts/forbidden-strings.toml` as the second `[[rule]]`

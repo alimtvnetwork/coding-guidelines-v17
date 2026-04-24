@@ -79,6 +79,14 @@ jobs:
       - name: Check forbidden strings (TOML-driven rename guards)
         run: python3 linter-scripts/check-forbidden-strings.py
 
+      - name: Forbidden-strings summary report (on failure)
+        # Emits a per-rule digest with the EXACT `sed` command that
+        # rewrites every stale match to its canonical replacement.
+        # Auto-appends to $GITHUB_STEP_SUMMARY so reviewers see it
+        # inline on the PR without opening logs.
+        if: failure()
+        run: python3 linter-scripts/forbidden-strings-summary.py --markdown
+
       - name: Check README install section (position + one-line fences)
         # Enforces:
         #   1. "Install in One Line" is the FIRST H2 after the platform badges.
