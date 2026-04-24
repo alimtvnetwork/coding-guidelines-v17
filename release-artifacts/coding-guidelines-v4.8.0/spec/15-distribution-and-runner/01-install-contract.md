@@ -16,18 +16,18 @@ Define exactly what `install.sh` / `install.ps1` (at the repo root) MUST do, wha
 These invocations MUST work without any prior setup other than `curl` (or `wget`) and `bash` (Linux/macOS) or PowerShell 7+ (Windows):
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v15/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v17/main/install.sh | bash
 ```
 
 ```powershell
-irm https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v15/main/install.ps1 | iex
+irm https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v17/main/install.ps1 | iex
 ```
 
 ---
 
 ## What gets installed (default)
 
-When invoked with no flags, both installers MUST pull the following four folders from `alimtvnetwork/coding-guidelines-v15@main` and unpack them into the **current working directory**:
+When invoked with no flags, both installers MUST pull the following four folders from `alimtvnetwork/coding-guidelines-v17@main` and unpack them into the **current working directory**:
 
 | Folder | Mandatory | Purpose |
 |--------|-----------|---------|

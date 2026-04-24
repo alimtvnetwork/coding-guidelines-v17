@@ -10,7 +10,7 @@
 
 Three sequential user requests, executed in one session:
 
-1. **Slug rebrand** — replaced `coding-guidelines-v14` → `coding-guidelines-v15` → `coding-guidelines-v16` across the repo. Final canonical slug: **`alimtvnetwork/coding-guidelines-v16`**.
+1. **Slug rebrand** — replaced `coding-guidelines-v14` → `coding-guidelines-v17` → `coding-guidelines-v17` across the repo. Final canonical slug: **`alimtvnetwork/coding-guidelines-v17`**.
 2. **InstallSection redesign** — collapsed the legacy "Install in One Line" list into a clean two-card **"Release & Migration"** section: Windows (PowerShell) + macOS/Linux (Bash). Removed the "skip latest probe" variants per direct user instruction ("this section is stupidity").
 3. **Batch task completion** — closed 11 outstanding plan/suggestion items in a single pass.
 
@@ -41,7 +41,7 @@ Three sequential user requests, executed in one session:
 ## Key decisions / user instructions
 
 1. 🔴 **Release & Migration UI shape is locked** — exactly two cards (Windows PS / Unix Bash), one-liner each, header above. **Never** restore "skip latest probe" variants. User words: *"I don't want to discuss this ever again."*
-2. 🔴 **Slug must be `alimtvnetwork/coding-guidelines-v16` everywhere** — when doing repo-wide rebrand, run a full `grep -rn` sweep across **all** non-`.release` files. The user explicitly called out that the previous replacement was incomplete: *"you didn't do all replace in the repo"*.
+2. 🔴 **Slug must be `alimtvnetwork/coding-guidelines-v17` everywhere** — when doing repo-wide rebrand, run a full `grep -rn` sweep across **all** non-`.release` files. The user explicitly called out that the previous replacement was incomplete: *"you didn't do all replace in the repo"*.
 3. **Version bump rule still applies** — every code change bumps at least minor.
 
 ## Pending after session

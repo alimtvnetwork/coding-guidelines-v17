@@ -161,20 +161,20 @@ Pin in **all three** distribution channels — never use `@latest` or
 ### GitHub composite Action
 
 ```yaml
-- uses: alimtvnetwork/coding-guidelines-v16/linters-cicd@v3.9.0
+- uses: alimtvnetwork/coding-guidelines-v17/linters-cicd@v3.9.0
 ```
 
 Or pin to the **commit SHA** for maximum supply-chain hardening:
 
 ```yaml
-- uses: alimtvnetwork/coding-guidelines-v16/linters-cicd@a3c91f2b8d4e5f6789012345678901234567890a
+- uses: alimtvnetwork/coding-guidelines-v17/linters-cicd@a3c91f2b8d4e5f6789012345678901234567890a
 ```
 
 ### `install.sh` one-liner
 
 ```bash
 LINTERS_VERSION=v3.9.0 \
-  curl -fsSL https://github.com/alimtvnetwork/coding-guidelines-v16/releases/download/v3.9.0/install.sh \
+  curl -fsSL https://github.com/alimtvnetwork/coding-guidelines-v17/releases/download/v3.9.0/install.sh \
   | bash
 ```
 
@@ -186,7 +186,7 @@ checksum embedded in the release notes — see
 
 ```bash
 VERSION=v3.9.0
-curl -fsSLO "https://github.com/alimtvnetwork/coding-guidelines-v16/releases/download/${VERSION}/coding-guidelines-linters-${VERSION}.zip"
+curl -fsSLO "https://github.com/alimtvnetwork/coding-guidelines-v17/releases/download/${VERSION}/coding-guidelines-linters-${VERSION}.zip"
 unzip -q "coding-guidelines-linters-${VERSION}.zip"
 ```
 

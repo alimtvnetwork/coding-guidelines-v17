@@ -46,7 +46,7 @@ function htmlBadge({ alt, src, href }) {
 }
 
 function buildBadges(s) {
-  const repo = "alimtvnetwork/coding-guidelines-v16";
+  const repo = "alimtvnetwork/coding-guidelines-v17";
   // shields.io uses `--` to render a literal dash in the value segment.
   const escDash = (v) => String(v).replace(/-/g, "--");
   const enc = (v) => encodeURIComponent(escDash(v));
@@ -62,7 +62,7 @@ function buildBadges(s) {
 }
 
 function buildPlatformBadges() {
-  const repo = "alimtvnetwork/coding-guidelines-v16";
+  const repo = "alimtvnetwork/coding-guidelines-v17";
   const health = loadHealth();
   const healthLabel = health.overallScore != null
     ? `${health.overallScore}%2F100%20(${health.grade})`

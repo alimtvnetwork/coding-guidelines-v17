@@ -20,9 +20,9 @@
 # --- Rule: stale repo slug (pre-renumber references) ---
 [[rule]]
 id = "STALE-REPO-SLUG"
-description = "Pre-renumber repo slug (coding-guidelines-v1..v14). Current canonical slug is coding-guidelines-v15."
+description = "Pre-renumber repo slug (coding-guidelines-v1..v14). Current canonical slug is coding-guidelines-v17."
 pattern = 'coding-guidelines-v(1[0-4]|[1-9])\b'
-fix_hint = "grep -rlE '$PATTERN' . | xargs sed -i 's|coding-guidelines-v14|coding-guidelines-v15|g'"
+fix_hint = "grep -rlE '$PATTERN' . | xargs sed -i 's|coding-guidelines-v14|coding-guidelines-v17|g'"
 exclude_dirs = ["release-artifacts"]
 exclude_files = ["forbidden-strings.toml", "check-forbidden-strings.py"]
 allowlist = [

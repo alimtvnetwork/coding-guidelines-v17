@@ -42,7 +42,7 @@ setup step:
 - uses: actions/setup-python@v5
   with:
     python-version: '3.11'
-- uses: alimtvnetwork/coding-guidelines-v16/linters-cicd@v3.11.0
+- uses: alimtvnetwork/coding-guidelines-v17/linters-cicd@v3.11.0
 ```
 
 ### Fix — self-hosted runners

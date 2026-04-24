@@ -7,7 +7,7 @@ pipeline {
         stage('Install linter pack') {
             steps {
                 sh 'apt-get update && apt-get install -y --no-install-recommends curl unzip'
-                sh 'curl -fsSL https://github.com/alimtvnetwork/coding-guidelines-v16/releases/latest/download/install.sh | bash'
+                sh 'curl -fsSL https://github.com/alimtvnetwork/coding-guidelines-v17/releases/latest/download/install.sh | bash'
             }
         }
         stage('Run coding-guidelines') {

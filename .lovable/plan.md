@@ -21,7 +21,7 @@
 - **B5** Effective-Score waiver section added to `spec/health-dashboard.md`.
 - **12** `spec/04-database-conventions/02-schema-design.md` §6 pinned to naming v3.5.0.
 - **UI** `src/components/landing/InstallSection.tsx` — collapsed legacy install list to **two** Release & Migration cards (Windows PowerShell, macOS/Linux Bash). Removed all "skip latest probe" variants per user lock-in.
-- **Rebrand** `release-artifacts/release-install.{ps1,sh}` → `alimtvnetwork/coding-guidelines-v16`.
+- **Rebrand** `release-artifacts/release-install.{ps1,sh}` → `alimtvnetwork/coding-guidelines-v17`.
 - **Bumps** `package.json` 4.21.0 → 4.24.0; `linters-cicd/VERSION` 3.20.0 → 3.22.0.
 
 ### Verification
@@ -31,7 +31,7 @@
 
 ### User locks (do not regress)
 1. Release & Migration UI: exactly two cards, no skip-probe variants. *"I don't want to discuss this ever again."*
-2. Canonical slug `alimtvnetwork/coding-guidelines-v16` everywhere — full `grep -rn` sweep after every rebrand. *"you didn't do all replace in the repo"* — never assume partial coverage is enough.
+2. Canonical slug `alimtvnetwork/coding-guidelines-v17` everywhere — full `grep -rn` sweep after every rebrand. *"you didn't do all replace in the repo"* — never assume partial coverage is enough.
 
 ---
 

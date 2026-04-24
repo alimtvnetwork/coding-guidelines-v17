@@ -7,7 +7,7 @@
 > **Status:** Authoritative digest — a blind AI can implement the install + runner surface from this file alone.
 
 This file consolidates everything a distributing/consuming agent needs in
-order to (a) ship a GitHub Release of `coding-guidelines-v16` and (b)
+order to (a) ship a GitHub Release of `coding-guidelines-v17` and (b)
 install + run it inside a target repository — without reading the source
 folder.
 
@@ -70,12 +70,12 @@ two diverge.
 
 ```bash
 # Linux / macOS
-curl -fsSL https://github.com/<org>/coding-guidelines-v16/releases/latest/download/install.sh | bash
+curl -fsSL https://github.com/<org>/coding-guidelines-v17/releases/latest/download/install.sh | bash
 ```
 
 ```powershell
 # Windows
-irm https://github.com/<org>/coding-guidelines-v16/releases/latest/download/install.ps1 | iex
+irm https://github.com/<org>/coding-guidelines-v17/releases/latest/download/install.ps1 | iex
 ```
 
 ### §3.2 Behavior — both installers MUST
@@ -83,7 +83,7 @@ irm https://github.com/<org>/coding-guidelines-v16/releases/latest/download/inst
 1. **Detect** an existing install (presence of any folder in
    `install-config.json`'s `folders` list) and prompt before overwriting.
 2. **Download** the spec + linters tree via
-   `codeload.github.com/<org>/coding-guidelines-v16/zip/refs/heads/main`.
+   `codeload.github.com/<org>/coding-guidelines-v17/zip/refs/heads/main`.
 3. **Verify** every downloaded zip against `checksums.txt` (SHA-256).
    Mismatch → exit code `2`, no files written.
 4. **Extract** only the folders listed in `install-config.json` (default:
@@ -157,7 +157,7 @@ This list is **the contract**. It MUST stay in sync with §2's
   "folders": ["spec", "linters", "linter-scripts", "linters-cicd"],
   "source": {
     "owner": "<org>",
-    "repo": "coding-guidelines-v16",
+    "repo": "coding-guidelines-v17",
     "ref": "main"
   },
   "verify": {
@@ -196,8 +196,8 @@ Triggered on `push` of a tag matching `v[0-9]+.[0-9]+.[0-9]+`. Steps:
 Verify a downloaded installer before piping to a shell:
 
 ```bash
-curl -fsSLO https://github.com/<org>/coding-guidelines-v16/releases/latest/download/install.sh
-curl -fsSLO https://github.com/<org>/coding-guidelines-v16/releases/latest/download/checksums.txt
+curl -fsSLO https://github.com/<org>/coding-guidelines-v17/releases/latest/download/install.sh
+curl -fsSLO https://github.com/<org>/coding-guidelines-v17/releases/latest/download/checksums.txt
 sha256sum -c checksums.txt --ignore-missing
 bash install.sh
 ```

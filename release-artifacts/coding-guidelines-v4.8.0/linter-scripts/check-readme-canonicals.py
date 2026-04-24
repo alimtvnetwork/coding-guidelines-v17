@@ -7,7 +7,7 @@ link. Catches stale references after a major-version rename or domain change.
 Sources of truth (override with --owner / --slug / --cdn or env vars
 README_CANON_OWNER / README_CANON_SLUG / README_CANON_CDN):
   owner = alimtvnetwork
-  slug  = coding-guidelines-v15
+  slug  = coding-guidelines-v17
   cdn   = cdn.riseup.asia
 
 Exit codes:
@@ -28,7 +28,7 @@ EXIT_FAIL = 1
 EXIT_ERROR = 2
 
 DEFAULT_OWNER = "alimtvnetwork"
-DEFAULT_SLUG = "coding-guidelines-v15"
+DEFAULT_SLUG = "coding-guidelines-v17"
 DEFAULT_CDN = "cdn.riseup.asia"
 
 # Bad CDN variants we explicitly reject.

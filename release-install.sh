@@ -37,7 +37,7 @@ set -euo pipefail
 # release asset. Unbaked checkouts keep the placeholder verbatim.
 BAKED_VERSION="__VERSION_PLACEHOLDER__"
 
-REPO="alimtvnetwork/coding-guidelines-v16"
+REPO="alimtvnetwork/coding-guidelines-v17"
 SEMVER_RE='^v?[0-9]+\.[0-9]+\.[0-9]+(-[A-Za-z0-9.]+)?$'
 
 # ── Colors / output ───────────────────────────────────────────────

@@ -42,7 +42,7 @@ EXPECTED_TOKENS: list[tuple[str, str]] = [
     ("Notes/Comments rule",        "Notes"),
     ("Spec-First workflow",        "Spec-First"),
     ("Issue-First workflow",       "Issue-First"),
-    ("Repo identity",              "alimtvnetwork/coding-guidelines-v16"),
+    ("Repo identity",              "alimtvnetwork/coding-guidelines-v17"),
     ("Axios pin: safe",            "1.14.0"),
     ("Axios pin: blocked",         "1.14.1"),
 ]

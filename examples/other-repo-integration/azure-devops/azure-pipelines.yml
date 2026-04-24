@@ -30,7 +30,7 @@ steps:
 
   - bash: |
       set -euo pipefail
-      curl -fsSL https://github.com/alimtvnetwork/coding-guidelines-v16/releases/latest/download/install.sh | bash
+      curl -fsSL https://github.com/alimtvnetwork/coding-guidelines-v17/releases/latest/download/install.sh | bash
     displayName: "Install coding-guidelines linter pack"
 
   - bash: |

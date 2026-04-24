@@ -33,7 +33,7 @@ pipeline {
                     set -eu
                     apt-get update
                     apt-get install -y --no-install-recommends curl unzip
-                    curl -fsSL https://github.com/alimtvnetwork/coding-guidelines-v16/releases/latest/download/install.sh | bash
+                    curl -fsSL https://github.com/alimtvnetwork/coding-guidelines-v17/releases/latest/download/install.sh | bash
                 '''
             }
         }

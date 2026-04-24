@@ -13,7 +13,7 @@ from typing import Iterable, Literal
 
 
 SCHEMA_URL = "https://json.schemastore.org/sarif-2.1.0.json"
-HELP_BASE = "https://github.com/alimtvnetwork/coding-guidelines-v16/blob/main/spec/02-coding-guidelines"
+HELP_BASE = "https://github.com/alimtvnetwork/coding-guidelines-v17/blob/main/spec/02-coding-guidelines"
 
 Level = Literal["error", "warning", "note"]
 
@@ -64,7 +64,7 @@ class SarifRun:
                         "driver": {
                             "name": self.tool_name,
                             "version": self.tool_version,
-                            "informationUri": "https://github.com/alimtvnetwork/coding-guidelines-v16",
+                            "informationUri": "https://github.com/alimtvnetwork/coding-guidelines-v17",
                             "rules": [r.to_dict() for r in self.rules],
                         }
                     },

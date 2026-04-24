@@ -56,7 +56,7 @@ After the first pipeline run, confirm:
 Replace the install line:
 
 ```yaml
-    curl -fsSL https://github.com/alimtvnetwork/coding-guidelines-v16/releases/download/v3.79.0/install.sh | bash
+    curl -fsSL https://github.com/alimtvnetwork/coding-guidelines-v17/releases/download/v3.79.0/install.sh | bash
 ```
 
 ## Step 7 — Branch protection (optional)

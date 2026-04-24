@@ -55,26 +55,26 @@ Use this in air-gapped CI or when you want to pre-stage the archive locally and 
 
 ```powershell
 # default: main branch, auto-open
-irm https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v16/main/slides-install.ps1 | iex
+irm https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v17/main/slides-install.ps1 | iex
 
 # pinned version, do not auto-open
-& ([scriptblock]::Create((irm https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v16/main/slides-install.ps1))) -Version v3.66.0 -NoOpen
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v17/main/slides-install.ps1))) -Version v3.66.0 -NoOpen
 
 # offline — fails fast if download required
-& ([scriptblock]::Create((irm https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v16/main/slides-install.ps1))) -Offline
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v17/main/slides-install.ps1))) -Offline
 ```
 
 ### Bash (Linux/macOS)
 
 ```bash
 # default: main branch, auto-open
-curl -fsSL https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v16/main/slides-install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v17/main/slides-install.sh | bash
 
 # pinned version, do not auto-open
-curl -fsSL https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v16/main/slides-install.sh | bash -s -- --version v3.66.0 --no-open
+curl -fsSL https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v17/main/slides-install.sh | bash -s -- --version v3.66.0 --no-open
 
 # offline — fails fast if download required
-curl -fsSL https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v16/main/slides-install.sh | bash -s -- --offline
+curl -fsSL https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v17/main/slides-install.sh | bash -s -- --offline
 ```
 
 ## Exit codes
@@ -98,7 +98,7 @@ The installer uses a small, stable set of exit codes so you can branch on them i
 
 ```
 ❌ --offline set but main-branch tarball is required.
-   URL: https://codeload.github.com/alimtvnetwork/coding-guidelines-v16/tar.gz/refs/heads/main
+   URL: https://codeload.github.com/alimtvnetwork/coding-guidelines-v17/tar.gz/refs/heads/main
    Re-run without --offline (network access needed to fetch the bundle).
 ```
 
@@ -109,8 +109,8 @@ The installer uses a small, stable set of exit codes so you can branch on them i
 - Re-run **without** `--offline` to allow the download.
 - Or pre-stage the archive yourself and skip the installer:
   ```bash
-  curl -fsSL "https://codeload.github.com/alimtvnetwork/coding-guidelines-v16/tar.gz/refs/heads/main" -o repo.tar.gz
-  tar -xzf repo.tar.gz --strip-components=1 -C ./vendor "coding-guidelines-v16-main/slides-app" "coding-guidelines-v16-main/spec-slides"
+  curl -fsSL "https://codeload.github.com/alimtvnetwork/coding-guidelines-v17/tar.gz/refs/heads/main" -o repo.tar.gz
+  tar -xzf repo.tar.gz --strip-components=1 -C ./vendor "coding-guidelines-v17-main/slides-app" "coding-guidelines-v17-main/spec-slides"
   ```
 - For pinned-version offline installs, mirror the release archive to your internal artifact store and host it behind a URL the installer can reach.
 
@@ -134,7 +134,7 @@ or, if `--offline`:
 
 - Let the script fall back to `main` (default behavior) — usually the warning is enough.
 - Run **without** `--version` to use the live `main` branch unconditionally.
-- Confirm the version exists: `https://github.com/alimtvnetwork/coding-guidelines-v16/releases`.
+- Confirm the version exists: `https://github.com/alimtvnetwork/coding-guidelines-v17/releases`.
 - If you need that exact version, re-run the release workflow that builds and uploads `slides.tar.gz`.
 
 ### 3. Network / download failure (exit `1`)
@@ -283,7 +283,7 @@ jobs:
   install:
     runs-on: ubuntu-latest
     env:
-      SLIDES_INSTALLER_URL: https://github.com/alimtvnetwork/coding-guidelines-v16/releases/latest/download/slides-install.sh
+      SLIDES_INSTALLER_URL: https://github.com/alimtvnetwork/coding-guidelines-v17/releases/latest/download/slides-install.sh
       SLIDES_TARGET: ./vendor/slides
     steps:
       - uses: actions/checkout@v4

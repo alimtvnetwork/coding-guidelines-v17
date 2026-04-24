@@ -57,7 +57,7 @@ You should see, on the MR page:
 Replace the `install.sh` line with a tagged URL:
 
 ```yaml
-    - curl -fsSL https://github.com/alimtvnetwork/coding-guidelines-v16/releases/download/v3.79.0/install.sh | bash
+    - curl -fsSL https://github.com/alimtvnetwork/coding-guidelines-v17/releases/download/v3.79.0/install.sh | bash
 ```
 
 ---

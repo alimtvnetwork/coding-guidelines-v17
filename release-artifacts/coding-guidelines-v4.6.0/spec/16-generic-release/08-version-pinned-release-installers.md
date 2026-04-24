@@ -97,7 +97,7 @@ Each template file is plain text with exactly these placeholder tokens:
 | Token | Replaced With | Example |
 |-------|---------------|---------|
 | `__EMBEDDED_VERSION__` | The release tag, with leading `v` | `v3.11.0` |
-| `__REPO_SLUG__`        | `owner/repo` | `alimtvnetwork/coding-guidelines-v15` |
+| `__REPO_SLUG__`        | `owner/repo` | `alimtvnetwork/coding-guidelines-v17` |
 | `__BUILD_DATE_UTC__`   | ISO-8601 UTC timestamp | `2026-04-20T07:42:11Z` |
 | `__COMMIT_SHA__`       | Full 40-char commit SHA | `a1b2c3…` |
 

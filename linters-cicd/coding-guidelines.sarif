@@ -7,7 +7,7 @@
         "driver": {
           "name": "coding-guidelines-boolean-column-negative",
           "version": "1.0.0",
-          "informationUri": "https://github.com/alimtvnetwork/coding-guidelines-v16",
+          "informationUri": "https://github.com/alimtvnetwork/coding-guidelines-v17",
           "rules": [
             {
               "id": "BOOL-NEG-001",
@@ -15,7 +15,7 @@
               "shortDescription": {
                 "text": "Database boolean columns must not use Not/No prefixes (e.g. IsNotActive, HasNoLicense). Use the positive form or store one canonical state and derive the inverse in code."
               },
-              "helpUri": "https://github.com/alimtvnetwork/coding-guidelines-v16/blob/main/spec/02-coding-guidelines/../04-database-conventions/01-naming-conventions.md"
+              "helpUri": "https://github.com/alimtvnetwork/coding-guidelines-v17/blob/main/spec/02-coding-guidelines/../04-database-conventions/01-naming-conventions.md"
             }
           ]
         }
@@ -27,7 +27,7 @@
         "driver": {
           "name": "coding-guidelines-nested-if-go",
           "version": "1.0.0",
-          "informationUri": "https://github.com/alimtvnetwork/coding-guidelines-v16",
+          "informationUri": "https://github.com/alimtvnetwork/coding-guidelines-v17",
           "rules": [
             {
               "id": "CODE-RED-001",
@@ -35,7 +35,7 @@
               "shortDescription": {
                 "text": "Nested if statements are forbidden \u2014 flatten with guard clauses."
               },
-              "helpUri": "https://github.com/alimtvnetwork/coding-guidelines-v16/blob/main/spec/02-coding-guidelines/01-cross-language/04-code-style/00-overview.md"
+              "helpUri": "https://github.com/alimtvnetwork/coding-guidelines-v17/blob/main/spec/02-coding-guidelines/01-cross-language/04-code-style/00-overview.md"
             }
           ]
         }
@@ -47,7 +47,7 @@
         "driver": {
           "name": "coding-guidelines-nested-if-ts",
           "version": "1.0.0",
-          "informationUri": "https://github.com/alimtvnetwork/coding-guidelines-v16",
+          "informationUri": "https://github.com/alimtvnetwork/coding-guidelines-v17",
           "rules": [
             {
               "id": "CODE-RED-001",
@@ -55,7 +55,7 @@
               "shortDescription": {
                 "text": "Nested if statements are forbidden \u2014 flatten with guard clauses."
               },
-              "helpUri": "https://github.com/alimtvnetwork/coding-guidelines-v16/blob/main/spec/02-coding-guidelines/01-cross-language/04-code-style/00-overview.md"
+              "helpUri": "https://github.com/alimtvnetwork/coding-guidelines-v17/blob/main/spec/02-coding-guidelines/01-cross-language/04-code-style/00-overview.md"
             }
           ]
         }
@@ -67,7 +67,7 @@
         "driver": {
           "name": "coding-guidelines-boolean-naming-go",
           "version": "1.0.0",
-          "informationUri": "https://github.com/alimtvnetwork/coding-guidelines-v16",
+          "informationUri": "https://github.com/alimtvnetwork/coding-guidelines-v17",
           "rules": [
             {
               "id": "CODE-RED-002",
@@ -75,7 +75,7 @@
               "shortDescription": {
                 "text": "Boolean identifiers must start with Is, Has, Can, Should, Was, or Will."
               },
-              "helpUri": "https://github.com/alimtvnetwork/coding-guidelines-v16/blob/main/spec/02-coding-guidelines/01-cross-language/02-boolean-principles/00-overview.md"
+              "helpUri": "https://github.com/alimtvnetwork/coding-guidelines-v17/blob/main/spec/02-coding-guidelines/01-cross-language/02-boolean-principles/00-overview.md"
             }
           ]
         }
@@ -87,7 +87,7 @@
         "driver": {
           "name": "coding-guidelines-boolean-naming-ts",
           "version": "1.0.0",
-          "informationUri": "https://github.com/alimtvnetwork/coding-guidelines-v16",
+          "informationUri": "https://github.com/alimtvnetwork/coding-guidelines-v17",
           "rules": [
             {
               "id": "CODE-RED-002",
@@ -95,7 +95,7 @@
               "shortDescription": {
                 "text": "Boolean identifiers must start with is, has, can, should, was, or will."
               },
-              "helpUri": "https://github.com/alimtvnetwork/coding-guidelines-v16/blob/main/spec/02-coding-guidelines/01-cross-language/02-boolean-principles/00-overview.md"
+              "helpUri": "https://github.com/alimtvnetwork/coding-guidelines-v17/blob/main/spec/02-coding-guidelines/01-cross-language/02-boolean-principles/00-overview.md"
             }
           ]
         }
@@ -107,7 +107,7 @@
         "driver": {
           "name": "coding-guidelines-magic-strings-go",
           "version": "1.0.0",
-          "informationUri": "https://github.com/alimtvnetwork/coding-guidelines-v16",
+          "informationUri": "https://github.com/alimtvnetwork/coding-guidelines-v17",
           "rules": [
             {
               "id": "CODE-RED-003",
@@ -115,7 +115,7 @@
               "shortDescription": {
                 "text": "Repeated string literals must be promoted to a typed constant."
               },
-              "helpUri": "https://github.com/alimtvnetwork/coding-guidelines-v16/blob/main/spec/02-coding-guidelines/01-cross-language/04-code-style/00-overview.md"
+              "helpUri": "https://github.com/alimtvnetwork/coding-guidelines-v17/blob/main/spec/02-coding-guidelines/01-cross-language/04-code-style/00-overview.md"
             }
           ]
         }
@@ -127,7 +127,7 @@
         "driver": {
           "name": "coding-guidelines-magic-strings-ts",
           "version": "1.0.0",
-          "informationUri": "https://github.com/alimtvnetwork/coding-guidelines-v16",
+          "informationUri": "https://github.com/alimtvnetwork/coding-guidelines-v17",
           "rules": [
             {
               "id": "CODE-RED-003",
@@ -135,7 +135,7 @@
               "shortDescription": {
                 "text": "Repeated string literals must be promoted to a typed constant."
               },
-              "helpUri": "https://github.com/alimtvnetwork/coding-guidelines-v16/blob/main/spec/02-coding-guidelines/01-cross-language/04-code-style/00-overview.md"
+              "helpUri": "https://github.com/alimtvnetwork/coding-guidelines-v17/blob/main/spec/02-coding-guidelines/01-cross-language/04-code-style/00-overview.md"
             }
           ]
         }
@@ -147,7 +147,7 @@
         "driver": {
           "name": "coding-guidelines-function-length-go",
           "version": "1.0.0",
-          "informationUri": "https://github.com/alimtvnetwork/coding-guidelines-v16",
+          "informationUri": "https://github.com/alimtvnetwork/coding-guidelines-v17",
           "rules": [
             {
               "id": "CODE-RED-004",
@@ -155,7 +155,7 @@
               "shortDescription": {
                 "text": "Functions must be 8\u201315 effective lines (excluding blanks/comments)."
               },
-              "helpUri": "https://github.com/alimtvnetwork/coding-guidelines-v16/blob/main/spec/02-coding-guidelines/01-cross-language/04-code-style/00-overview.md"
+              "helpUri": "https://github.com/alimtvnetwork/coding-guidelines-v17/blob/main/spec/02-coding-guidelines/01-cross-language/04-code-style/00-overview.md"
             }
           ]
         }
@@ -167,7 +167,7 @@
         "driver": {
           "name": "coding-guidelines-function-length-ts",
           "version": "1.0.0",
-          "informationUri": "https://github.com/alimtvnetwork/coding-guidelines-v16",
+          "informationUri": "https://github.com/alimtvnetwork/coding-guidelines-v17",
           "rules": [
             {
               "id": "CODE-RED-004",
@@ -175,7 +175,7 @@
               "shortDescription": {
                 "text": "Functions must be 8\u201315 effective lines (excluding blanks/comments)."
               },
-              "helpUri": "https://github.com/alimtvnetwork/coding-guidelines-v16/blob/main/spec/02-coding-guidelines/01-cross-language/04-code-style/00-overview.md"
+              "helpUri": "https://github.com/alimtvnetwork/coding-guidelines-v17/blob/main/spec/02-coding-guidelines/01-cross-language/04-code-style/00-overview.md"
             }
           ]
         }
@@ -187,7 +187,7 @@
         "driver": {
           "name": "coding-guidelines-file-length",
           "version": "1.0.0",
-          "informationUri": "https://github.com/alimtvnetwork/coding-guidelines-v16",
+          "informationUri": "https://github.com/alimtvnetwork/coding-guidelines-v17",
           "rules": [
             {
               "id": "CODE-RED-006",
@@ -195,7 +195,7 @@
               "shortDescription": {
                 "text": "Source files must not exceed 300 lines."
               },
-              "helpUri": "https://github.com/alimtvnetwork/coding-guidelines-v16/blob/main/spec/02-coding-guidelines/01-cross-language/04-code-style/00-overview.md"
+              "helpUri": "https://github.com/alimtvnetwork/coding-guidelines-v17/blob/main/spec/02-coding-guidelines/01-cross-language/04-code-style/00-overview.md"
             }
           ]
         }
@@ -207,7 +207,7 @@
         "driver": {
           "name": "coding-guidelines-positive-conditions-go",
           "version": "1.0.0",
-          "informationUri": "https://github.com/alimtvnetwork/coding-guidelines-v16",
+          "informationUri": "https://github.com/alimtvnetwork/coding-guidelines-v17",
           "rules": [
             {
               "id": "CODE-RED-008",
@@ -215,7 +215,7 @@
               "shortDescription": {
                 "text": "`if` conditions must be positive \u2014 no `!`, no `!=`."
               },
-              "helpUri": "https://github.com/alimtvnetwork/coding-guidelines-v16/blob/main/spec/02-coding-guidelines/01-cross-language/12-no-negatives.md"
+              "helpUri": "https://github.com/alimtvnetwork/coding-guidelines-v17/blob/main/spec/02-coding-guidelines/01-cross-language/12-no-negatives.md"
             }
           ]
         }
@@ -227,7 +227,7 @@
         "driver": {
           "name": "coding-guidelines-positive-conditions-ts",
           "version": "1.0.0",
-          "informationUri": "https://github.com/alimtvnetwork/coding-guidelines-v16",
+          "informationUri": "https://github.com/alimtvnetwork/coding-guidelines-v17",
           "rules": [
             {
               "id": "CODE-RED-008",
@@ -235,7 +235,7 @@
               "shortDescription": {
                 "text": "`if` conditions must be positive \u2014 no `!`, no `!=`, no `!==`."
               },
-              "helpUri": "https://github.com/alimtvnetwork/coding-guidelines-v16/blob/main/spec/02-coding-guidelines/01-cross-language/12-no-negatives.md"
+              "helpUri": "https://github.com/alimtvnetwork/coding-guidelines-v17/blob/main/spec/02-coding-guidelines/01-cross-language/12-no-negatives.md"
             }
           ]
         }
@@ -247,7 +247,7 @@
         "driver": {
           "name": "coding-guidelines-free-text-columns",
           "version": "1.1.0",
-          "informationUri": "https://github.com/alimtvnetwork/coding-guidelines-v16",
+          "informationUri": "https://github.com/alimtvnetwork/coding-guidelines-v17",
           "rules": [
             {
               "id": "DB-FREETEXT-001",
@@ -255,7 +255,7 @@
               "shortDescription": {
                 "text": "Entity/reference tables must declare 'Description TEXT NULL'; transactional tables must declare both 'Notes TEXT NULL' and 'Comments TEXT NULL'. Presence check only \u2014 for full Rule 12 (NOT NULL / DEFAULT) enforcement use MISSING-DESC-001."
               },
-              "helpUri": "https://github.com/alimtvnetwork/coding-guidelines-v16/blob/main/spec/02-coding-guidelines/../04-database-conventions/02-schema-design.md"
+              "helpUri": "https://github.com/alimtvnetwork/coding-guidelines-v17/blob/main/spec/02-coding-guidelines/../04-database-conventions/02-schema-design.md"
             }
           ]
         }
@@ -267,7 +267,7 @@
         "driver": {
           "name": "coding-guidelines-missing-desc",
           "version": "1.2.0",
-          "informationUri": "https://github.com/alimtvnetwork/coding-guidelines-v16",
+          "informationUri": "https://github.com/alimtvnetwork/coding-guidelines-v17",
           "rules": [
             {
               "id": "MISSING-DESC-001",
@@ -275,7 +275,7 @@
               "shortDescription": {
                 "text": "Entity tables must declare 'Description TEXT NULL'; transactional tables must declare both 'Notes TEXT NULL' and 'Comments TEXT NULL'; and none of these reserved columns may be NOT NULL or carry a DEFAULT (Rules 10/11/12, schema-design \u00a76). Honours -- linter-waive: MISSING-DESC-001 reason=\"...\" comments."
               },
-              "helpUri": "https://github.com/alimtvnetwork/coding-guidelines-v16/blob/main/spec/02-coding-guidelines/../04-database-conventions/02-schema-design.md"
+              "helpUri": "https://github.com/alimtvnetwork/coding-guidelines-v17/blob/main/spec/02-coding-guidelines/../04-database-conventions/02-schema-design.md"
             }
           ]
         }
@@ -287,7 +287,7 @@
         "driver": {
           "name": "coding-guidelines-no-else-after-return-go",
           "version": "1.0.0",
-          "informationUri": "https://github.com/alimtvnetwork/coding-guidelines-v16",
+          "informationUri": "https://github.com/alimtvnetwork/coding-guidelines-v17",
           "rules": [
             {
               "id": "STYLE-002",
@@ -295,7 +295,7 @@
               "shortDescription": {
                 "text": "Avoid `else` after `return` / `throw` / `break` / `continue`."
               },
-              "helpUri": "https://github.com/alimtvnetwork/coding-guidelines-v16/blob/main/spec/02-coding-guidelines/01-cross-language/04-code-style/00-overview.md"
+              "helpUri": "https://github.com/alimtvnetwork/coding-guidelines-v17/blob/main/spec/02-coding-guidelines/01-cross-language/04-code-style/00-overview.md"
             }
           ]
         }
@@ -307,7 +307,7 @@
         "driver": {
           "name": "coding-guidelines-no-else-after-return-ts",
           "version": "1.0.0",
-          "informationUri": "https://github.com/alimtvnetwork/coding-guidelines-v16",
+          "informationUri": "https://github.com/alimtvnetwork/coding-guidelines-v17",
           "rules": [
             {
               "id": "STYLE-002",
@@ -315,7 +315,7 @@
               "shortDescription": {
                 "text": "Avoid `else` after `return` / `throw` / `break` / `continue`."
               },
-              "helpUri": "https://github.com/alimtvnetwork/coding-guidelines-v16/blob/main/spec/02-coding-guidelines/01-cross-language/04-code-style/00-overview.md"
+              "helpUri": "https://github.com/alimtvnetwork/coding-guidelines-v17/blob/main/spec/02-coding-guidelines/01-cross-language/04-code-style/00-overview.md"
             }
           ]
         }

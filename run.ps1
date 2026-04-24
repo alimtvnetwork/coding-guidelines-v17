@@ -32,7 +32,7 @@ $ErrorActionPreference = "Stop"
 
 function Show-Help {
     Write-Host ""
-    Write-Host "  coding-guidelines-v16 — root runner" -ForegroundColor Cyan
+    Write-Host "  coding-guidelines-v17 — root runner" -ForegroundColor Cyan
     Write-Host ""
     Write-Host "  Usage: .\run.ps1 [<command>] [<flags>]"
     Write-Host ""

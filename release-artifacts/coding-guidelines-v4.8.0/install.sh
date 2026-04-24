@@ -4,7 +4,7 @@
 #
 # Quick start (defaults from install-config.json):
 #   ./install.sh
-#   curl -fsSL https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v15/main/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v17/main/install.sh | bash
 #
 # Power-user flags:
 # Power-user flags:
@@ -207,7 +207,7 @@ if [[ -f "$CONFIG_FILE" ]]; then
   read_config "$CONFIG_FILE"
 fi
 
-REPO="${REPO:-alimtvnetwork/coding-guidelines-v15}"
+REPO="${REPO:-alimtvnetwork/coding-guidelines-v17}"
 BRANCH="${BRANCH:-main}"
 DEST="${DEST:-$(pwd)}"
 [[ ${#FOLDERS[@]} -eq 0 ]] && FOLDERS=("spec" "linters" "linter-scripts")

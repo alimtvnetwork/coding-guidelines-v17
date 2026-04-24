@@ -27,7 +27,7 @@ STYLE_099_RULE = {
     "id": "STYLE-099",
     "name": "SuppressionWithoutReason",
     "shortDescription": {"text": "codeguidelines:disable= comment is missing a reason after the em dash"},
-    "helpUri": "https://github.com/alimtvnetwork/coding-guidelines-v16/blob/main/spec/02-coding-guidelines/06-cicd-integration/98-faq.md",
+    "helpUri": "https://github.com/alimtvnetwork/coding-guidelines-v17/blob/main/spec/02-coding-guidelines/06-cicd-integration/98-faq.md",
 }
 
 
@@ -151,7 +151,7 @@ def _ensure_style_099_run(doc: dict) -> dict:
             "driver": {
                 "name": "coding-guidelines-style-099",
                 "version": _read_version(),
-                "informationUri": "https://github.com/alimtvnetwork/coding-guidelines-v16",
+                "informationUri": "https://github.com/alimtvnetwork/coding-guidelines-v17",
                 "rules": [STYLE_099_RULE],
             }
         },

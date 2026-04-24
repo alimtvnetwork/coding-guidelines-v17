@@ -21,9 +21,9 @@ type: constraint
 ```bash
 # One-shot installers (no clone required)
 #   PowerShell:
-iwr https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v16/main/install.ps1 | iex
+iwr https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v17/main/install.ps1 | iex
 #   Bash:
-curl -fsSL https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v16/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v17/main/install.sh | bash
 ```
 ````
 
@@ -35,13 +35,13 @@ Reasons it is forbidden: comments inside the block, two platforms in one block, 
 ### 🪟 Windows · PowerShell
 
 ```powershell
-irm https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v15/main/install.ps1 | iex
+irm https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v17/main/install.ps1 | iex
 ```
 
 ### 🐧 macOS · Linux · Bash
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v15/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v17/main/install.sh | bash
 ```
 ````
 

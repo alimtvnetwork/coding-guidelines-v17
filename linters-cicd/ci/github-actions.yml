@@ -17,7 +17,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Run coding-guidelines linters
-        uses: alimtvnetwork/coding-guidelines-v16/linters-cicd@v3.9.0
+        uses: alimtvnetwork/coding-guidelines-v17/linters-cicd@v3.9.0
         with:
           path: .
           languages: go,typescript        # remove to auto-detect

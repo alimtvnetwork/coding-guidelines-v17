@@ -29,7 +29,7 @@ Not shipped as templates. Users wire them themselves using the contract:
 
 ```bash
 # 1. Install
-curl -fsSL https://github.com/alimtvnetwork/coding-guidelines-v16/releases/latest/download/install.sh | bash
+curl -fsSL https://github.com/alimtvnetwork/coding-guidelines-v17/releases/latest/download/install.sh | bash
 
 # 2. Run
 ./linters-cicd/run-all.sh --path . --format sarif --output coding-guidelines.sarif
@@ -42,7 +42,7 @@ curl -fsSL https://github.com/alimtvnetwork/coding-guidelines-v16/releases/lates
 ## GitHub composite Action — usage
 
 ```yaml
-- uses: alimtvnetwork/coding-guidelines-v16/linters-cicd@v3.9.0
+- uses: alimtvnetwork/coding-guidelines-v17/linters-cicd@v3.9.0
   with:
     path: .
     languages: go,typescript     # optional, default: auto-detect

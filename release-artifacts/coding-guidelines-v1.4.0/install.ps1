@@ -10,9 +10,9 @@
 
 .EXAMPLE
     .\install.ps1
-    .\install.ps1 -Repo "alimtvnetwork/coding-guidelines-v15" -Branch "dev"
+    .\install.ps1 -Repo "alimtvnetwork/coding-guidelines-v17" -Branch "dev"
     .\install.ps1 -ConfigFile "my-config.json"
-    irm https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v15/main/install.ps1 | iex
+    irm https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v17/main/install.ps1 | iex
 #>
 
 param(
@@ -59,7 +59,7 @@ else {
 
 # Apply config values (CLI params take priority)
 if ([string]::IsNullOrEmpty($Repo)) {
-    $Repo = if ($config -and $config.repo) { $config.repo } else { "alimtvnetwork/coding-guidelines-v15" }
+    $Repo = if ($config -and $config.repo) { $config.repo } else { "alimtvnetwork/coding-guidelines-v17" }
 }
 
 if ([string]::IsNullOrEmpty($Branch)) {

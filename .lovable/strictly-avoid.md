@@ -13,7 +13,7 @@
 
 - **Never create `.lovable/memories/`** — only `.lovable/memory/` exists. Causes confusion, splits files, breaks indexes.
 - **Never create per-task folders under `.lovable/`** like `completed-tasks/`, `pending-tasks/`, or a `suggestions/` directory — plans and suggestions each live in **one file** (`plan.md`, `suggestions.md`) with a `## Completed` / `## Implemented` section. See `.lovable/memory/avoid/01-avoid-per-task-folders.md`.
-- **Never use `v1` namespace** — the project repo is `alimtvnetwork/coding-guidelines-v15`. Any `v1` reference is a bug.
+- **Never use `v1` namespace** — the project repo is `alimtvnetwork/coding-guidelines-v17`. Any `v1` reference is a bug.
 - **Never touch the `.release` folder** — managed externally.
 - **Never sync** `01-app`, `02-app-issues`, `03-general`, `03-tasks`, or `12-consolidated-guidelines` from upstream sibling repos. All maintained locally.
 

@@ -240,12 +240,12 @@ jobs:
 
             **Windows (PowerShell)**
             ```powershell
-            irm https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v16/main/install.ps1 | iex
+            irm https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v17/main/install.ps1 | iex
             ```
 
             **Linux / macOS**
             ```bash
-            curl -fsSL https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v16/main/install.sh | bash
+            curl -fsSL https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v17/main/install.sh | bash
             ```
 
             ## Slide Deck
@@ -257,12 +257,12 @@ jobs:
 
             GitHub composite Action one-liner:
             ```yaml
-            - uses: alimtvnetwork/coding-guidelines-v16/linters-cicd@${{ steps.version.outputs.version }}
+            - uses: alimtvnetwork/coding-guidelines-v17/linters-cicd@${{ steps.version.outputs.version }}
               with: { path: . }
             ```
             Any other CI:
             ```bash
-            curl -fsSL https://github.com/alimtvnetwork/coding-guidelines-v16/releases/download/${{ steps.version.outputs.version }}/linters-install.sh | bash
+            curl -fsSL https://github.com/alimtvnetwork/coding-guidelines-v17/releases/download/${{ steps.version.outputs.version }}/linters-install.sh | bash
             bash ./linters-cicd/run-all.sh --path .
             ```
 
@@ -284,11 +284,11 @@ jobs:
 
             **Bash example (error-manage):**
             ```bash
-            curl -fsSL https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v16/main/error-manage-install.sh | bash
+            curl -fsSL https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v17/main/error-manage-install.sh | bash
             ```
             **PowerShell example (splitdb):**
             ```powershell
-            irm https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v16/main/splitdb-install.ps1 | iex
+            irm https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v17/main/splitdb-install.ps1 | iex
             ```
             Offline zips are also published per bundle:
             `coding-guidelines-<bundle>-${{ steps.version.outputs.version }}.zip`.

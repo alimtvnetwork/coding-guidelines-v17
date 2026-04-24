@@ -12,7 +12,7 @@ this repository's coding guidelines. Drop into any pipeline with one line.
 ### GitHub Actions (one-liner)
 
 ```yaml
-- uses: alimtvnetwork/coding-guidelines-v16/linters-cicd@v3.9.0
+- uses: alimtvnetwork/coding-guidelines-v17/linters-cicd@v3.9.0
   with:
     path: .
 ```
@@ -20,7 +20,7 @@ this repository's coding guidelines. Drop into any pipeline with one line.
 ### Any other CI
 
 ```bash
-curl -fsSL https://github.com/alimtvnetwork/coding-guidelines-v16/releases/latest/download/install.sh | bash
+curl -fsSL https://github.com/alimtvnetwork/coding-guidelines-v17/releases/latest/download/install.sh | bash
 bash ./linters-cicd/run-all.sh --path . --output coding-guidelines.sarif
 ```
 
@@ -61,7 +61,7 @@ in [`01-sarif-contract.md`](../spec/02-coding-guidelines/06-cicd-integration/01-
 
 | Channel | How |
 |---------|-----|
-| GitHub composite Action | `uses: alimtvnetwork/coding-guidelines-v16/linters-cicd@vX.Y.Z` |
+| GitHub composite Action | `uses: alimtvnetwork/coding-guidelines-v17/linters-cicd@vX.Y.Z` |
 | Versioned ZIP | Attached to every GitHub Release as `coding-guidelines-linters-vX.Y.Z.zip` |
 | `install.sh` one-liner | `curl ... | bash` (verifies SHA-256) |
 

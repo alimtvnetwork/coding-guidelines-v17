@@ -25,7 +25,7 @@
 | 34 | `01-naming-conventions.md` v3.4.0 — Rule 8 three-bucket table | 2026-04-19 |
 | 35 | `01-naming-conventions.md` v3.5.0 — Rules 10/11/12 (Description/Notes/Comments) | 2026-04-19 |
 | 36 | Restructured `.lovable/` to single-file convention; write-memory prompt v1.0.0 | 2026-04-19 |
-| 37 | Slug rebrand to `coding-guidelines-v16` (full repo sweep) | 2026-04-24 |
+| 37 | Slug rebrand to `coding-guidelines-v17` (full repo sweep) | 2026-04-24 |
 | 38 | Release & Migration UI rewrite (2 cards, no skip-probe variants) — locked | 2026-04-24 |
 | 39 | Batch close v4.24.0 — B10 `--strict`, B11 `--split-by severity`, B8 `--total-timeout`, B7 PHP plugins, B2 Playwright spec, 09+10 offline E2E, B6 consistency dates, B5 effective-score waiver, 12 schema §6 alignment | 2026-04-24 |
 

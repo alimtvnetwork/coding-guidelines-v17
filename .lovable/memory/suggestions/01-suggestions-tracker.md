@@ -20,7 +20,7 @@
 | 20 | Cross-link Rule 9 from boolean specs | 2026-04-19 |
 | 21 | Schema design §6 Mandatory Descriptive Columns | 2026-04-19 |
 | 22 | Restructure `.lovable/` to single-file convention | 2026-04-19 |
-| 23 | Slug rebrand to `coding-guidelines-v16` | 2026-04-24 |
+| 23 | Slug rebrand to `coding-guidelines-v17` | 2026-04-24 |
 | 24 | Release & Migration UI lock-in (2 cards) | 2026-04-24 |
 | 25 | Batch close v4.24.0 — 11 plan items | 2026-04-24 |
 

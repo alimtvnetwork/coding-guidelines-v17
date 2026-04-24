@@ -74,7 +74,7 @@ Keyboard shortcuts:
   P          Presenter view (next + timer)
   Home/End   First / last slide
 
-Built from the coding-guidelines-v16 repository.
+Built from the coding-guidelines-v17 repository.
 Author: Md. Alim Ul Karim — alimkarim.com · Riseup Asia LLC
 Bundled font: Ubuntu (Ubuntu Font License 1.0).
 `;

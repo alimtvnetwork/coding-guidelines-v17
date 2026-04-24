@@ -17,7 +17,7 @@ every repository in this family MUST follow so that:
 - A new contributor recognises the project family within 3 seconds.
 - An AI agent can locate canonical entry points without scanning the tree.
 - The visual identity (icon, badges, author block) is consistent across
-  all sibling repositories (e.g. `coding-guidelines-v15`, `gitmap-v6`).
+  all sibling repositories (e.g. `coding-guidelines-v17`, `gitmap-v6`).
 
 Any deviation from §3 is a release blocker. Use `linter-scripts/check-root-readme.py`
 (roadmap) or manual review against §9's checklist before tagging a release.

@@ -24,7 +24,7 @@ bash ./linters-cicd/run-all.sh \
 
 ```bash
 # Step 1 — install the pack into ./linters-cicd/
-curl -fsSL https://github.com/alimtvnetwork/coding-guidelines-v16/releases/latest/download/install.sh | bash
+curl -fsSL https://github.com/alimtvnetwork/coding-guidelines-v17/releases/latest/download/install.sh | bash
 
 # Step 2 — run it
 bash ./linters-cicd/run-all.sh \
@@ -36,7 +36,7 @@ bash ./linters-cicd/run-all.sh \
 ### c. Pin a version (recommended for production)
 
 ```bash
-curl -fsSL https://github.com/alimtvnetwork/coding-guidelines-v16/releases/download/v3.79.0/install.sh | bash
+curl -fsSL https://github.com/alimtvnetwork/coding-guidelines-v17/releases/download/v3.79.0/install.sh | bash
 ```
 
 ### d. Read the report in the terminal (no SARIF viewer needed)
@@ -88,7 +88,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Run coding-guidelines linters
-        uses: alimtvnetwork/coding-guidelines-v16/linters-cicd@v3.79.0
+        uses: alimtvnetwork/coding-guidelines-v17/linters-cicd@v3.79.0
         with:
           path: .
           languages: go,typescript     # remove this line to auto-detect
@@ -108,7 +108,7 @@ Hand-rolled equivalent (uses `install.sh` + the official SARIF upload):
 
 ```yaml
 - name: Install linter pack
-  run: curl -fsSL https://github.com/alimtvnetwork/coding-guidelines-v16/releases/download/v3.79.0/install.sh | bash
+  run: curl -fsSL https://github.com/alimtvnetwork/coding-guidelines-v17/releases/download/v3.79.0/install.sh | bash
 
 - name: Run checks
   run: bash ./linters-cicd/run-all.sh --path . --format sarif --output coding-guidelines.sarif

@@ -9,7 +9,7 @@
 
 ## Purpose
 
-This folder defines the **end-user distribution surface** of `coding-guidelines-v16`:
+This folder defines the **end-user distribution surface** of `coding-guidelines-v17`:
 
 1. The **install scripts** (`install.sh`, `install.ps1`) that pull spec + linters from a GitHub release into a user's repo.
 2. The **runner scripts** (`run.sh`, `run.ps1`) at the repo root that update the local clone, build artifacts, and dispatch sub-commands (e.g. `slides`).

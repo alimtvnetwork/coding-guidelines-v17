@@ -165,7 +165,7 @@ Implementations SHOULD offer flags to disable individual sources:
 The repo name MUST end in `-v{N}` where `{N}` is a positive integer:
 
 ```
-{repo-base}-v{N}        e.g.  coding-guidelines-v15
+{repo-base}-v{N}        e.g.  coding-guidelines-v17
                               movie-cli-v2
                               repo-v20
 ```

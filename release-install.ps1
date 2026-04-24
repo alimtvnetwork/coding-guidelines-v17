@@ -64,7 +64,7 @@ $ProgressPreference = "SilentlyContinue"
 # tag (e.g. v3.21.0) when uploading this file as a release asset.
 $BakedVersion = "__VERSION_PLACEHOLDER__"
 
-$Repo     = "alimtvnetwork/coding-guidelines-v16"
+$Repo     = "alimtvnetwork/coding-guidelines-v17"
 $SemverRe = '^v?\d+\.\d+\.\d+(-[A-Za-z0-9.]+)?$'
 
 $script:Indent = "    "

@@ -148,7 +148,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 - **`check-stale-repo-slug.sh` linter safeguard.** Scans repository for pre-renumber
   repo slug references (`coding-guidelines-v1` through `v14`). The current canonical
-  slug is `coding-guidelines-v16`; any older slug is a bug from incomplete bulk rename.
+  slug is `coding-guidelines-v17`; any older slug is a bug from incomplete bulk rename.
 - **Allowlist-driven filtering** via `linter-scripts/stale-repo-slug.allowlist` --
   permits legitimate historical references in changelogs, migration docs, and
   install-script version-probe specs (v5→v15 is the canonical worked example).
@@ -246,7 +246,7 @@ the canonical superset.
   - `run-all.sh` orchestrator with text + SARIF formats and proper exit codes
     (0 clean / 1 findings / 2 tool error).
   - **GitHub composite Action** at `linters-cicd/action.yml`:
-    `uses: alimtvnetwork/coding-guidelines-v16/linters-cicd@v3.9.0`.
+    `uses: alimtvnetwork/coding-guidelines-v17/linters-cicd@v3.9.0`.
   - **`install.sh` one-liner** with SHA-256 verification and `-d`/`-v`/`-n` flags.
   - Ready-to-paste CI templates for GitHub Actions, GitLab CI, Azure DevOps,
     Bitbucket Pipelines, Jenkins, plus a pre-commit hook.

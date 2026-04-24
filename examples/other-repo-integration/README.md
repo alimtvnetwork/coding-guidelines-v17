@@ -5,7 +5,7 @@
 > **Updated:** 2026-04-23
 
 This folder is a **copy-paste starter kit** for teams who want to add the
-`coding-guidelines-v16` linter pack to a repository that lives **outside**
+`coding-guidelines-v17` linter pack to a repository that lives **outside**
 this monorepo. Pick your CI platform, follow the numbered steps, commit
 the file, push.
 
@@ -33,7 +33,7 @@ All three platforms produce the **same SARIF 2.1.0 file**
 | Jenkins | [`jenkins/`](./jenkins/) | Warnings-NG plugin dashboard |
 
 GitHub Actions users do **not** need this kit — use the one-liner
-`uses: alimtvnetwork/coding-guidelines-v16/linters-cicd@v3.79.0` instead.
+`uses: alimtvnetwork/coding-guidelines-v17/linters-cicd@v3.79.0` instead.
 
 ---
 
@@ -43,7 +43,7 @@ Every platform does the same thing:
 
 ```bash
 # 1. INSTALL — downloads linters-cicd/ into the workspace
-curl -fsSL https://github.com/alimtvnetwork/coding-guidelines-v16/releases/latest/download/install.sh | bash
+curl -fsSL https://github.com/alimtvnetwork/coding-guidelines-v17/releases/latest/download/install.sh | bash
 
 # 2. RUN — emits SARIF, exits 1 on CODE RED
 bash ./linters-cicd/run-all.sh --path . --format sarif --output coding-guidelines.sarif
@@ -61,7 +61,7 @@ Everything below is just glue around those three lines.
 release never surprises a passing build:
 
 ```bash
-curl -fsSL https://github.com/alimtvnetwork/coding-guidelines-v16/releases/download/v3.79.0/install.sh | bash
+curl -fsSL https://github.com/alimtvnetwork/coding-guidelines-v17/releases/download/v3.79.0/install.sh | bash
 ```
 
 ---

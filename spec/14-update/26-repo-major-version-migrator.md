@@ -17,7 +17,7 @@
 
 ## Problem Statement
 
-When a major version is cut, the repo is renamed (e.g. `coding-guidelines-v16` → `coding-guidelines-v16`). Every URL, badge, install one-liner, `package.json` repo field, README link, and CI workflow that hardcodes the old name becomes stale. Manual replacement is error-prone and easy to miss in JSON, YAML, and markdown stamps.
+When a major version is cut, the repo is renamed (e.g. `coding-guidelines-v17` → `coding-guidelines-v17`). Every URL, badge, install one-liner, `package.json` repo field, README link, and CI workflow that hardcodes the old name becomes stale. Manual replacement is error-prone and easy to miss in JSON, YAML, and markdown stamps.
 
 The migrator is a one-shot CI/CD-runnable script that:
 
@@ -47,8 +47,8 @@ The migrator is a one-shot CI/CD-runnable script that:
 
 | Flag | Required | Purpose |
 |------|----------|---------|
-| `--from <slug>` | yes | Old repo slug, e.g. `alimtvnetwork/coding-guidelines-v16`. |
-| `--to <slug>` | yes | New repo slug, e.g. `alimtvnetwork/coding-guidelines-v16`. |
+| `--from <slug>` | yes | Old repo slug, e.g. `alimtvnetwork/coding-guidelines-v17`. |
+| `--to <slug>` | yes | New repo slug, e.g. `alimtvnetwork/coding-guidelines-v17`. |
 | `--new-version <semver>` | yes | New `package.json` version, e.g. `4.0.0`. Must be a major bump. |
 | `--dry-run` | no (default ON) | Print planned changes; write nothing. |
 | `--confirm` | no | Required to actually write files. Without this, dry-run wins. |
@@ -164,7 +164,7 @@ File: `.github/workflows/migrate-repo-version.yml`
 2. Running with `--from a/b --to a/c --new-version 4.0.0` and no `--confirm` prints the planned change set and exits 0 without modifying any file.
 3. Running with `--confirm` updates every in-scope file, bumps `package.json` version, runs all sync scripts, and exits 0.
 4. If `package.json` is at v3.x and `--new-version` is v3.62.0, exits 3 (not a major bump).
-5. If old slug appears inside a longer identifier (e.g. `coding-guidelines-v16-archive`), the script does NOT rewrite it and reports the collision.
+5. If old slug appears inside a longer identifier (e.g. `coding-guidelines-v17-archive`), the script does NOT rewrite it and reports the collision.
 6. If working tree is dirty at start, exits 7 before any read.
 7. After a successful `--confirm` run, `npm run lint:readme` and `npm run sync` both pass on the resulting tree.
 8. The new spec/14-update/26 file is referenced from `spec/14-update/00-overview.md` and `spec/14-update/readme.md`.

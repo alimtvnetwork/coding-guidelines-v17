@@ -61,7 +61,7 @@ The two new GIFs (`coding-guidelines-walkthrough.gif`, `install-flow.gif`) and t
 |---|---|---|
 | 17 | Add a `## For AI Agents` section right after the H1 summary listing the canonical entry points: `llm.md`, `bundles.json`, `spec/17-consolidated-guidelines/00-overview.md`, `.lovable/memory/index.md`. | 🔴 |
 | 18 | Publish a `bundles.schema.json`-validated table of contents so an AI can answer "which bundle do I need?" with a single fetch instead of crawling the whole repo. | 🟡 |
-| 19 | Add a one-line `# coding-guidelines-v16` topic to the GitHub repo metadata so cross-project AI search picks it up. (Repo-side, not file-side.) | 🟢 |
+| 19 | Add a one-line `# coding-guidelines-v17` topic to the GitHub repo metadata so cross-project AI search picks it up. (Repo-side, not file-side.) | 🟢 |
 
 ## Honesty & freshness
 

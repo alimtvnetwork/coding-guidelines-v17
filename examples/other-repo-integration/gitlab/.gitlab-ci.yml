@@ -18,7 +18,7 @@ coding-guidelines:
   image: python:3.11-slim
   before_script:
     - apt-get update && apt-get install -y --no-install-recommends curl unzip
-    - curl -fsSL https://github.com/alimtvnetwork/coding-guidelines-v16/releases/latest/download/install.sh | bash
+    - curl -fsSL https://github.com/alimtvnetwork/coding-guidelines-v17/releases/latest/download/install.sh | bash
   script:
     - bash ./linters-cicd/run-all.sh
         --path .

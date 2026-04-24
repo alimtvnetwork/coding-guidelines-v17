@@ -20,7 +20,7 @@
     .\install.ps1
     .\install.ps1 -Version v1.22.0 -Folders spec/14-update -Prompt
     .\install.ps1 -DryRun
-    irm https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v15/main/install.ps1 | iex
+    irm https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v17/main/install.ps1 | iex
 #>
 
 param(
@@ -158,7 +158,7 @@ if (Test-Path $ConfigFile) {
 }
 
 if ([string]::IsNullOrEmpty($Repo)) {
-    $Repo = if ($config -and $config.repo) { $config.repo } else { "alimtvnetwork/coding-guidelines-v15" }
+    $Repo = if ($config -and $config.repo) { $config.repo } else { "alimtvnetwork/coding-guidelines-v17" }
 }
 if ([string]::IsNullOrEmpty($Branch)) {
     $Branch = if ($config -and $config.branch) { $config.branch } else { "main" }

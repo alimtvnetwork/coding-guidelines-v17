@@ -17,7 +17,7 @@
 
 ## Problem Statement
 
-When a major version is cut, the repo is renamed (e.g. `coding-guidelines-v14` → `coding-guidelines-v15`). Every URL, badge, install one-liner, `package.json` repo field, README link, and CI workflow that hardcodes the old name becomes stale. Manual replacement is error-prone and easy to miss in JSON, YAML, and markdown stamps.
+When a major version is cut, the repo is renamed (e.g. `coding-guidelines-v14` → `coding-guidelines-v17`). Every URL, badge, install one-liner, `package.json` repo field, README link, and CI workflow that hardcodes the old name becomes stale. Manual replacement is error-prone and easy to miss in JSON, YAML, and markdown stamps.
 
 The migrator is a one-shot CI/CD-runnable script that:
 
@@ -48,7 +48,7 @@ The migrator is a one-shot CI/CD-runnable script that:
 | Flag | Required | Purpose |
 |------|----------|---------|
 | `--from <slug>` | yes | Old repo slug, e.g. `alimtvnetwork/coding-guidelines-v14`. |
-| `--to <slug>` | yes | New repo slug, e.g. `alimtvnetwork/coding-guidelines-v15`. |
+| `--to <slug>` | yes | New repo slug, e.g. `alimtvnetwork/coding-guidelines-v17`. |
 | `--new-version <semver>` | yes | New `package.json` version, e.g. `4.0.0`. Must be a major bump. |
 | `--dry-run` | no (default ON) | Print planned changes; write nothing. |
 | `--confirm` | no | Required to actually write files. Without this, dry-run wins. |

@@ -320,7 +320,7 @@ This section **mirrors** the operational rules stored in `.lovable/memory/index.
 |------|-------|
 | **Never** sync `01-app`, `02-app-issues`, `03-general`, `03-tasks`, or `12-consolidated-guidelines` from upstream sibling repos | All maintained locally |
 | **Skip** from spec audits: `21-app`, `22-app-issues`, `23-app-database`, `24-app-design-system-and-ui` are intentional stubs | Never write 97/99 files for them; never demote to `_drafts/`; exclude from corpus averages |
-| Repo identity: `alimtvnetwork/coding-guidelines-v16` | Install scripts live at repo root (`install.ps1` / `install.sh`) |
+| Repo identity: `alimtvnetwork/coding-guidelines-v17` | Install scripts live at repo root (`install.ps1` / `install.sh`) |
 
 ### X.3 Naming Rules
 

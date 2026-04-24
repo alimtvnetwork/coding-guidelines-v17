@@ -17,7 +17,7 @@ TIMEOUT_RULE = {
         "text": "A check exceeded its configured timeout and was terminated."
     },
     "helpUri": (
-        "https://github.com/alimtvnetwork/coding-guidelines-v16/blob/main/"
+        "https://github.com/alimtvnetwork/coding-guidelines-v17/blob/main/"
         "spec/02-coding-guidelines/06-cicd-integration/07-performance.md"
     ),
 }
@@ -45,7 +45,7 @@ def _build(rule_id: str, lang: str, seconds: str, version: str) -> dict:
                     "driver": {
                         "name": f"coding-guidelines-{rule_id.lower()}-{lang}",
                         "version": version,
-                        "informationUri": "https://github.com/alimtvnetwork/coding-guidelines-v16",
+                        "informationUri": "https://github.com/alimtvnetwork/coding-guidelines-v17",
                         "rules": [TIMEOUT_RULE],
                     }
                 },

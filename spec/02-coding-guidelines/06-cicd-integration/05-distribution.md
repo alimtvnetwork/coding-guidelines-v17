@@ -28,7 +28,7 @@ linters-cicd/
 Install one-liner (Linux / macOS):
 
 ```bash
-curl -fsSL https://github.com/alimtvnetwork/coding-guidelines-v16/releases/latest/download/install.sh | bash
+curl -fsSL https://github.com/alimtvnetwork/coding-guidelines-v17/releases/latest/download/install.sh | bash
 ```
 
 The installer:
@@ -51,7 +51,7 @@ Flags:
 `linters-cicd/action.yml` lets GitHub users skip the install entirely:
 
 ```yaml
-- uses: alimtvnetwork/coding-guidelines-v16/linters-cicd@v3.9.0
+- uses: alimtvnetwork/coding-guidelines-v17/linters-cicd@v3.9.0
 ```
 
 GitHub clones the repo at the specified ref and runs `action.yml`. Zero

@@ -22,13 +22,13 @@ Use the raw install scripts from this repository **after the repo is synced to G
 ### Bash (Linux / macOS)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v15/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v17/main/install.sh | bash
 ```
 
 ### PowerShell (Windows)
 
 ```powershell
-irm https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v15/main/install.ps1 | iex
+irm https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v17/main/install.ps1 | iex
 ```
 
 ### Local usage
@@ -45,11 +45,11 @@ chmod +x install.sh
 ### Override source repo or branch
 
 ```bash
-./install.sh --repo alimtvnetwork/coding-guidelines-v15 --branch develop
+./install.sh --repo alimtvnetwork/coding-guidelines-v17 --branch develop
 ```
 
 ```powershell
-.\install.ps1 -Repo "alimtvnetwork/coding-guidelines-v15" -Branch "develop"
+.\install.ps1 -Repo "alimtvnetwork/coding-guidelines-v17" -Branch "develop"
 ```
 
 ### Configuration (`install-config.json`)
@@ -58,7 +58,7 @@ The scripts read `install-config.json` to determine which repo, branch, and fold
 
 ```json
 {
-  "repo": "alimtvnetwork/coding-guidelines-v15",
+  "repo": "alimtvnetwork/coding-guidelines-v17",
   "branch": "main",
   "folders": [
     "spec",

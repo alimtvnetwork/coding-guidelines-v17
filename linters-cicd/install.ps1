@@ -6,7 +6,7 @@
     Conforms to: spec/14-update/27-generic-installer-behavior.md
 
     Example one-liner:
-      iwr -useb https://github.com/alimtvnetwork/coding-guidelines-v16/releases/latest/download/install.ps1 | iex
+      iwr -useb https://github.com/alimtvnetwork/coding-guidelines-v17/releases/latest/download/install.ps1 | iex
 
     Flags:
       -Dest <dir>         Install destination (default: ./linters-cicd)
@@ -78,7 +78,7 @@ if ($MyInvocation.UnboundArguments) {
 
 $ErrorActionPreference = 'Stop'
 
-$Repo = "alimtvnetwork/coding-guidelines-v16"
+$Repo = "alimtvnetwork/coding-guidelines-v17"
 $Verify = -not $NoVerify
 
 # Banner (spec §7)

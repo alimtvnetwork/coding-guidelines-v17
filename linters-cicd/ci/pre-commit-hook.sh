@@ -9,7 +9,7 @@ LINTERS_DIR="$REPO_ROOT/linters-cicd"
 
 if [ ! -d "$LINTERS_DIR" ]; then
     echo "linters-cicd/ not found — install via:" >&2
-    echo "  curl -fsSL https://github.com/alimtvnetwork/coding-guidelines-v16/releases/latest/download/install.sh | bash" >&2
+    echo "  curl -fsSL https://github.com/alimtvnetwork/coding-guidelines-v17/releases/latest/download/install.sh | bash" >&2
     exit 0
 fi
 

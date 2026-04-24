@@ -241,7 +241,7 @@ room). Every entry below specifies the **exact teaching point**, the
 - **File:** `slides/12-closing.tsx`
 - **Title:** "Apply one transformation per PR"
 - **Body:** Recap of the 10 transformations as a checklist. Footer with
-  `coding-guidelines-v16` repo link.
+  `coding-guidelines-v17` repo link.
 
 ## Topic-to-GIF mapping
 

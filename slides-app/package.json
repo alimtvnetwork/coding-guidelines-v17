@@ -3,7 +3,7 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "description": "Standalone training slide deck for the coding-guidelines-v16 review curriculum. Builds to a portable HTML/CSS/JS bundle (dist.zip) that runs offline by double-clicking index.html.",
+  "description": "Standalone training slide deck for the coding-guidelines-v17 review curriculum. Builds to a portable HTML/CSS/JS bundle (dist.zip) that runs offline by double-clicking index.html.",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
