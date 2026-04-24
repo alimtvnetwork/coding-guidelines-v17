@@ -1,7 +1,34 @@
 # Current Plan
 
-**Version:** 4.15.0
+**Version:** 4.16.0
 **Updated:** 2026-04-24
+
+---
+
+## v4.16.0 — BOOL-NEG-001 v2: Two-Tier Detection + Replacement Hints (Task #07)
+
+**Scope:** Extend BOOL-NEG-001 from a single-tier "Not/No" check to a two-tier scanner that also catches `Cannot*`/`Dis*`/`Un*` roots, and embed canonical-rename suggestions in every finding. Backed by the codegen inversion table for hint determinism.
+
+### Done
+- **#07**: New shared library `linters-cicd/checks/_lib/boolean_naming.py` — single source of truth for forbidden regex, suspect regex, allow-list, and hint generator. Imports the codegen `_FORWARD` table so linter ↔ codegen stay locked together by code, not just convention.
+- Tier 1 (error) — `Is/Has + Not/No + UpperCamel`. Same as v1; hints now generated.
+- Tier 2 (warning) — `Cannot*`, `(Is|Has)?Dis(abled|allowed|connected)*`, `(Is|Has)?Un[a-z]+...`. Allow-list (10 names) takes precedence in BOTH tiers.
+- Replacement hints (4 strategies, in priority order):
+  1. `IsNot*` / `HasNo*` → strip the negation (`IsNotActive` → `IsActive`)
+  2. Inversion table direct lookup (`IsInactive` → `IsActive`, `HasNoLicense` → `HasLicense`)
+  3. `Cannot*` → `Can*` (`CannotEdit` → `CanEdit`)
+  4. None when no safe rename exists (suppresses confusing "NotNot" fallbacks)
+- Refactored `sql.py` and `go.py` to consume the shared library. Both bumped to tool_version `2.0.0`. SARIF emit unchanged so all downstream consumers (run-all, GH Code Scanning) keep working.
+- Added Tier 2 walkers to Go scanner: `scan_struct_tags_v2`, `scan_embedded_sql_v2` (4-tuple return adding tier). v1 walkers preserved as filtered wrappers so the existing test suite + shim keep working without changes.
+- `boolean_column_negative_shim.py` now consumes the shared library directly (no more dependency on the SQL module's internals).
+- Flipped 2 boundary tests (`TestOutOfScope` → `TestSuspectTier`) in both SQL and Go suites to assert v2 contract: Cannot/DisabledFlag/UnreadStatus now produce exactly one suspect-tier warning; allow-listed `IsDisabled` stays clean.
+- New test file `test_boolean_naming_lib.py` — 17 tests across 7 suites covering Tier 1, Tier 2, allow-list precedence in both tiers, no-tier-overlap, all 4 hint strategies, format_message contract, and codegen lock-step assertion.
+
+### Verification
+- 69/69 unit tests pass (was 49 — +20 net from new lib tests + flipped boundary tests).
+- E2E SQL fixture (8-column table) produces exactly: 2 errors with hints (`IsNotActive`→`IsActive`, `HasNoLicense`→`HasLicense`), 3 warnings (`CannotEdit`→`CanEdit`, `DisabledFlag` no-hint, `UnreadCount` no-hint), and 0 findings for `IsDisabled` + `IsActive` (correct).
+- Codegen determinism harness still green — Rule 9 fixtures unchanged.
+- All 3 installer harnesses still green (153 assertions).
 
 ---
 
