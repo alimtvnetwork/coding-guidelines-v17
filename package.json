@@ -41,7 +41,9 @@
     "test:installer:bundles": "bash tests/installer/check-bundle-installers.sh",
     "test:release:bake": "bash tests/installer/check-release-bake.sh",
     "test:installer:root": "bash tests/installer/check-root-install-acceptance.sh",
-    "test:linters": "python3 linters-cicd/tests/run.py"
+    "test:linters": "python3 linters-cicd/tests/run.py",
+    "codegen:verify": "bash linters-cicd/codegen/scripts/verify-codegen-determinism.sh",
+    "codegen:regen": "bash linters-cicd/codegen/scripts/regen-codegen-fixtures.sh"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
