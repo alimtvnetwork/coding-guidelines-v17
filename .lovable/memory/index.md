@@ -1,61 +1,28 @@
-# Memory Index
-
-**Updated:** 2026-04-23 (session 2 — readme CODE-RED walkthrough)
+# Memory: index.md
+Updated: today
 
 # Project Memory
 
 ## Core
 - 🔴 CODE RED: Never swallow errors. Zero-nesting (no nested if). Max 2 operands. Positively named guard functions.
 - 🔴 CODE RED: Strict metrics: functions 8-15 lines, files < 300 lines, React components < 100 lines.
-- 🔴 NEVER sync 01-app, 02-app-issues, 03-general, 03-tasks, or 12-consolidated-guidelines from upstream sibling repos. All maintained locally.
-- 🔴 SKIP from spec audits: `21-app`, `22-app-issues`, `23-app-database`, `24-app-design-system-and-ui` are intentional stubs. Never write 97/99 files for them, never demote to `_drafts/`, exclude from corpus averages.
+- 🔴 README install commands: ONE line per command, NEVER `#` comments inside install code fences. Platform shown by header above the block. Install section comes FIRST after badges, before TOC. Match on-site `InstallSection.tsx` order (4 full-repo + 7 named bundles).
+- 🔴 NEVER sync 01-app, 02-app-issues, 03-general, 03-tasks, or 12-consolidated-guidelines from gitmap-v3. All maintained locally.
 - Naming: PascalCase for all internal IDs, DB, JSON, Types. Exceptions: Rust uses snake_case identifiers.
 - DB Schema: PascalCase naming. PKs are `{TableName}Id` (INTEGER PRIMARY KEY AUTOINCREMENT). No UUIDs.
-- DB Booleans: forbidden `Not`/`No` prefixes; Approved Inverses (`IsDisabled`, `IsInvalid`, `IsIncomplete`, `IsUnavailable`, `IsUnread`, `IsHidden`, `IsBroken`, `IsLocked`, `IsUnpublished`, `IsUnverified`) allowed. Inverses derived in code via Rule 9 codegen.
-- DB Descriptive columns: entity tables MUST have `Description TEXT NULL`; transactional tables MUST have `Notes TEXT NULL` and `Comments TEXT NULL`.
+- DB Schema Rules 10/11/12: Entity/ref tables need `Description TEXT NULL`; transactional need `Notes`+`Comments TEXT NULL`; all must be nullable, no DEFAULT. Join tables exempt.
 - Workflow: Spec-First (`spec/`) and Issue-First (`03-issues/`).
-- Repo: `alimtvnetwork/coding-guidelines-v15`. Install scripts live at repo root (`install.ps1` / `install.sh`).
-- `.lovable/` structure: single-file convention — `plan.md`, `suggestions.md`, `strictly-avoid.md` each hold their full history. Never create per-task folders.
+- Global Namespace: Always use `github.com/mahin/movie-cli-v2`. Any v1 reference is a bug.
+- Version sync: bump package.json → `node scripts/sync-version.mjs` → `node scripts/sync-spec-tree.mjs`.
 - Execution: Break complex requests into discrete tasks. Wait for "next" prompt to continue.
-- 🔴 INSTALLERS: Two modes only. PINNED (any `--version`/baked tag/`releases/download/<tag>/` URL) = exact tag, NO `releases/latest`, NO `main` fallback, NO cross-repo jump, 404→exit 3. IMPLICIT = latest release → V→V+20 parallel discovery → main (with ⚠️ warning). Spec: `spec/14-update/27-generic-installer-behavior.md`.
 
-## Memory Files
-
-### Workflow
-- [Plan Tracker](workflow/01-plan-tracker.md) — Mirrors `.lovable/plan.md`; chronological tracker of completed and pending tasks.
-
-### Suggestions
-- [Suggestions Tracker](suggestions/01-suggestions-tracker.md) — Mirrors `.lovable/suggestions.md`; tracks active and implemented suggestions.
-
-### Project
-- [Naming Compliance Issues](project/naming-compliance-issues.md)
-- [Phase 2 — Content Overlap Audit](project/phase2-content-overlap-audit.md)
-- [Phase 3 — Consolidated Structure Design](project/phase3-consolidated-structure-design.md)
-- [v2.2 Error Spec Changes](project/v2.2-error-spec-changes.md)
-- [README Bundle Installers + GIFs (v3.55.0)](project/03-readme-bundle-installers.md)
-
-### Features
-- [Visual Rendering System](features/visual-rendering-system.md)
-
-### Issues
-- [Nested Code Fence Rendering](issues/nested-code-fence-rendering.md)
-
-### Done
-- [Coding Guidelines Consolidation Plan](done/coding-guidelines-consolidation-plan.md)
-
-### Sessions
-- [2026-04-19 — Performance + Boolean Naming + Schema Descriptive Columns](sessions/2026-04-19-perf-boolean-naming-schema.md)
-- [2026-04-19 — Distribution & Runner Spec + Slides Sub-Command](sessions/2026-04-19-distribution-runner-slides.md)
-- [2026-04-23 — Quickstart + Zero CI/CD Violations](sessions/2026-04-23-quickstart-and-zero-violations.md)
-- [2026-04-23 — README CODE-RED Walkthrough + Spec References](sessions/2026-04-23-readme-code-red-walkthrough.md)
-
-### Avoid
-- [Avoid Per-Task Folders](avoid/01-avoid-per-task-folders.md) — Why `.lovable/` uses single-file convention; what was removed.
-
-## Memory Pointers (mem://)
-- [Axios Pinning](mem://constraints/axios-version-pinning) — Exact pinned versions only (1.14.0/0.30.3). Blocked: 1.14.1, 0.30.4.
+## Memories
+- [Install Command Formatting](mem://constraints/install-command-formatting) — One-line installs, no inline comments, per-platform headers, mirror InstallSection.tsx order.
+- [Blank Line Between If Guards](mem://constraints/blank-line-between-if-guards) — Rule 5 applied to all markdown snippets and source code.
+- [SQL Linter Rules](mem://sessions/2026-04-sql-linter-rules) — DB-FREETEXT-001 (presence) + MISSING-DESC-001 (presence+Rule 12+waivers), shared _lib, waiver syntax.
+- [Axios Pinning](mem://constraints/axios-version-pinning) — Exact pinned versions only (1.14.0/0.30.3). Blocked versions: 1.14.1, 0.30.4.
 - [Database Architecture](mem://architecture/database-schema) — PascalCase naming, no UUIDs, Vw prefixes for views.
-- [Error Handling](mem://architecture/error-handling) — `apperror` package, explicit file/path logging required.
+- [Error Handling](mem://architecture/error-handling) — 'apperror' package, explicit file/path logging required.
 - [PowerShell Style](mem://style/powershell-naming) — lowercase-kebab-case files, PascalCase Verb-Noun functions.
 - [Development Workflow](mem://processes/development-workflow) — Spec-first workflow, linter enforcement, clean docs.
 - [React ForwardRef Warning](mem://constraints/react-app-forwardref-warning) — Ignore lovable.js App.tsx ref console warning.
@@ -69,9 +36,6 @@
 - [Split Database](mem://architecture/split-database) — Root, App, Session hierarchical SQLite with WAL and Casbin.
 - [Seedable Config](mem://architecture/seedable-configuration) — SemVer GORM merge of config.seed.json.
 - [Self Update Arch](mem://features/self-update-architecture) — Rename-first deployment, atomicity with latest.json.
-- [Release-Pinned Installer](mem://features/release-pinned-installer) — Additive release-install.ps1/sh; pins exact version, no latest lookup, no cross-repo drift.
-- [Installer Behavior (Generic)](mem://standards/installer-behavior) — Two-mode (PINNED vs IMPLICIT) cross-repo installer contract; V→V+20 parallel discovery; canonical spec at `spec/14-update/27-generic-installer-behavior.md` for sharing with any AI.
 - [Doc Standards](mem://project/documentation-standards) — Mandatory numeric folders (01-20 Core, 21+ App), JSON tree syncing.
 - [Author Attribution](mem://project/author-attribution) — Md. Alim Ul Karim, Riseup Asia LLC, SEO/footer requirements.
-- [Avoid Upstream Sync](mem://constraints/avoid-app-sync) — NEVER sync app/app-issues/general/tasks/consolidated-guidelines from upstream sibling repos.
-- [Skip Stub Spec Folders](mem://constraints/skip-stub-spec-folders) — 21-app, 22-app-issues, 23-app-database, 24-app-design-system-and-ui excluded from audit/remediation.
+- [Avoid Gitmap Sync](mem://constraints/avoid-app-sync) — NEVER sync app, app-issues, general, tasks, or consolidated-guidelines from gitmap-v3.
