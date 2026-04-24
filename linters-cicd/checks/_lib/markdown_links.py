@@ -34,6 +34,10 @@ _LINK_RE = re.compile(r"\[([^\]]*)\]\(([^)\s]+)(?:\s+\"[^\"]*\")?\)")
 _HEADING_RE = re.compile(r"^(#{1,6})\s+(.+?)\s*#*\s*$")
 _FENCE_RE = re.compile(r"^(`{3,}|~{3,})")
 _EXTERNAL_PREFIXES = ("http://", "https://", "mailto:", "tel:", "ftp://", "ftps://", "javascript:")
+# Heuristic: targets that look like inline code identifiers (no path separator,
+# no extension, no hash) are almost always prose patterns like `[err](err)`
+# from `[name](type)` documentation conventions, not real links.
+_IDENT_LIKE_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_.()*]*$")
 
 
 @dataclass(frozen=True)
