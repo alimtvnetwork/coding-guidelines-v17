@@ -72,4 +72,4 @@ in-memory semantic-inverse pairs documented in
 - [Go Boolean Standards](../../03-golang/02-boolean-standards.md) — Go-specific rules and exemptions (P7, P8)
 - [Master Coding Guidelines](../15-master-coding-guidelines/00-overview.md) — Consolidated reference
 - [Issues & Fixes Log](../01-issues-and-fixes-log.md) — Historical fixes
-- [apperror Package — Result Guard Rule](../../../03-error-manage/02-error-architecture/06-apperror-package/01-apperror-reference/06-serialization-and-guards.md#12-result-guard-rule-mandatory-error-check-before-value-access)
+- [apperror Package — Result Guard Rule](../../../03-error-manage/02-error-architecture/06-apperror-package/01-apperror-reference/06-serialization-and-guards.md#12-result-guard-rule--mandatory-error-check-before-value-access)

@@ -24,10 +24,10 @@
 - [🔬 Research](#research) (1 file)
 - [📱 App](#app) (1 file)
 - [🔄 CI/CD Pipeline Workflows](#cicd-pipeline-workflows) (18 files)
-- [🔄 Self-Update & App Update](#self-update-app-update) (11 files)
+- [🔄 Self-Update & App Update](#self-update--app-update) (11 files)
 - [🐛 App Issues](#app-issues) (1 file)
 - [🗄️ App Database](#app-database) (1 file)
-- [🎨 App Design System & UI](#app-design-system-ui) (1 file)
+- [🎨 App Design System & UI](#app-design-system--ui) (1 file)
 
 ---
 

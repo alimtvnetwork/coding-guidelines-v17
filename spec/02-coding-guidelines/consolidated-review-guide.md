@@ -8,12 +8,12 @@
 
 ## Table of Contents
 
-1. [Workflow & Process](#1-workflow-process)
-2. [Function & File Size](#2-function-file-size)
-3. [Parameters & Returns](#3-parameters-returns)
+1. [Workflow & Process](#1-workflow--process)
+2. [Function & File Size](#2-function--file-size)
+3. [Parameters & Returns](#3-parameters--returns)
 4. [Naming Conventions](#4-naming-conventions)
-5. [Boolean & Conditionals](#5-boolean-conditionals)
-6. [Enums & Constants](#6-enums-constants)
+5. [Boolean & Conditionals](#5-boolean--conditionals)
+6. [Enums & Constants](#6-enums--constants)
 7. [Error Handling](#7-error-handling)
 8. [Type Safety](#8-type-safety)
 9. [Parallel Execution](#9-parallel-execution)

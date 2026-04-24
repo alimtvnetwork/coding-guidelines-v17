@@ -12,7 +12,7 @@
 |----------|--------|
 | [Naming Convention Violations](#naming-convention-violations) | #01–#04 |
 | [Database Casing Violations](#database-casing-violations) | #05–#08 |
-| [Boolean & Negation Violations](#boolean-negation-violations) | #09–#11 |
+| [Boolean & Negation Violations](#boolean--negation-violations) | #09–#11 |
 | [Enum Standard Violations](#enum-standard-violations) | #12–#14 |
 | [Formatting Violations](#formatting-violations) | #15–#17 |
 | [Type Safety Violations](#type-safety-violations) | #18–#19 |
