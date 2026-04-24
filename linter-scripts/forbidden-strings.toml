@@ -29,7 +29,7 @@ pattern = 'coding-guidelines-v(1[0-4]|[1-9])\b'
 replacement = "coding-guidelines-v17"
 fix_hint = "python3 linter-scripts/forbidden-strings-summary.py --rule STALE-REPO-SLUG --emit-fix-command | bash"
 exclude_dirs = ["release-artifacts"]
-exclude_files = ["forbidden-strings.toml", "check-forbidden-strings.py"]
+exclude_files = ["forbidden-strings.toml", "check-forbidden-strings.py", "forbidden-strings-summary.py"]
 allowlist = [
   "spec/06-seedable-config-architecture/97-changelog.md",
   "CHANGELOG.md",
@@ -54,7 +54,7 @@ pattern = 'movie-cli-v1\\b'
 replacement = "movie-cli-v2"
 fix_hint = "python3 linter-scripts/forbidden-strings-summary.py --rule STALE-MODULE-PATH --emit-fix-command | bash"
 exclude_dirs = ["release-artifacts"]
-exclude_files = ["forbidden-strings.toml", "check-forbidden-strings.py"]
+exclude_files = ["forbidden-strings.toml", "check-forbidden-strings.py", "forbidden-strings-summary.py"]
 allowlist = [
   "spec/14-update/23-install-script-version-probe.md",
 ]
@@ -67,5 +67,5 @@ pattern = 'cdn\.riseup-asia\.com'
 replacement = "cdn.riseup.asia"
 fix_hint = "python3 linter-scripts/forbidden-strings-summary.py --rule LEGACY-CDN-DOMAIN --emit-fix-command | bash"
 exclude_dirs = ["release-artifacts"]
-exclude_files = ["forbidden-strings.toml", "check-forbidden-strings.py", "CHANGELOG.md"]
+exclude_files = ["forbidden-strings.toml", "check-forbidden-strings.py", "forbidden-strings-summary.py", "CHANGELOG.md"]
 allowlist = []
