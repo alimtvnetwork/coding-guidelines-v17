@@ -109,6 +109,10 @@ while [[ $# -gt 0 ]]; do
 done
 
 # ── Resolve pinned version (spec §Resolution Algorithm) ───────────
+# Precedence (spec §B.2 + ratified env-var extension §B.2.b'):
+#   1. --version flag
+#   2. $INSTALLER_VERSION env var
+#   3. Baked __VERSION_PLACEHOLDER__
 resolve_version() {
   if [[ -n "$ARG_VERSION" ]]; then
     if [[ "$BAKED_VERSION" != "__VERSION_PLACEHOLDER__" \
@@ -116,6 +120,14 @@ resolve_version() {
       warn "Argument version ($ARG_VERSION) overrides baked-in ($BAKED_VERSION)."
     fi
     echo "$ARG_VERSION"
+    return 0
+  fi
+  if [[ -n "${INSTALLER_VERSION:-}" ]]; then
+    if [[ "$BAKED_VERSION" != "__VERSION_PLACEHOLDER__" \
+          && "$BAKED_VERSION" != "$INSTALLER_VERSION" ]]; then
+      warn "Env INSTALLER_VERSION ($INSTALLER_VERSION) overrides baked-in ($BAKED_VERSION)."
+    fi
+    echo "$INSTALLER_VERSION"
     return 0
   fi
   if [[ "$BAKED_VERSION" != "__VERSION_PLACEHOLDER__" ]]; then

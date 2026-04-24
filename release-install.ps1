@@ -51,7 +51,9 @@
 
 param(
     [string]$Version = "",
-    [switch]$NoUpdate
+    [switch]$NoUpdate,
+    [Alias("?")]
+    [switch]$Help
 )
 
 $ErrorActionPreference = "Stop"
@@ -72,13 +74,29 @@ function Write-Warn { param([string]$Msg) Write-Host "$script:Indent⚠️  $Msg
 function Write-Err  { param([string]$Msg) Write-Host "$script:Indent❌ $Msg" -ForegroundColor Red }
 function Write-Dim  { param([string]$Msg) Write-Host "$script:Indent$Msg"   -ForegroundColor DarkGray }
 
+# ── -Help / -? short-circuit (spec §B.1.c.i) ──────────────────────
+if ($Help) {
+    Get-Help $PSCommandPath -Full
+    exit 0
+}
+
 # ── Resolve pinned version (spec §Resolution Algorithm) ───────────
+# Precedence (spec §B.2 + ratified env-var extension §B.2.b'):
+#   1. -Version flag
+#   2. $env:INSTALLER_VERSION
+#   3. Baked __VERSION_PLACEHOLDER__
 function Resolve-PinnedVersion {
     if ($Version) {
         if ($BakedVersion -ne "__VERSION_PLACEHOLDER__" -and $BakedVersion -ne $Version) {
             Write-Warn "Argument -Version ($Version) overrides baked-in ($BakedVersion)."
         }
         return $Version
+    }
+    if ($env:INSTALLER_VERSION) {
+        if ($BakedVersion -ne "__VERSION_PLACEHOLDER__" -and $BakedVersion -ne $env:INSTALLER_VERSION) {
+            Write-Warn "Env INSTALLER_VERSION ($($env:INSTALLER_VERSION)) overrides baked-in ($BakedVersion)."
+        }
+        return $env:INSTALLER_VERSION
     }
     if ($BakedVersion -ne "__VERSION_PLACEHOLDER__") {
         return $BakedVersion

@@ -96,6 +96,12 @@ jobs:
         # placeholder only.
         run: bash tests/installer/check-no-latest-api.sh
 
+      - name: release-install.sh exit-code acceptance (spec §F + §AC)
+        # Verifies failure modes 1 (no version) and 2 (invalid semver)
+        # AND the ratified $INSTALLER_VERSION env-var precedence-2 path.
+        # Spec: spec/14-update/25-release-pinned-installer.md §B.2 + §F
+        run: bash tests/installer/check-release-install-acceptance.sh
+
   cross-links:
     name: Spec Cross-Reference Validation
     runs-on: ubuntu-latest

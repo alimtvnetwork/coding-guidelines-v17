@@ -33,9 +33,11 @@ I want to have a `release-install.ps1` file, and that file will only be used for
 
 2. Version Resolution Order
    a. Explicit `-Version` / `--version` argument wins.
-   b. Otherwise use baked-in `VERSION_PLACEHOLDER` replaced at release-build time.
-   c. If neither is available, hard fail with non-zero exit.
-   d. Never fall back to `latest`, `main`, or `HEAD`.
+   b. `$INSTALLER_VERSION` / `$env:INSTALLER_VERSION` environment variable (ratified extension; useful for CI pipelines and Dockerfiles where flags are awkward).
+   c. Otherwise use baked-in `VERSION_PLACEHOLDER` replaced at release-build time.
+   d. If none of the above is available, hard fail with non-zero exit.
+   e. Never fall back to `latest`, `main`, or `HEAD`.
+   f. When two sources disagree, higher precedence wins and a warning is emitted to stderr.
 
 3. Pin Enforcement Guarantees
    a. Download only from `https://github.com/<owner>/<repo>/releases/download/<PINNED_TAG>/...`.
