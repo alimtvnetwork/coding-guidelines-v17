@@ -46,16 +46,20 @@ trap 'rm -rf "$TMP_DIR"' EXIT
 
 NET_MARKER="$TMP_DIR/network-was-called"
 
-# PowerShell harness:
-#   - Override IWR/IRM at the top of the session so any probe trips a marker + throws.
-#   - Run the installer with the requested flag.
-#   - Capture exit code; report PASS/FAIL based on (exit==0 && no marker && usage printed).
-PS_HARNESS=$(cat <<'PSEOF'
-param([string]$Installer, [string]$Flag, [string]$NetMarker)
+# PowerShell wrapper script:
+#   - Overrides Invoke-WebRequest / Invoke-RestMethod in this session so any
+#     network probe writes a marker file AND throws. Function overrides take
+#     precedence over cmdlets in the same session.
+#   - Dot-sources / invokes the installer, propagating its exit code.
+# The wrapper itself writes the installer's output to stdout (where we can
+# capture it from bash) — we do not try to capture from inside PowerShell,
+# because the script's `exit 0` terminates the host before we could inspect.
+WRAPPER_FILE="$TMP_DIR/wrapper.ps1"
+cat > "$WRAPPER_FILE" <<'PSEOF'
+param([string]$Installer, [string]$Flag)
 
 $ErrorActionPreference = 'Continue'
 
-# --- Network sentinels: fail loudly if the script tries to probe anything. ---
 function Invoke-WebRequest {
     param([Parameter(ValueFromRemainingArguments=$true)]$AllArgs)
     Set-Content -Path $env:_NET_MARKER -Value "Invoke-WebRequest called: $AllArgs"
@@ -66,52 +70,20 @@ function Invoke-RestMethod {
     Set-Content -Path $env:_NET_MARKER -Value "Invoke-RestMethod called: $AllArgs"
     throw "TEST: Invoke-RestMethod must not be called during --help"
 }
-$env:_NET_MARKER = $NetMarker
 
-# Run the installer with the requested help flag. Capture stdout for usage
-# verification, let the script exit on its own.
-try {
-    if ($Flag -eq '--help') {
-        # Bash long-form: pass via positional args so the script's UnboundArgs
-        # / raw-line scanner picks it up.
-        $output = & $Installer --help 2>&1
-    } elseif ($Flag -eq '-h') {
-        $output = & $Installer -h 2>&1
-    } else {
-        $output = & $Installer -Help 2>&1
-    }
-    $rc = $LASTEXITCODE
-    if ($null -eq $rc) { $rc = 0 }
-} catch {
-    Write-Host "EXCEPTION: $_"
-    $output = "$_"
-    $rc = 99
+if ($Flag -eq '--help') {
+    & $Installer --help
+} elseif ($Flag -eq '-h') {
+    & $Installer -h
+} elseif ($Flag -eq '-Help') {
+    & $Installer -Help
+} else {
+    Write-Error "unknown flag: $Flag"
+    exit 2
 }
 
-$outText = ($output | Out-String)
-Write-Host "----- captured output ($Flag) -----"
-Write-Host $outText
-Write-Host "----- exit=$rc -----"
-
-if ($rc -ne 0) {
-    Write-Host "FAIL: $Flag exited $rc (expected 0)"
-    exit 1
-}
-if (-not ($outText -match 'Usage:')) {
-    Write-Host "FAIL: $Flag output missing 'Usage:' marker"
-    exit 1
-}
-if (-not ($outText -match 'install\.ps1')) {
-    Write-Host "FAIL: $Flag output missing 'install.ps1' marker"
-    exit 1
-}
-
-exit 0
+exit $LASTEXITCODE
 PSEOF
-)
-
-HARNESS_FILE="$TMP_DIR/harness.ps1"
-printf '%s\n' "$PS_HARNESS" > "$HARNESS_FILE"
 
 overall_rc=0
 for flag in "-Help" "-h" "--help"; do
@@ -119,12 +91,17 @@ for flag in "-Help" "-h" "--help"; do
     echo ""
     echo "▸ Testing install.ps1 $flag"
 
+    set +e
     # shellcheck disable=SC2086
-    $PWSH -NoProfile -File "$HARNESS_FILE" \
+    output=$(_NET_MARKER="$NET_MARKER" $PWSH -NoProfile -File "$WRAPPER_FILE" \
         -Installer "$INSTALLER" \
-        -Flag "$flag" \
-        -NetMarker "$NET_MARKER"
+        -Flag "$flag" 2>&1)
     flag_rc=$?
+    set -e
+
+    echo "----- captured output ($flag) -----"
+    echo "$output"
+    echo "----- exit=$flag_rc -----"
 
     if [ -f "$NET_MARKER" ]; then
         echo "❌ FAIL: $flag triggered a network call:"
@@ -134,7 +111,19 @@ for flag in "-Help" "-h" "--help"; do
     fi
 
     if [ "$flag_rc" -ne 0 ]; then
-        echo "❌ FAIL: harness rc=$flag_rc for $flag"
+        echo "❌ FAIL: $flag exited with $flag_rc (expected 0)"
+        overall_rc=1
+        continue
+    fi
+
+    if ! echo "$output" | grep -q "Usage:"; then
+        echo "❌ FAIL: $flag output missing 'Usage:' marker"
+        overall_rc=1
+        continue
+    fi
+
+    if ! echo "$output" | grep -q "install.ps1"; then
+        echo "❌ FAIL: $flag output missing 'install.ps1' marker"
         overall_rc=1
         continue
     fi
