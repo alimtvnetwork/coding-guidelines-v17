@@ -1,9 +1,59 @@
 # Current Plan
 
-**Version:** 3.14.0
-**Updated:** 2026-04-23 (session 2)
+**Version:** 3.98.0
+**Updated:** 2026-04-24
 
 ---
+
+## Latest Session — Fix `processUser` Blank-Line Style in readme.md
+
+**Scope:** Documentation example only. No production code, no CI changes.
+
+### Problem
+
+The `processUser` "Refactored" example in `readme.md` (lines 152–163) violates
+**Rule 5** of `release-artifacts/coding-guidelines-v1.4.0/spec/02-coding-guidelines/01-cross-language/04-code-style/03-blank-lines-and-spacing.md`:
+
+> If code continues after a closing `}` (i.e., not followed by another `}`,
+> `else`, `catch`, or end of function), insert one blank line after it.
+
+Three consecutive `if` blocks were stacked with no blank lines between
+them and the trailing `return`.
+
+### Fix
+
+Insert one blank line after each closing `}` so each `if` and the final
+`return` are visually separated. Also satisfies Rule 4 (blank line before
+trailing `return` when preceded by other statements).
+
+### CI Linting Confirmation
+
+`.github/workflows/ci.yml` runs `validate-guidelines.go` and
+`validate-guidelines.py` against the `spec/` tree — these target **code
+patterns**, not markdown prose. Markdown remains intentionally un-linted
+for code style; example snippets in `readme.md` / `docs/` must be
+hand-validated against the spec. **No CI change required** (matches user
+preference: lint code in CI, not markdown).
+
+### Memory
+
+Saved `mem://constraints/blank-line-between-if-guards` so this exact
+mistake is not repeated.
+
+### Files Touched
+
+- `readme.md` — fix `processUser` example
+- `.lovable/memory/constraints/blank-line-between-if-guards.md` — new
+- `.lovable/memory/index.md` — add reference
+- `.lovable/plan.md` — this entry
+- `package.json` — bump 3.97.0 → 3.98.0
+- Run `npm run sync`
+
+---
+
+## Active Work (carried over)
+
+
 
 ## Active Work
 
