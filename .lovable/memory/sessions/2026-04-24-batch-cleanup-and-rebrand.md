@@ -52,4 +52,33 @@ Three sequential user requests, executed in one session:
 
 ---
 
+## Audit trail — why the old slug is preserved here
+
+This file intentionally retains the pre-rebrand slug strings
+(`coding-guidelines-v14`, `coding-guidelines-v1`..`v13`) inside the
+narrative above (see §Scope item 1 and §Key decisions item 2). They are
+not stale references — they are the historical record of the rename
+itself. Removing them would erase the very change this session note
+exists to document.
+
+Because of this, the file is permanently waived from the
+`STALE-REPO-SLUG` rule via
+[`linter-scripts/forbidden-strings.toml`](../../../linter-scripts/forbidden-strings.toml)
+`allowlist`. The waiver is scoped to this single path so the rule still
+blocks the old slug everywhere else in the repo.
+
+**Rules for editors:**
+
+1. Do **not** rewrite the historical slug strings in this file to make
+   the linter "cleaner" — the allowlist already handles it.
+2. Do **not** widen the allowlist to cover other files; if a new file
+   legitimately needs to mention the old slug, add it explicitly with a
+   one-line comment justifying why.
+3. The canonical, current slug remains
+   **`alimtvnetwork/coding-guidelines-v17`** (see §Key decisions item 2)
+   — that is the only slug allowed in code, configs, install scripts,
+   release artifacts, and live documentation.
+
+---
+
 *Session note — v1.0.0 — 2026-04-24*
