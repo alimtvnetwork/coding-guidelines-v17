@@ -11,6 +11,10 @@
 #   id          — unique short identifier (used in output)
 #   description — human-readable explanation
 #   pattern     — ERE regex (Python re syntax)
+#   replacement — canonical string the stale match should become.
+#                 Used by `forbidden-strings-summary.py` to emit a
+#                 precise per-file `sed` command. Optional but
+#                 strongly recommended for any rename guard.
 #   fix_hint    — suggested bulk-fix command shown on failure
 #   exclude_dirs— directories to skip entirely (always: .git, node_modules, dist, build)
 #   exclude_files— glob patterns for files to skip (e.g. the checker itself)
@@ -22,7 +26,8 @@
 id = "STALE-REPO-SLUG"
 description = "Pre-renumber repo slug (coding-guidelines-v1..v14). Current canonical slug is coding-guidelines-v17."
 pattern = 'coding-guidelines-v(1[0-4]|[1-9])\b'
-fix_hint = "grep -rlE '$PATTERN' . | xargs sed -i 's|coding-guidelines-v17|coding-guidelines-v17|g'"
+replacement = "coding-guidelines-v17"
+fix_hint = "python3 linter-scripts/forbidden-strings-summary.py --rule STALE-REPO-SLUG --emit-fix-command | bash"
 exclude_dirs = ["release-artifacts"]
 exclude_files = ["forbidden-strings.toml", "check-forbidden-strings.py"]
 allowlist = [
@@ -46,7 +51,8 @@ allowlist = [
 id = "STALE-MODULE-PATH"
 description = "Stale module path reference (movie-cli-v1). Current canonical namespace is movie-cli-v2."
 pattern = 'movie-cli-v1\\b'
-fix_hint = "grep -rlE '$PATTERN' . | xargs sed -i 's|movie-cli-v1|movie-cli-v2|g'"
+replacement = "movie-cli-v2"
+fix_hint = "python3 linter-scripts/forbidden-strings-summary.py --rule STALE-MODULE-PATH --emit-fix-command | bash"
 exclude_dirs = ["release-artifacts"]
 exclude_files = ["forbidden-strings.toml", "check-forbidden-strings.py"]
 allowlist = [
@@ -58,7 +64,8 @@ allowlist = [
 id = "LEGACY-CDN-DOMAIN"
 description = "Legacy CDN domain (cdn.riseup-asia.com). Current canonical domain is cdn.riseup.asia."
 pattern = 'cdn\.riseup-asia\.com'
-fix_hint = "grep -rlE '$PATTERN' . | xargs sed -i 's|cdn.riseup-asia.com|cdn.riseup.asia|g'"
+replacement = "cdn.riseup.asia"
+fix_hint = "python3 linter-scripts/forbidden-strings-summary.py --rule LEGACY-CDN-DOMAIN --emit-fix-command | bash"
 exclude_dirs = ["release-artifacts"]
 exclude_files = ["forbidden-strings.toml", "check-forbidden-strings.py", "CHANGELOG.md"]
 allowlist = []
