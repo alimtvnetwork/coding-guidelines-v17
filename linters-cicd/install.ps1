@@ -96,6 +96,38 @@ Write-Host "       source:  $sourceKind"
 Write-Host "       dest:    $Dest"
 Write-Host ""
 
+# =====================================================================
+# -NoVerify warning banner
+#
+# When checksum verification is disabled, print a prominent multi-line
+# banner so the operator can never miss it — including in piped
+# `irm | iex` flows where stdout scrolls quickly. This mirrors the spec §8
+# exit-code contract:
+#   - With verification ON  → mismatch exits 4 (verification failed).
+#   - With -NoVerify        → no integrity check is performed; corrupted
+#                             or tampered archives will install silently
+#                             and the script will exit 0 on success.
+# =====================================================================
+if (-not $Verify) {
+    Write-Host ""
+    Write-Host "    ╔══════════════════════════════════════════════════════════════════╗" -ForegroundColor Yellow
+    Write-Host "    ║  ⚠️  WARNING: -NoVerify — SHA-256 verification is DISABLED       ║" -ForegroundColor Yellow
+    Write-Host "    ╠══════════════════════════════════════════════════════════════════╣" -ForegroundColor Yellow
+    Write-Host "    ║  The downloaded archive will NOT be checked against              ║" -ForegroundColor Yellow
+    Write-Host "    ║  checksums.txt. Corrupted or tampered files will install         ║" -ForegroundColor Yellow
+    Write-Host "    ║  silently. This is NOT recommended for CI or production use.     ║" -ForegroundColor Yellow
+    Write-Host "    ║                                                                  ║" -ForegroundColor Yellow
+    Write-Host "    ║  Exit-code impact (spec §8):                                     ║" -ForegroundColor Yellow
+    Write-Host "    ║    • verification ON   →  checksum mismatch exits 4              ║" -ForegroundColor Yellow
+    Write-Host "    ║    • verification OFF  →  no exit 4 is ever raised               ║" -ForegroundColor Yellow
+    Write-Host "    ║                           (script exits 0 on download success,  ║" -ForegroundColor Yellow
+    Write-Host "    ║                            even for a tampered archive)         ║" -ForegroundColor Yellow
+    Write-Host "    ║                                                                  ║" -ForegroundColor Yellow
+    Write-Host "    ║  Re-run WITHOUT -NoVerify to restore integrity checking.         ║" -ForegroundColor Yellow
+    Write-Host "    ╚══════════════════════════════════════════════════════════════════╝" -ForegroundColor Yellow
+    Write-Host ""
+}
+
 if ($Version -eq "latest") {
     $urlBase = "https://github.com/$Repo/releases/latest/download"
 } else {
