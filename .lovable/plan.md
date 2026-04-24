@@ -69,8 +69,8 @@ Reinforce `mem://constraints/install-command-formatting` and add the reminder to
 | 10 | End-to-end test: `install.sh` on a clean dest dir pulls all 4 folders incl. `linters-cicd/` | ⏳ Pending | Medium |
 | 11 | Implement `release-install.ps1` per spec `14-update/25-release-pinned-installer.md` (v1.0.0) | ✅ Done (4.6.0) | High |
 | 12 | Implement `release-install.sh` per spec `14-update/25-release-pinned-installer.md` (v1.0.0) | ✅ Done (4.6.0) | High |
-| 13 | Wire release-install.* into `release.sh` / `release.ps1` (sed VERSION/REPO, ship as release assets) | ⏳ Pending | High |
-| 14 | Add release-pinned one-liner block to GitHub Release body template | ⏳ Pending | Medium |
+| 13 | Wire release-install.* into `release.sh` / `release.ps1` (sed VERSION/REPO, ship as release assets) | ✅ Done (4.7.0) | High |
+| 14 | Add release-pinned one-liner block to GitHub Release body template | ✅ Done (4.7.0) | Medium |
 | 15 | Test harness asserting NO call to `api.github.com/.../releases/latest` from release-install.* | ✅ Done (4.5.0) | Medium |
 
 ---

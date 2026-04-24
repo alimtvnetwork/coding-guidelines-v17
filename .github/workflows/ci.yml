@@ -102,6 +102,13 @@ jobs:
         # Spec: spec/14-update/25-release-pinned-installer.md §B.2 + §F
         run: bash tests/installer/check-release-install-acceptance.sh
 
+      - name: release.sh bake-output integration (spec §Release-Time Build Step)
+        # Runs ./release.sh end-to-end and asserts the baked
+        # release-install.{sh,ps1} have no placeholder, carry the
+        # resolved tag, and are listed in checksums.txt.
+        # Spec: spec/14-update/25-release-pinned-installer.md
+        run: bash tests/installer/check-release-bake.sh
+
   cross-links:
     name: Spec Cross-Reference Validation
     runs-on: ubuntu-latest

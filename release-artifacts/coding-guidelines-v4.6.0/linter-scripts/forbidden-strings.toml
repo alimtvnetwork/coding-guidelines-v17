@@ -1,0 +1,57 @@
+# ============================================================
+# Forbidden Strings Configuration
+# ============================================================
+# Each [[rule]] defines a regex pattern that must NOT appear in the
+# repository (outside of excluded dirs and allowlisted paths).
+#
+# To add a new rename guard, append a [[rule]] block — no new
+# scripts needed. The generic checker reads this file.
+#
+# Fields:
+#   id          — unique short identifier (used in output)
+#   description — human-readable explanation
+#   pattern     — ERE regex (Python re syntax)
+#   fix_hint    — suggested bulk-fix command shown on failure
+#   exclude_dirs— directories to skip entirely (always: .git, node_modules, dist, build)
+#   exclude_files— glob patterns for files to skip (e.g. the checker itself)
+#   allowlist   — repo-relative paths/globs that may legitimately contain the pattern
+# ============================================================
+
+# --- Rule: stale repo slug (pre-renumber references) ---
+[[rule]]
+id = "STALE-REPO-SLUG"
+description = "Pre-renumber repo slug (coding-guidelines-v1..v14). Current canonical slug is coding-guidelines-v15."
+pattern = 'coding-guidelines-v(1[0-4]|[1-9])\b'
+fix_hint = "grep -rlE '$PATTERN' . | xargs sed -i 's|coding-guidelines-v14|coding-guidelines-v15|g'"
+exclude_dirs = ["release-artifacts"]
+exclude_files = ["forbidden-strings.toml", "check-forbidden-strings.py"]
+allowlist = [
+  "spec/06-seedable-config-architecture/97-changelog.md",
+  "CHANGELOG.md",
+  "spec/14-update/23-install-script-version-probe.md",
+  "spec/14-update/26-repo-major-version-migrator.md",
+  "src/data/specTree.json",
+  ".lovable/memory/index.md",
+  ".lovable/strictly-avoid.md",
+]
+# --- Rule: stale module path (movie-cli v1 references) ---
+[[rule]]
+id = "STALE-MODULE-PATH"
+description = "Stale module path reference (movie-cli-v1). Current canonical namespace is movie-cli-v2."
+pattern = 'movie-cli-v1\\b'
+fix_hint = "grep -rlE '$PATTERN' . | xargs sed -i 's|movie-cli-v1|movie-cli-v2|g'"
+exclude_dirs = ["release-artifacts"]
+exclude_files = ["forbidden-strings.toml", "check-forbidden-strings.py"]
+allowlist = [
+  "spec/14-update/23-install-script-version-probe.md",
+]
+
+# --- Rule: legacy CDN domain references ---
+[[rule]]
+id = "LEGACY-CDN-DOMAIN"
+description = "Legacy CDN domain (cdn.riseup-asia.com). Current canonical domain is cdn.riseup.asia."
+pattern = 'cdn\.riseup-asia\.com'
+fix_hint = "grep -rlE '$PATTERN' . | xargs sed -i 's|cdn.riseup-asia.com|cdn.riseup.asia|g'"
+exclude_dirs = ["release-artifacts"]
+exclude_files = ["forbidden-strings.toml", "check-forbidden-strings.py", "CHANGELOG.md"]
+allowlist = []

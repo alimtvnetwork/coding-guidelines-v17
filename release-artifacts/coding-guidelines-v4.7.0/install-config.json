@@ -1,0 +1,10 @@
+{
+  "repo": "alimtvnetwork/coding-guidelines-v15",
+  "branch": "main",
+  "folders": [
+    "spec",
+    "linters",
+    "linter-scripts",
+    "linters-cicd"
+  ]
+}
