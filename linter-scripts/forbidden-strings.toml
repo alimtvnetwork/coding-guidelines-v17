@@ -33,6 +33,13 @@ allowlist = [
   "src/data/specTree.json",
   ".lovable/memory/index.md",
   ".lovable/strictly-avoid.md",
+  # Historical session log: documents the v14 → v17 rebrand itself, so
+  # the old slug must remain literally for the audit trail to make sense.
+  ".lovable/memory/sessions/2026-04-24-batch-cleanup-and-rebrand.md",
+  # References a path inside release-artifacts/coding-guidelines-v1.4.0/ —
+  # that directory is a frozen snapshot of v1.4.0 and is excluded from
+  # the scan; the prose reference to its path must be allowlisted too.
+  ".lovable/memory/constraints/standalone-script-standards.md",
 ]
 # --- Rule: stale module path (movie-cli v1 references) ---
 [[rule]]
