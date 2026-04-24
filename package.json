@@ -39,7 +39,8 @@
     "test:installer:no-latest": "bash tests/installer/check-no-latest-api.sh",
     "test:installer:acceptance": "bash tests/installer/check-release-install-acceptance.sh",
     "test:installer:bundles": "bash tests/installer/check-bundle-installers.sh",
-    "test:release:bake": "bash tests/installer/check-release-bake.sh"
+    "test:release:bake": "bash tests/installer/check-release-bake.sh",
+    "test:installer:root": "bash tests/installer/check-root-install-acceptance.sh"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
