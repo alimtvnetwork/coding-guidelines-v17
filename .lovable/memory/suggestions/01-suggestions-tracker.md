@@ -23,6 +23,7 @@
 | 23 | Slug rebrand to `coding-guidelines-v17` | 2026-04-24 |
 | 24 | Release & Migration UI lock-in (2 cards) | 2026-04-24 |
 | 25 | Batch close v4.24.0 — 11 plan items | 2026-04-24 |
+| 26 | Codegen CI + BOOL-NEG-001 pipeline + orchestrator flags E2E | 2026-04-25 |
 
 (For 01–14 see `.lovable/suggestions.md` Implemented Suggestions.)
 
@@ -35,18 +36,18 @@
 | 01 | Mobile responsive testing | Low |
 | 02 | Search/filter in spec tree | Medium |
 | 03 | Breadcrumb navigation | Low |
-| 04 | Smoke-test BOOL-NEG-001 in full pipeline | Medium |
+| 04 | ~~Smoke-test BOOL-NEG-001 in full pipeline~~ ✅ v4.25.0 | — |
 | 05 | Go-aware BOOL-NEG-001 variant | Medium |
 | 06 | Unit tests for BOOL-NEG-001 | Medium |
 | 07 | Round-trip tests for codegen inversion table | Medium |
-| 08 | Wire codegen into CI | Medium |
+| 08 | ~~Wire codegen into CI~~ ✅ Done | — |
 | 09 | Strengthen BOOL-NEG-001 with replacement hints | Low |
 | 10 | Linter for missing descriptive columns | Medium |
 | 11 | Cross-link Rule 9 / Rules 10–12 + link-checker | Low |
 | 12 | Author 8 real Mermaid diagrams | Medium |
-| 13 | Real-repo orchestrator run (`--strict`/`--total-timeout`/`--split-by severity`) | Medium |
+| 13 | ~~Real-repo orchestrator run (`--strict`/`--total-timeout`/`--split-by severity`)~~ ✅ v4.25.0 | — |
 | 14 | Wire Playwright landing spec into CI | Low |
 
 ---
 
-*Suggestions tracker — v3.6.0 — 2026-04-24*
+*Suggestions tracker — v3.7.0 — 2026-04-25*

@@ -23,13 +23,13 @@ Under investigation. The check has only been exercised directly via `python3 che
 ## Attempted Solutions
 
 - [x] Standalone smoke test — passed (4 findings, exit 1, allow-list silently passed).
-- [ ] Pipeline integration test — not yet run.
-- [ ] Parallel run determinism check — not yet run.
+- [x] Pipeline integration test — `tests/pipeline/check-bool-neg-001-pipeline.sh` (CI-blocking, v4.25.0).
+- [x] Parallel run determinism check — exercised via `--jobs auto` in the same pipeline test.
 
 ## Priority
 
-Medium.
+Resolved (v4.25.0).
 
 ## Blocked By
 
-Nothing. Just needs a clean test run; tracked in `.lovable/plan.md` Active Work item #01.
+Nothing — closed by `tests/pipeline/check-bool-neg-001-pipeline.sh` and CI step "BOOL-NEG-001 pipeline smoke test (run-all.sh end-to-end)".
