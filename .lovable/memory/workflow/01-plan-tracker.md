@@ -28,6 +28,7 @@
 | 37 | Slug rebrand to `coding-guidelines-v17` (full repo sweep) | 2026-04-24 |
 | 38 | Release & Migration UI rewrite (2 cards, no skip-probe variants) — locked | 2026-04-24 |
 | 39 | Batch close v4.24.0 — B10 `--strict`, B11 `--split-by severity`, B8 `--total-timeout`, B7 PHP plugins, B2 Playwright spec, 09+10 offline E2E, B6 consistency dates, B5 effective-score waiver, 12 schema §6 alignment | 2026-04-24 |
+| 40 | Codegen CI step + BOOL-NEG-001 pipeline smoke + orchestrator flags E2E (closes plan items #05, #01, #11) | 2026-04-25 |
 
 (For dates 2026-04-02 → 2026-04-16, see `.lovable/plan.md` Completed Plans Historical.)
 
@@ -37,20 +38,20 @@
 
 | # | Task | Priority | Notes |
 |---|------|----------|-------|
-| 01 | Smoke-test BOOL-NEG-001 in `run-all.sh` | Medium | Standalone passes |
+| 01 | ~~Smoke-test BOOL-NEG-001 in `run-all.sh`~~ | — | ✅ Done v4.25.0 — `tests/pipeline/check-bool-neg-001-pipeline.sh` |
 | 02 | Go-aware BOOL-NEG-001 variant | Medium | `embed.FS` SQL |
 | 03 | Unit tests for BOOL-NEG-001 | Medium | |
 | 04 | Round-trip tests for codegen inversion table | Medium | |
-| 05 | Wire codegen into CI (`git diff --exit-code`) | Medium | Highest-value next |
+| 05 | ~~Wire codegen into CI (`git diff --exit-code`)~~ | — | ✅ Done — CI step "Verify codegen determinism" (.github/workflows/ci.yml) |
 | 06 | Linter for missing `Description`/`Notes`/`Comments` | Medium | Rules 10–12 |
 | 07 | Strengthen BOOL-NEG-001 with replacement hints | Low | |
 | 08 | Cross-link link-checker over `spec/` | Low | |
 | 09 | Mobile responsiveness | Low | |
 | 10 | Author 8 real Mermaid diagrams (13-generic-cli + 14-update) | Medium | Placeholders only |
-| 11 | Real-repo run of orchestrator with `--strict --total-timeout --split-by severity` | Medium | New flags need E2E validation |
+| 11 | ~~Real-repo run of orchestrator with `--strict --total-timeout --split-by severity`~~ | — | ✅ Done v4.25.0 — `tests/pipeline/check-orchestrator-flags.sh` |
 | 12 | Wire Playwright `landing.spec.ts` into CI | Low | Spec exists |
 | 13 | Publish click (button on Lovable UI) | Medium | App ready |
 
 ---
 
-*Plan tracker — v3.6.0 — 2026-04-24*
+*Plan tracker — v3.7.0 — 2026-04-25*
