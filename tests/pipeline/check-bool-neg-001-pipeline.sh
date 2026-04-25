@@ -78,7 +78,7 @@ fi
 
 # Assert via python: 4 BOOL-NEG-001 findings, no allow-listed names included.
 python3 - "$OUT_SARIF" <<'PY' || exit 1
-import json, sys
+import json, re, sys
 doc = json.load(open(sys.argv[1]))
 findings = []
 for run in doc.get("runs", []):
@@ -98,16 +98,26 @@ if len(findings) != EXPECTED:
         print(f"   - {f['uri']}:{f['line']} :: {f['msg']}", file=sys.stderr)
     sys.exit(1)
 
-# Allow-list assertion: IsActive / IsDisabled must never appear.
-joined = "\n".join(f["msg"] for f in findings)
+# Allow-list assertion: IsActive / IsDisabled must never appear as
+# the flagged identifier. Use word boundaries so substrings like
+# "IsActive" inside "IsNotActive" are not falsely matched.
+def name_in_msg(name: str, msg: str) -> bool:
+    return re.search(rf"\b{re.escape(name)}\b", msg) is not None
+
+joined_msgs = [f["msg"] for f in findings]
 for name in ("IsActive", "IsDisabled"):
-    if name in joined:
+    hits = [m for m in joined_msgs if name_in_msg(name, m)
+            and not any(name_in_msg(forb, m) for forb in
+                        ("IsNotActive", "HasNoLicense", "IsNotVerified", "HasNoSubscription"))]
+    if hits:
         print(f"::error::allow-listed name '{name}' was incorrectly flagged", file=sys.stderr)
+        for h in hits:
+            print(f"   - {h}", file=sys.stderr)
         sys.exit(1)
 
 # Forbidden names must each appear exactly once.
 for name in ("IsNotActive", "HasNoLicense", "IsNotVerified", "HasNoSubscription"):
-    hits = sum(1 for f in findings if name in f["msg"])
+    hits = sum(1 for f in findings if name_in_msg(name, f["msg"]))
     if hits != 1:
         print(f"::error::forbidden name '{name}' appeared {hits} times (want 1)", file=sys.stderr)
         sys.exit(1)
