@@ -142,6 +142,24 @@ jobs:
         # On drift: regen + commit (see script header).
         run: bash linters-cicd/codegen/scripts/verify-codegen-determinism.sh
 
+      - name: BOOL-NEG-001 pipeline smoke test (run-all.sh end-to-end)
+        # Closes .lovable/resolved-issues/01-bool-neg-001-pipeline-untested.md
+        # and pending-suggestion #04. Runs the BOOL-NEG-001 SQL check
+        # through the full orchestrator (registry → check → SARIF merge)
+        # and asserts: 4 findings on forbidden Is/Has + Not/No prefixes,
+        # 10-name allow-list silently passes, no rule-id collision with
+        # the synthetic STYLE-099 finding.
+        run: bash tests/pipeline/check-bool-neg-001-pipeline.sh
+
+      - name: Orchestrator flags smoke test (--strict / --total-timeout / --split-by)
+        # Closes plan item #11 + pending-suggestion #13. Validates the
+        # v4.24.0 flags end-to-end against the real repo:
+        # 1) --total-timeout watchdog cancels on fast completion
+        # 2) --total-timeout watchdog fires on forced timeout
+        # 3) --split-by severity writes per-severity SARIF siblings
+        # 4) --strict rejects unknown TOML keys
+        run: bash tests/pipeline/check-orchestrator-flags.sh
+
   cross-links:
     name: Spec Cross-Reference Validation
     runs-on: ubuntu-latest
