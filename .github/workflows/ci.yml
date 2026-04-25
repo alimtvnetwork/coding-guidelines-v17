@@ -143,13 +143,6 @@ jobs:
         # comments, empty input).
         run: python3 linters-cicd/tests/run.py
 
-      - name: Verify codegen determinism (Rule 9 inverted-fields)
-        # Re-runs the inverted-field codegen on committed fixtures and
-        # diffs against expected/. Backs up the round-trip + bijection
-        # guarantees proven in test_codegen_inversion_table.py (#04).
-        # On drift: regen + commit (see script header).
-        run: bash linters-cicd/codegen/scripts/verify-codegen-determinism.sh
-
       - name: BOOL-NEG-001 pipeline smoke test (run-all.sh end-to-end)
         # Closes .lovable/resolved-issues/01-bool-neg-001-pipeline-untested.md
         # and pending-suggestion #04. Runs the BOOL-NEG-001 SQL check
@@ -167,6 +160,70 @@ jobs:
         # 3) --split-by severity writes per-severity SARIF siblings
         # 4) --strict rejects unknown TOML keys
         run: bash tests/pipeline/check-orchestrator-flags.sh
+
+  codegen:
+    name: Codegen (Rule 9 inverted-fields)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # ── Path filter ──────────────────────────────────────────────
+      # Only run the codegen verification when files that can affect
+      # the generated output have changed. Push events to main always
+      # run (no `base` available for diffing), so main stays trusted.
+      - name: Detect codegen-relevant changes
+        id: changes
+        uses: dorny/paths-filter@v3
+        with:
+          # On push events, paths-filter uses the previous commit as
+          # base automatically. On PRs it diffs against the PR base.
+          filters: |
+            codegen:
+              - 'linters-cicd/codegen/**'
+              - 'linters-cicd/tests/test_codegen_*.py'
+              - 'linters-cicd/tests/test_codegen_determinism_harness.py'
+              - '.github/workflows/ci.yml'
+
+      # ── Determinism check (always re-runs codegen, compares to expected/) ──
+      - name: Verify codegen determinism
+        if: steps.changes.outputs.codegen == 'true' || github.event_name == 'push'
+        # Re-runs inverted-field codegen on committed source fixtures and
+        # diffs the output byte-for-byte against committed expected/
+        # artifacts. Backed by round-trip + bijection guarantees proven
+        # in test_codegen_inversion_table.py.
+        # On drift: `npm run codegen:regen` locally and commit.
+        run: bash linters-cicd/codegen/scripts/verify-codegen-determinism.sh
+
+      # ── Regen-diff guard (catches uncommitted regen output) ──
+      # Even if verify-determinism passes, an author may have edited a
+      # source fixture without re-running regen. This step regenerates
+      # in-place and fails if the working tree drifts from the index.
+      - name: Regen-diff guard (no uncommitted codegen output)
+        if: steps.changes.outputs.codegen == 'true' || github.event_name == 'push'
+        run: |
+          bash linters-cicd/codegen/scripts/regen-codegen-fixtures.sh
+          if ! git diff --exit-code --stat -- linters-cicd/codegen/fixtures/expected/; then
+            echo ""
+            echo "::error::Codegen drift detected — fixtures/expected/ is out of sync with sources/."
+            echo "::error::Fix: run 'npm run codegen:regen' locally and commit the regenerated files."
+            echo ""
+            echo "--- Full diff ---"
+            git diff -- linters-cicd/codegen/fixtures/expected/
+            exit 1
+          fi
+          echo "✅ Codegen fixtures are in sync."
+
+      - name: Skipped — no codegen-relevant files changed
+        if: steps.changes.outputs.codegen != 'true' && github.event_name == 'pull_request'
+        run: |
+          echo "ℹ️ No changes under linters-cicd/codegen/** — verification skipped for this PR."
+          echo "   (Pushes to main always run the full codegen verification.)"
 
   cross-links:
     name: Spec Cross-Reference Validation
