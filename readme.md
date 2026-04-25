@@ -2,14 +2,14 @@
   <a href="https://github.com/alimtvnetwork/coding-guidelines-v17">
     <img
       src="public/images/coding-guidelines-icon.png"
-      alt="Coding Guidelines v15 brand icon — gradient shield with code-bracket symbol"
+      alt="Coding Guidelines v17 brand icon — gradient shield with code-bracket symbol"
       width="160"
       height="160"
     />
   </a>
 </p>
 
-<h1 align="center">Coding Guidelines v15</h1>
+<h1 align="center">Coding Guidelines v17</h1>
 
 <p align="center">
   <strong>Production-grade coding standards with zero-nesting enforcement and AI-optimized spec architecture<br/>
@@ -1211,3 +1211,7 @@ Full bio, design philosophy, and FAQ: [`docs/author.md`](docs/author.md).
 ---
 
 *This README is auto-stamped by [`scripts/sync-readme-stats.mjs`](scripts/sync-readme-stats.mjs). The numbers above are pulled from [`version.json`](version.json) on every `npm run sync`. Hand-editing the stamped values is safe but will be overwritten on the next sync.*
+
+---
+
+<p align="center"><sub><strong>v4.24.0</strong></sub></p>
