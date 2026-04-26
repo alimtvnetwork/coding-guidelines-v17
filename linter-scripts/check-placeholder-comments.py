@@ -1425,6 +1425,81 @@ def _normalise_changed_lines(
     return out
 
 
+def _render_rename_intake_table(rows: list[_DiffIntakeRow],
+                                stream) -> None:
+    """Render the rename/copy intake table to ``stream`` (typically
+    ``sys.stderr``).
+
+    Output shape::
+
+        ── rename/copy intake (3 row(s)) ──
+        kind  score  old                            →  new
+        R     092    spec/old-name.md               →  spec/new-name.md
+        R     ---    spec/legacy/intro.md           →  spec/intro.md
+        C     057    spec/template.md               →  spec/feature/intro.md
+
+    * ``kind`` is one column wide (R or C).
+    * ``score`` is right-padded to 5 chars; rows without a similarity
+      score render ``---`` so the column stays vertically aligned.
+    * ``old`` is left-padded to the longest old-path width (capped
+      at a sensible max so a single 200-char path doesn't push the
+      arrow off-screen). Paths longer than the cap are truncated
+      with a leading ``…`` so the *tail* (the meaningful part) is
+      preserved — same convention git uses for long pathspecs in
+      ``status`` output.
+    * ``new`` is unpadded (it's the last column, no alignment
+      needed downstream).
+
+    The header row count uses singular/plural (``1 row`` vs.
+    ``N rows``) so a forced-ON empty table reads naturally as
+    ``0 row(s)`` — the parenthetical form is intentional, it's the
+    cheapest way to support every count without a special case.
+    Always followed by a single blank line so subsequent stderr
+    output (the diff-mode banner, violation summary, etc.) doesn't
+    glue onto the table.
+    """
+    # Cap on the OLD-column width. Beyond this, paths are truncated
+    # with a leading ``…``. 60 chars is wide enough for typical
+    # ``spec/<module>/<file>.md`` layouts but narrow enough that the
+    # arrow + new path still fit in an 80-wide CI log without wrap.
+    _MAX_OLD_WIDTH = 60
+
+    def _truncate_left(s: str, width: int) -> str:
+        if len(s) <= width:
+            return s
+        # Preserve the tail (the leaf filename, the bit operators
+        # actually scan for). ``width - 1`` to leave room for ``…``.
+        return "…" + s[-(width - 1):]
+
+    print(f"── rename/copy intake ({len(rows)} row(s)) ──", file=stream)
+    if not rows:
+        # Forced-ON empty table: emit the header, then a hint that
+        # explains why the body is empty. Saves the operator a
+        # round-trip to the docs when they expected to see rows.
+        print("  (no rename or copy rows in this diff)", file=stream)
+        print("", file=stream)
+        return
+    # Compute the OLD column width as the longest truncated OLD path
+    # across the table, then pad every row to that width. Doing this
+    # in two passes keeps alignment correct even when truncation
+    # shortens some entries below the natural max.
+    old_display = [_truncate_left(r.old or "(unknown)", _MAX_OLD_WIDTH)
+                   for r in rows]
+    old_width = max((len(s) for s in old_display), default=0)
+    # Header row. ``kind`` is fixed-4-wide ("kind"), ``score`` is
+    # fixed-5-wide so unscored ``---`` rows align under "score".
+    print(f"  kind  score  {'old':<{old_width}}  →  new", file=stream)
+    for r, old_disp in zip(rows, old_display):
+        score_disp = f"{r.score:03d}" if r.score is not None else "---"
+        # Pad ``score_disp`` to 5 chars so a 3-digit score (e.g.
+        # ``100``) and the 3-char ``---`` both end at the same
+        # column boundary as the 5-wide "score" header.
+        print(f"  {r.kind:<4s}  {score_disp:<5s}  "
+              f"{old_disp:<{old_width}}  →  {r.new}",
+              file=stream)
+    print("", file=stream)
+
+
 # ---- Diff-excerpt rendering (used by the human summary in diff mode)
 #
 # We keep the parser tiny and tolerant: only the post-state side of a
