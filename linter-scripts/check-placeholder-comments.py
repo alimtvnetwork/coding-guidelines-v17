@@ -450,6 +450,17 @@ def main(argv: list[str] | None = None) -> int:
         metavar="VERB",
         help="Add an extra imperative verb to the P-001 allowlist "
              "(repeatable). Use lowercase, hyphens allowed.")
+    ap.add_argument("--cache-dir", default=None, metavar="DIR",
+        help="Enable a content-addressed PASS cache. On a hit (the linter "
+             "script + every scanned `.md` hash to the same key as a "
+             "previously-cached PASS) the scan is skipped and exit 0 is "
+             "returned immediately. Misses run normally and write a fresh "
+             "sentinel only on success. Stale or poisoned sentinels are "
+             "ignored because the key is recomputed from the working tree "
+             "every run.")
+    ap.add_argument("--no-cache-write", action="store_true",
+        help="With --cache-dir, read the sentinel but never write it. "
+             "Useful for read-only / forked-repo CI runs.")
     args = ap.parse_args(argv)
 
     root = Path(args.root).resolve()
@@ -459,6 +470,26 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     intent_verbs = DEFAULT_INTENT_VERBS | {v.lower() for v in args.allow_verb}
+
+    # ---- Cache fast-path ------------------------------------------
+    # The cache key fingerprints every input that can change the
+    # linter's verdict: the linter script itself, the resolved root,
+    # the imperative-verb allowlist (P-001 widening), and every `.md`
+    # under the root. A hit short-circuits the scan; a miss falls
+    # through to the full lint and writes a sentinel only if the
+    # scan ends clean (exit 0).
+    cache_key: str | None = None
+    sentinel: Path | None = None
+    if args.cache_dir:
+        cache_key = _compute_cache_key(root, intent_verbs)
+        sentinel = Path(args.cache_dir) / f"{cache_key}.pass"
+        if sentinel.is_file():
+            if not args.json:
+                print(f"✅ placeholder-comments: cache hit "
+                      f"({cache_key[:12]}…), skipping scan of {args.root}/")
+            else:
+                print("[]")
+            return 0
 
     violations: list[Violation] = []
     cross_file_bullets: list[tuple[str, int, str]] = []
@@ -500,7 +531,60 @@ def main(argv: list[str] | None = None) -> int:
                 print(f"  {v.file}:{v.line}  [{v.code}] {v.message}")
             print("\n  See linter-scripts/check-placeholder-comments.py for rule docs.")
 
+    # ---- Persist sentinel on clean runs only ----------------------
+    # Failed runs MUST NOT poison the cache: a future "fix" might
+    # re-introduce the same hash via revert, and we'd then skip the
+    # scan and miss the regression. Only PASS gets cached.
+    if sentinel is not None and not violations and not args.no_cache_write:
+        try:
+            sentinel.parent.mkdir(parents=True, exist_ok=True)
+            sentinel.write_text(
+                f"placeholder-comments PASS\nkey={cache_key}\n",
+                encoding="utf-8",
+            )
+        except OSError as e:
+            # Cache write failures are advisory — never fail the run.
+            print(f"::warning::placeholder-comments: cache write failed: {e}",
+                  file=sys.stderr)
+
     return 1 if violations else 0
+
+
+def _compute_cache_key(root: Path, intent_verbs: frozenset[str] | set[str]) -> str:
+    """Build a SHA-256 fingerprint of every input that affects the verdict.
+
+    Inputs (in deterministic order):
+      1. The absolute, resolved scan root.
+      2. The sorted, canonicalised imperative-verb allowlist.
+      3. The SHA-256 of the linter script itself (so a logic change
+         invalidates every cached PASS automatically).
+      4. For every `.md` under the root (sorted by path, dotfiles
+         excluded — same filter as ``iter_markdown_files``):
+         ``<repo-relative-path>\\0<sha256-of-bytes>\\n``
+
+    Anything outside this set (mtimes, permissions, sibling files,
+    environment variables) is intentionally excluded so the key is
+    reproducible across machines and CI shards.
+    """
+    h = hashlib.sha256()
+    h.update(b"placeholder-comments-cache-v1\n")
+    h.update(f"root={root}\n".encode("utf-8"))
+    h.update(("verbs=" + ",".join(sorted(intent_verbs)) + "\n").encode("utf-8"))
+    try:
+        script_bytes = Path(__file__).resolve().read_bytes()
+        h.update(b"script=" + hashlib.sha256(script_bytes).hexdigest().encode() + b"\n")
+    except OSError:
+        # __file__ unreadable (zipapp / frozen). Fall back to a stable
+        # tag so the cache still works, just with coarser invalidation.
+        h.update(b"script=unknown\n")
+    for md in iter_markdown_files(root):
+        try:
+            data = md.read_bytes()
+        except OSError:
+            continue
+        rel = str(md.relative_to(root)).encode("utf-8")
+        h.update(rel + b"\0" + hashlib.sha256(data).hexdigest().encode() + b"\n")
+    return h.hexdigest()
 
 
 if __name__ == "__main__":
