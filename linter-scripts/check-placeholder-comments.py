@@ -617,7 +617,18 @@ def main(argv: list[str] | None = None) -> int:
              "still scans the full tree so new duplicates introduced "
              "by a changed file always surface, even if the colliding "
              "first declaration lives in an unchanged file. Mutually "
-             "exclusive with --changed-files.")
+             "exclusive with --changed-files. Numeric shorthand: a "
+             "bare positive integer N expands to `HEAD~N` (e.g. "
+             "`--diff-base 1` ≡ `--diff-base HEAD~1`); leading `~N` "
+             "or `^N` are also expanded against `HEAD` so "
+             "`--diff-base ~2` ≡ `HEAD~2`. Any other value is passed "
+             "to git verbatim.")
+    ap.add_argument("--diff-prev", nargs="?", const="1", default=None,
+        metavar="N",
+        help="Diff-mode shorthand: compare against `HEAD~N` (default "
+             "N=1, i.e. the previous commit). Equivalent to "
+             "`--diff-base HEAD~N`. Mutually exclusive with "
+             "--diff-base and --changed-files.")
     ap.add_argument("--changed-files", default=None, metavar="PATH",
         help="Diff-mode: read the changed-file list from PATH (one "
              "repo-relative path per line, blanks/`#` comments ignored) "
@@ -744,6 +755,34 @@ def main(argv: list[str] | None = None) -> int:
         print("error: --diff-base and --changed-files are mutually exclusive",
               file=sys.stderr)
         return 2
+
+    # ``--diff-prev`` is a shorthand for ``--diff-base HEAD~N`` (default
+    # N=1). It's mutually exclusive with both --diff-base and
+    # --changed-files: stacking it with --diff-base would silently lose
+    # one of the two refs, and stacking it with --changed-files would
+    # mix two distinct intake sources. We resolve --diff-prev into
+    # ``args.diff_base`` so every downstream code path keeps using a
+    # single attribute.
+    if args.diff_prev is not None:
+        if args.diff_base:
+            print("error: --diff-prev and --diff-base are mutually exclusive",
+                  file=sys.stderr)
+            return 2
+        if args.changed_files:
+            print("error: --diff-prev and --changed-files are mutually exclusive",
+                  file=sys.stderr)
+            return 2
+        prev_raw = str(args.diff_prev).strip()
+        if not prev_raw.isdigit() or int(prev_raw) < 0:
+            print(f"error: --diff-prev requires a non-negative integer "
+                  f"(got {args.diff_prev!r})", file=sys.stderr)
+            return 2
+        args.diff_base = f"HEAD~{int(prev_raw)}"
+    elif args.diff_base:
+        # Apply numeric / ~N / ^N shorthand expansion to whatever the
+        # user typed. Non-shorthand refs pass through unchanged, so a
+        # plain ``--diff-base origin/main`` still hits git verbatim.
+        args.diff_base = _normalize_diff_base(args.diff_base)
 
     if args.diff_context < 0:
         print(f"error: --diff-context must be >= 0 (got {args.diff_context})",
@@ -1186,6 +1225,30 @@ def _render_changed_files_audit(rows: list[_ChangedFileAudit],
         counts[r.status] = counts.get(r.status, 0) + 1
     summary = "  ".join(f"{s}={counts[s]}" for s in _AUDIT_STATUSES)
     print(f"  totals: {summary}", file=stream)
+
+
+def _normalize_diff_base(ref: str) -> str:
+    """Expand bare-numeric / ``~N`` / ``^N`` shorthands to ``HEAD~N`` / ``HEAD^N``.
+
+    Rules (applied to the trimmed input):
+      * ``"N"`` where N is a positive int  → ``"HEAD~N"``
+      * ``"~N"`` (N a positive int)        → ``"HEAD~N"``
+      * ``"^N"`` (N a positive int)        → ``"HEAD^N"``
+      * Anything else (including refs that already start with a name
+        like ``HEAD``, ``main``, ``origin/main``, a SHA, etc.) is
+        returned verbatim so we never second-guess git's own ref
+        grammar. ``"0"`` / ``"~0"`` resolve to ``HEAD`` itself which
+        git accepts and which yields an empty diff — useful for
+        smoke-testing the diff plumbing without changing scope.
+    """
+    s = ref.strip()
+    if not s:
+        return ref
+    if s.isdigit():
+        return f"HEAD~{s}"
+    if len(s) >= 2 and s[0] in ("~", "^") and s[1:].isdigit():
+        return f"HEAD{s}"
+    return ref
 
 
 def _resolve_changed_md(repo_root: Path, root: Path, *,
