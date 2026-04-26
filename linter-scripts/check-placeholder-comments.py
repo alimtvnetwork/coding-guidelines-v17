@@ -1006,6 +1006,7 @@ def main(argv: list[str] | None = None) -> int:
                 only_statuses=(frozenset(args.only_changed_status)
                                if args.only_changed_status else None),
                 with_similarity=args.with_similarity,
+                with_labels=args.similarity_labels,
             )
             # CSV export mirrors the same dedupe + filter pipeline so
             # the spreadsheet always matches what the operator just
@@ -1021,7 +1022,10 @@ def main(argv: list[str] | None = None) -> int:
                 if args.only_changed_status:
                     only = frozenset(args.only_changed_status)
                     csv_rows = [r for r in csv_rows if r.status in only]
-                _write_similarity_csv(csv_rows, args.similarity_csv)
+                _write_similarity_csv(
+                    csv_rows, args.similarity_csv,
+                    with_labels=args.similarity_labels,
+                )
         if not args.json:
             print(f"ℹ️  placeholder-comments: diff-mode active — "
                   f"{len(changed_md)} changed `.md` file(s) under {args.root}/")
