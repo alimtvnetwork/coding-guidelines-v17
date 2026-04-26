@@ -799,6 +799,26 @@ def main(argv: list[str] | None = None) -> int:
              "BEFORE the export, so the CSV contains exactly the rows "
              "you'd see in the text/JSON audit. No-op without "
              "--list-changed-files.")
+    ap.add_argument("--similarity-labels", action="store_true",
+        help="With --with-similarity, attach a per-kind discriminator "
+             "to every rename/copy row so the score's *meaning* is "
+             "explicit instead of implied by the kind letter. Three "
+             "canonical labels: `rename-similarity` (R rows — score "
+             "is how alike the two paths are, 100 = byte-identical "
+             "move), `copy-similarity` (C rows — score is how much of "
+             "the source survived in the copy, 100 = verbatim "
+             "duplicate), and `unscored` (R/C row whose percentage is "
+             "absent — kind is still meaningful, magnitude isn't). "
+             "Plain A/M/D rows carry no label. In the text table the "
+             "label appears as a new `meaning` column appended after "
+             "`old`; in --json mode it's added as a `score_kind` "
+             "field on the nested `similarity` object (omitted on "
+             "plain rows where `similarity` itself is null); in "
+             "--similarity-csv exports a 7th `score_kind` column is "
+             "APPENDED (never inserted) so positional readers that "
+             "hard-code indices 0–5 keep working unchanged. Opt-in "
+             "to preserve the legacy schema byte-for-byte for "
+             "downstream consumers; no-op without --with-similarity.")
     ap.add_argument("--github", dest="github", action="store_true",
         default=None,
         help="Emit one GitHub Actions `::error file=…,line=…,title=…::` "
