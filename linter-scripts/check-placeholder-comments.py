@@ -43,6 +43,10 @@ Rules enforced (lightweight, no AST):
          contiguous per template guidance).
   P-006  Every opening marker must have a matching closer
          (``-->`` or ``</spec-placeholder>``).
+  P-007  Two or more placeholder bullets must not point at the same
+         target ``.md`` file (anchor ignored — duplicates pointing at
+         different sections of the same file still collapse to one
+         pending activation). Detected within a file and across files.
 
 Only multi-line comment blocks that start with the ``TODO:``/``FIXME:``
 marker on the opening line are linted. Single-line comments and
