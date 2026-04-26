@@ -100,3 +100,10 @@ export const MIN_FONT_SIZE = 12;
 export const MAX_FONT_SIZE = 32;
 export const FONT_SIZE_STEP = 2;
 export const COPY_FEEDBACK_DELAY = 2000;
+
+/**
+ * Threshold for showing the fullscreen "expand" affordance on docs-viewer
+ * code blocks. Mirrors the landing-page CommandRow rule: only show when the
+ * block is large enough that an enlarged view actually helps.
+ */
+export const EXPAND_LINE_THRESHOLD = 12;
