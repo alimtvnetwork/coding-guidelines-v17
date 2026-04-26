@@ -129,8 +129,11 @@ class ListFilesDiffMode(unittest.TestCase):
         self.assertEqual(by_path["spec/sub/c.md"]["status"], "linted")
         # The unchanged file is scanned only for cross-file P-007.
         self.assertEqual(by_path["spec/b.md"]["status"], "cross-file-only")
-        self.assertIn("cross-file P-007",
-                      by_path["spec/b.md"]["reason"])
+        # Reason mentions P-007 (the rule that requires cross-file
+        # bullet collection) so an operator can map the status back
+        # to a concrete rule without checking the docs.
+        self.assertIn("P-007", by_path["spec/b.md"]["reason"])
+        self.assertIn("unchanged", by_path["spec/b.md"]["reason"])
 
     def test_empty_changed_set_emits_clean_json_array(self) -> None:
         # An empty ``--changed-files`` document used to fall through
