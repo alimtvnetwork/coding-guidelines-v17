@@ -1607,6 +1607,7 @@ def _render_changed_files_audit(rows: list[_ChangedFileAudit],
                                 only_statuses: frozenset[str] | None = None,
                                 with_similarity: bool = False,
                                 with_labels: bool = False,
+                                legend_mode: str = _SIMILARITY_LEGEND_AUTO,
                                 ) -> None:
     """Print the diff-mode changed-file audit table to ``stream``.
 
