@@ -93,6 +93,81 @@ Guidelines for placeholders:
 - Remove the `<!--` and `-->` wrappers (and the `TODO:` prefix) once the target exists.
 - If the anchor (`#section-anchor`) is unknown, omit it and add it later.
 
+### How to activate placeholders
+
+When the target file finally lands, "activate" the placeholder by
+promoting the bullets out of the comment so the cross-link checker
+starts validating them. Three steps, in order:
+
+1. Confirm the target file exists and the anchor (if any) matches a real heading.
+2. Delete the opening `<!-- TODO: ...` line and the closing `-->` line.
+3. Run `python3 linter-scripts/check-spec-cross-links.py --root spec --repo-root .`
+   to verify the now-live links resolve.
+
+#### Example 1 — single placeholder, target now exists
+
+**Before** (placeholder, ignored by the checker):
+
+```markdown
+<!-- TODO: activate when target is created
+- [Database conventions](../04-database-conventions/00-overview.md)
+-->
+```
+
+**After** (live link, validated by the checker):
+
+```markdown
+- [Database conventions](../04-database-conventions/00-overview.md)
+```
+
+#### Example 2 — partial activation, one target still pending
+
+Split the block: promote the resolved bullet out, keep the unresolved
+one wrapped. Do **not** leave a half-commented block — the linter
+(`check-placeholder-comments.py`) will reject mixed prose inside `<!-- -->`.
+
+**Before:**
+
+```markdown
+<!-- TODO: activate when targets are created
+- [Naming conventions](../04-database-conventions/01-naming-conventions.md)
+- [Schema design](../04-database-conventions/02-schema-design.md)
+-->
+```
+
+**After** (first target shipped, second still pending):
+
+```markdown
+- [Naming conventions](../04-database-conventions/01-naming-conventions.md)
+
+<!-- TODO: activate when target is created
+- [Schema design](../04-database-conventions/02-schema-design.md)
+-->
+```
+
+#### Example 3 — anchor added after the fact
+
+If you originally omitted the `#section-anchor`, add it during
+activation rather than leaving a stale link to the file root.
+
+**Before:**
+
+```markdown
+<!-- TODO: activate when target is created
+- [Free-text columns](../04-database-conventions/02-schema-design.md)
+-->
+```
+
+**After** (anchor confirmed against the target's heading):
+
+```markdown
+- [Free-text columns](../04-database-conventions/02-schema-design.md#free-text-columns)
+```
+
+> **Do not** simply delete the `<!--` / `-->` markers without re-running
+> the cross-link checker — a mistyped path or stale anchor will only
+> surface once the link is live.
+
 ---
 
 ## Pre-flight checklist (delete before committing)

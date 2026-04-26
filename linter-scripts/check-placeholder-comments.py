@@ -77,10 +77,50 @@ def iter_markdown_files(root: Path) -> Iterable[Path]:
         yield p
 
 
+def strip_code_fences(text: str) -> str:
+    """Blank out fenced code blocks while preserving line numbers.
+
+    Documentation that *shows* a placeholder snippet inside ```` ```markdown ````
+    fences would otherwise be linted as a real placeholder. We replace
+    every line inside a fence with an empty string but keep the newline,
+    so reported line numbers in surrounding prose stay accurate.
+    """
+    out: list[str] = []
+    in_fence = False
+    fence_marker = ""
+    for line in text.splitlines():
+        stripped = line.lstrip()
+        if not in_fence and (stripped.startswith("```") or stripped.startswith("~~~")):
+            in_fence = True
+            fence_marker = stripped[:3]
+            out.append("")
+            continue
+        if in_fence and stripped.startswith(fence_marker):
+            in_fence = False
+            out.append("")
+            continue
+        if in_fence:
+            out.append("")
+        else:
+            out.append(line)
+    return "\n".join(out)
+
+
+# Inline code spans (`...`) on a single line. We blank the contents but
+# preserve the line so subsequent line numbers stay accurate. Multi-line
+# spans are not standard CommonMark, so per-line handling is enough.
+INLINE_CODE_RE = re.compile(r"`+[^`\n]*?`+")
+
+
+def strip_inline_code(text: str) -> str:
+    return "\n".join(INLINE_CODE_RE.sub(lambda m: " " * len(m.group(0)), line)
+                     for line in text.splitlines())
+
+
 def lint_file(path: Path, repo_root: Path) -> list[Violation]:
     rel = str(path.relative_to(repo_root))
     text = path.read_text(encoding="utf-8")
-    lines = text.splitlines()
+    lines = strip_inline_code(strip_code_fences(text)).splitlines()
     out: list[Violation] = []
 
     i = 0
