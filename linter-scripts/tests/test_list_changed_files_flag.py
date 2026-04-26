@@ -176,11 +176,14 @@ class DeletedPathParserUnit(unittest.TestCase):
         self.mod = mod
 
     def test_parse_name_status_captures_d_rows(self) -> None:
-        # ``deleted`` now carries ``(path, source)`` tuples so the
-        # audit emitter can look up a per-provenance reason string.
-        # ``_parse_name_status`` is the diff-D path → source is
-        # always ``"diff-D"`` for every row it captures.
-        deleted: list[tuple[str, str]] = []
+        # ``deleted`` carries ``(path, source, new_path | None)``
+        # tuples so the audit emitter can look up a per-provenance
+        # reason string AND name the destination on R/C-old rows.
+        # Plain ``D`` rows have ``new_path=None`` because there is
+        # no rename destination; ``_parse_name_status`` is the
+        # ``diff-D`` path → ``source`` is always ``"diff-D"`` for
+        # every D row it captures.
+        deleted: list[tuple[str, str, "str | None"]] = []
         out = self.mod._parse_name_status(
             "A\tspec/new.md\n"
             "D\tspec/old.md\n"
@@ -190,8 +193,8 @@ class DeletedPathParserUnit(unittest.TestCase):
         )
         self.assertEqual(out, ["spec/new.md", "spec/edit.md"])
         self.assertEqual(deleted, [
-            ("spec/old.md", "diff-D"),
-            ("spec/another-old.md", "diff-D"),
+            ("spec/old.md", "diff-D", None),
+            ("spec/another-old.md", "diff-D", None),
         ])
 
     def test_parse_name_status_no_deleted_arg_drops_d_rows(self) -> None:
@@ -205,13 +208,15 @@ class DeletedPathParserUnit(unittest.TestCase):
         # ``--changed-files`` payload's ``D\tpath`` rows are tagged
         # ``changed-files-D`` so the audit emitter can distinguish
         # them from real ``git diff`` D rows.
-        deleted: list[tuple[str, str]] = []
+        deleted: list[tuple[str, str, "str | None"]] = []
         out = self.mod._normalise_changed_lines(
             ["spec/keep.md", "D\tspec/gone.md", "spec/also.md"],
             deleted=deleted,
         )
         self.assertEqual(out, ["spec/keep.md", "spec/also.md"])
-        self.assertEqual(deleted, [("spec/gone.md", "changed-files-D")])
+        self.assertEqual(deleted, [
+            ("spec/gone.md", "changed-files-D", None),
+        ])
 
 
 if __name__ == "__main__":
