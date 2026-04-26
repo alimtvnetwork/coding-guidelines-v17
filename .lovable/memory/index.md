@@ -1,5 +1,5 @@
 # Memory: index.md
-Updated: 2026-04-24
+Updated: 2026-04-26
 
 # Project Memory
 
@@ -19,6 +19,7 @@ Updated: 2026-04-24
 - Global Namespace: Always use `github.com/mahin/movie-cli-v2`. Any v1 reference is a bug.
 - Version sync: bump package.json → `node scripts/sync-version.mjs` → `node scripts/sync-spec-tree.mjs`.
 - Execution: Break complex requests into discrete tasks. Wait for "next" prompt to continue.
+- 🔴 NO-QUESTIONS MODE active (40-task batch from 2026-04-26): never call ask_questions; log ambiguities to `.lovable/question-and-ambiguity/xx-title.md` and update its README index. Resume on explicit "ask questions" signal.
 
 ## Memories
 - [Install Command Formatting](mem://constraints/install-command-formatting) — One-line installs, no inline comments, per-platform headers, mirror InstallSection.tsx order.
@@ -47,3 +48,4 @@ Updated: 2026-04-24
 - [Install Command Formatting](mem://constraints/install-command-formatting) — README top install area must mirror UI order; one-line commands only; bundles before ToC.
 - [Standalone Script Standards](mem://constraints/standalone-script-standards) — Hard rules for browser/userscript files: no !important, no as-unknown, no error swallowing, class+DI, enums in types.ts, styles.ts, hide via class+transition.
 - [Payment Banner Hider RCA](mem://issues/payment-banner-hider-rca) — Root cause for the macro-ahk-v23 regression and the mandatory pre-write checklist that prevents repeats.
+- [No-Questions Mode](mem://workflow/no-questions-mode) — 40-task no-questions run; ambiguity logging template, sequencing, and resume trigger.
