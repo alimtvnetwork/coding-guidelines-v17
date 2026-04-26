@@ -462,6 +462,27 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--no-cache-write", action="store_true",
         help="With --cache-dir, read the sentinel but never write it. "
              "Useful for read-only / forked-repo CI runs.")
+    ap.add_argument("--diff-base", default=None, metavar="REF",
+        help="Diff-mode: only report per-file violations (P-001…P-006, "
+             "P-008, within-file P-007) for `.md` files changed vs. "
+             "REF (e.g. `origin/main`, `HEAD~1`, or a SHA). Resolved "
+             "with `git diff --name-only --diff-filter=AM REF...HEAD` "
+             "so renames + deletions are excluded. Cross-file P-007 "
+             "still scans the full tree so new duplicates introduced "
+             "by a changed file always surface, even if the colliding "
+             "first declaration lives in an unchanged file. Mutually "
+             "exclusive with --changed-files.")
+    ap.add_argument("--changed-files", default=None, metavar="PATH",
+        help="Diff-mode: read the changed-file list from PATH (one "
+             "repo-relative path per line, blanks/`#` comments ignored) "
+             "instead of invoking git. Use `-` to read from stdin. "
+             "Same semantics as --diff-base for cross-file P-007. "
+             "Mutually exclusive with --diff-base.")
+    ap.add_argument("--diff-empty-passes", action="store_true",
+        help="With --diff-base/--changed-files, when the resolved "
+             "changed-file set has no `.md` under --root, exit 0 "
+             "without scanning. Default behaviour is the same; this "
+             "flag is accepted for explicitness in CI configs.")
     args = ap.parse_args(argv)
 
     root = Path(args.root).resolve()
@@ -470,7 +491,42 @@ def main(argv: list[str] | None = None) -> int:
         print(f"error: --root {args.root!r} is not a directory", file=sys.stderr)
         return 2
 
+    if args.diff_base and args.changed_files:
+        print("error: --diff-base and --changed-files are mutually exclusive",
+              file=sys.stderr)
+        return 2
+
     intent_verbs = DEFAULT_INTENT_VERBS | {v.lower() for v in args.allow_verb}
+
+    # ---- Resolve diff-mode changed-file allowlist (if any) -------
+    # ``changed_md`` is None ⇒ full-tree mode (legacy behaviour).
+    # ``changed_md`` is a set of resolved Paths ⇒ diff mode: only
+    # those files emit per-file violations. Cross-file P-007 still
+    # walks every `.md` so a changed file colliding with an
+    # unchanged target is reported.
+    changed_md: set[Path] | None = None
+    if args.diff_base or args.changed_files:
+        try:
+            changed_md = _resolve_changed_md(
+                repo_root, root,
+                diff_base=args.diff_base,
+                changed_files=args.changed_files,
+            )
+        except RuntimeError as e:
+            print(f"error: {e}", file=sys.stderr)
+            return 2
+        if not args.json:
+            print(f"ℹ️  placeholder-comments: diff-mode active — "
+                  f"{len(changed_md)} changed `.md` file(s) under {args.root}/")
+        if not changed_md:
+            # Nothing under --root changed → fast PASS. Cross-file P-007
+            # has nothing new to report by definition (no new bullets).
+            if args.json:
+                print("[]")
+            else:
+                print(f"✅ placeholder-comments: no spec changes vs. diff base, "
+                      "skipping scan.")
+            return 0
 
     # ---- Cache fast-path ------------------------------------------
     # The cache key fingerprints every input that can change the
@@ -479,9 +535,16 @@ def main(argv: list[str] | None = None) -> int:
     # under the root. A hit short-circuits the scan; a miss falls
     # through to the full lint and writes a sentinel only if the
     # scan ends clean (exit 0).
+    #
+    # Diff mode bypasses the PASS-cache: the cache is keyed on the
+    # full-tree fingerprint, but a diff-mode run only inspects a
+    # subset of files, so its PASS verdict is *narrower* and must
+    # never satisfy a future full-tree query. Skipping cache I/O
+    # entirely keeps the invariant trivial: only full-tree PASSes
+    # are ever cached.
     cache_key: str | None = None
     sentinel: Path | None = None
-    if args.cache_dir:
+    if args.cache_dir and changed_md is None:
         cache_key = _compute_cache_key(root, intent_verbs)
         sentinel = Path(args.cache_dir) / f"{cache_key}.pass"
         if sentinel.is_file():
@@ -495,6 +558,12 @@ def main(argv: list[str] | None = None) -> int:
     violations: list[Violation] = []
     cross_file_bullets: list[tuple[str, int, str]] = []
     for md in iter_markdown_files(root):
+        if changed_md is not None and md.resolve() not in changed_md:
+            # Unchanged file: still collect its bullets so cross-file
+            # P-007 can detect a new collision introduced by a
+            # changed file, but suppress its per-file violations.
+            _collect_bullets_only(md, repo_root, cross_file_bullets)
+            continue
         violations.extend(lint_file(md, repo_root, cross_file_bullets, intent_verbs))
 
     # ---- P-007 cross-file duplicates -------------------------------
@@ -503,11 +572,22 @@ def main(argv: list[str] | None = None) -> int:
     # surface groups whose entries span ≥2 distinct files. The
     # *second* and later occurrences are flagged, pointing back at
     # the first declaration site for fast triage.
+    #
+    # In diff mode, only collisions whose *later* side lives in a
+    # changed file are reported — an unchanged file colliding with
+    # another unchanged file is pre-existing and out of scope for
+    # the push under review.
     by_target: dict[str, list[tuple[str, int, str]]] = {}
     for rel, ln, target in cross_file_bullets:
         by_target.setdefault(_canonical_target(rel, target, repo_root), []).append(
             (rel, ln, target)
         )
+    changed_rels: set[str] | None = None
+    if changed_md is not None:
+        changed_rels = {
+            str(p.relative_to(repo_root)) for p in changed_md
+            if p.is_relative_to(repo_root)
+        }
     for key, entries in by_target.items():
         files_seen = {e[0] for e in entries}
         if len(files_seen) < 2:
@@ -516,6 +596,8 @@ def main(argv: list[str] | None = None) -> int:
         for rel, ln, target in entries[1:]:
             if rel == first_rel:
                 continue  # already reported by the within-file pass
+            if changed_rels is not None and rel not in changed_rels:
+                continue  # pre-existing collision in unchanged file
             violations.append(Violation(rel, ln, "P-007",
                 f"Duplicate placeholder target `{target}` — also declared at "
                 f"`{first_rel}:L{first_ln}` as `{first_target}` "
