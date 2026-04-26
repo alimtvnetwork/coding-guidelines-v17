@@ -1113,17 +1113,24 @@ def _fetch_diff_excerpts(repo_root: Path, diff_base: str, rel_path: str,
 
 
 def _collect_bullets_only(path: Path, repo_root: Path,
-                          bullets_out: list[tuple[str, int, str]]) -> None:
+                          bullets_out: list[tuple[str, int, str]],
+                          exts: frozenset[str] | set[str] = DEFAULT_SOURCE_EXTS,
+                          ) -> None:
     """Cross-file P-007 helper for diff mode.
 
     Re-uses ``lint_file`` to extract every valid bullet from an
     unchanged file but discards the per-file violations. The bullets
     are needed so a *changed* file's new bullet can collide with a
     pre-existing target in an unchanged file and still trip P-007.
+
+    ``exts`` is forwarded to ``lint_file`` so P-003's target-
+    extension check uses the same allowlist when collecting bullets
+    from an unchanged file (otherwise a `.mdx` link in a `.md` file
+    would be silently dropped from the duplicate-detection pool).
     """
     # ``lint_file`` already appends to ``bullets_out`` via its
     # ``valid_bullets`` parameter; we drop the violations list.
-    lint_file(path, repo_root, bullets_out, DEFAULT_INTENT_VERBS)
+    lint_file(path, repo_root, bullets_out, DEFAULT_INTENT_VERBS, exts)
 
 
 # Per-rule one-liner shown in the annotation title so reviewers see
@@ -1190,16 +1197,21 @@ def _format_github_annotations(violations: list[Violation]) -> Iterable[str]:
         )
 
 
-def _compute_cache_key(root: Path, intent_verbs: frozenset[str] | set[str]) -> str:
+def _compute_cache_key(root: Path, intent_verbs: frozenset[str] | set[str],
+                       exts: frozenset[str] | set[str] = DEFAULT_SOURCE_EXTS,
+                       ) -> str:
     """Build a SHA-256 fingerprint of every input that affects the verdict.
 
     Inputs (in deterministic order):
       1. The absolute, resolved scan root.
       2. The sorted, canonicalised imperative-verb allowlist.
-      3. The SHA-256 of the linter script itself (so a logic change
+      3. The sorted, canonicalised source-file extension allowlist
+         (adding/removing an extension widens or narrows the scan,
+         so it must invalidate every prior PASS sentinel).
+      4. The SHA-256 of the linter script itself (so a logic change
          invalidates every cached PASS automatically).
-      4. For every `.md` under the root (sorted by path, dotfiles
-         excluded — same filter as ``iter_markdown_files``):
+      5. For every source file under the root (sorted by path,
+         dotfiles excluded — same filter as ``iter_source_files``):
          ``<repo-relative-path>\\0<sha256-of-bytes>\\n``
 
     Anything outside this set (mtimes, permissions, sibling files,
@@ -1207,9 +1219,13 @@ def _compute_cache_key(root: Path, intent_verbs: frozenset[str] | set[str]) -> s
     reproducible across machines and CI shards.
     """
     h = hashlib.sha256()
-    h.update(b"placeholder-comments-cache-v1\n")
+    # Bumped to v2 because the key shape changed (added `exts=`).
+    # A v1 sentinel under the same name would now describe a
+    # different scan, so the version tag forces a clean miss.
+    h.update(b"placeholder-comments-cache-v2\n")
     h.update(f"root={root}\n".encode("utf-8"))
     h.update(("verbs=" + ",".join(sorted(intent_verbs)) + "\n").encode("utf-8"))
+    h.update(("exts=" + ",".join(sorted(exts)) + "\n").encode("utf-8"))
     try:
         script_bytes = Path(__file__).resolve().read_bytes()
         h.update(b"script=" + hashlib.sha256(script_bytes).hexdigest().encode() + b"\n")
@@ -1217,7 +1233,7 @@ def _compute_cache_key(root: Path, intent_verbs: frozenset[str] | set[str]) -> s
         # __file__ unreadable (zipapp / frozen). Fall back to a stable
         # tag so the cache still works, just with coarser invalidation.
         h.update(b"script=unknown\n")
-    for md in iter_markdown_files(root):
+    for md in iter_source_files(root, exts):
         try:
             data = md.read_bytes()
         except OSError:
@@ -1225,6 +1241,37 @@ def _compute_cache_key(root: Path, intent_verbs: frozenset[str] | set[str]) -> s
         rel = str(md.relative_to(root)).encode("utf-8")
         h.update(rel + b"\0" + hashlib.sha256(data).hexdigest().encode() + b"\n")
     return h.hexdigest()
+
+
+def _normalise_extensions(raw: list[str]) -> frozenset[str]:
+    """Canonicalise a list of ``--ext`` values to a lowercase,
+    dot-prefixed, deduplicated frozenset.
+
+    Accepts ``mdx`` / ``.mdx`` / ``MDX`` / ``  .MdX  `` and yields
+    ``.mdx``. Rejects empty entries, entries containing path
+    separators, and entries that don't match a tame extension
+    grammar — those would cause surprising rglob behaviour and
+    would be silently accepted as valid P-003 targets, masking
+    typos like ``--ext "md "`` (trailing space).
+    """
+    cleaned: set[str] = set()
+    for entry in raw:
+        s = entry.strip().lower()
+        if not s:
+            raise ValueError("empty extension in allowlist")
+        if not s.startswith("."):
+            s = "." + s
+        # `.<alnum, dot, hyphen>+` covers `.md`, `.mdx`, `.txt`,
+        # `.markdown`, `.tmpl.md` if anyone ever wants compound
+        # extensions. Rejects path separators (`/`, `\`) and shell
+        # metacharacters that would corrupt rglob globs.
+        if not re.fullmatch(r"\.[a-z0-9][a-z0-9.\-]*", s):
+            raise ValueError(
+                f"invalid extension {entry!r} — expected a tame "
+                "suffix like `.md`, `.mdx`, `.txt`"
+            )
+        cleaned.add(s)
+    return frozenset(cleaned)
 
 
 if __name__ == "__main__":
