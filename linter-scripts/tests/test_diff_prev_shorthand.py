@@ -25,27 +25,26 @@ normalisation, not git itself.
 
 from __future__ import annotations
 
-import importlib.util
 import subprocess
 import sys
 import tempfile
 import unittest
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from conftest_shim import load_placeholder_linter  # noqa: E402
+
 LINTER = (Path(__file__).resolve().parent.parent
           / "check-placeholder-comments.py")
 
 
 def _load_linter_module():
-    """Import the hyphenated CLI script as a module so we can call
-    private helpers directly. Mirrors the loader pattern used by the
-    other unit-level test files in this suite."""
-    spec = importlib.util.spec_from_file_location(
-        "_cpc_under_test_diff_prev", LINTER)
-    mod = importlib.util.module_from_spec(spec)
-    assert spec.loader is not None
-    spec.loader.exec_module(mod)
-    return mod
+    """Return the linter module via the shared conftest shim. The shim
+    pre-registers the module in ``sys.modules`` BEFORE executing it,
+    which is required for ``@dataclass`` decorators inside the linter
+    to resolve their own type hints (Python 3.13 dataclass internals
+    look up ``cls.__module__`` in ``sys.modules``)."""
+    return load_placeholder_linter()
 
 
 def _run(*args: str, cwd: Path) -> tuple[int, str, str]:
