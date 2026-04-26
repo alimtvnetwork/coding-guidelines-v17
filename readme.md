@@ -551,6 +551,46 @@ npm run lint:readme:canonicals
 
 > **Markdown is intentionally not linted for code-style.** CI lints code in `spec/` and source files only — example snippets in `readme.md` and `docs/` are validated by hand against [`spec/02-coding-guidelines/01-cross-language/04-code-style/`](spec/02-coding-guidelines/01-cross-language/04-code-style/).
 
+#### Placeholder-comments lint (`.md` + optional `.mdx`)
+
+`linter-scripts/check-placeholder-comments.py` scans spec source files for forbidden placeholder/TODO blocks. The CI defaults to `.md` only; pass `--include-mdx` to additionally lint `.mdx` files (the flag is a shortcut for `--extension md --extension mdx` and resolves to the same canonical cache segment, so a switch back-and-forth doesn't thrash the cache).
+
+```bash
+# Default — lint .md only under spec/, with a per-branch cache.
+python3 linter-scripts/check-placeholder-comments.py \
+  --root spec \
+  --cache-dir .cache/placeholder-comments
+```
+
+```bash
+# Extend the scan to .mdx files (e.g. for docs sites that mix
+# Markdown and MDX). The cache directory is segmented per
+# extension allowlist, so this run writes to
+# .cache/placeholder-comments/ext-md+mdx/ and never collides
+# with the .md-only sentinels above.
+python3 linter-scripts/check-placeholder-comments.py \
+  --root spec \
+  --include-mdx \
+  --cache-dir .cache/placeholder-comments
+```
+
+```bash
+# Diff mode in CI: only lint files changed vs. the merge base,
+# emit JSON for the verdict, and force the rename/copy intake
+# diagnostic ON so the build log records every R/C row git
+# detected (scored vs. unscored is labelled explicitly under
+# both text and JSON renderers).
+python3 linter-scripts/check-placeholder-comments.py \
+  --root spec \
+  --include-mdx \
+  --cache-dir .cache/placeholder-comments \
+  --diff-base origin/main \
+  --diff-rename-log \
+  --json
+```
+
+> **Cache-dir tip.** Point `--cache-dir` at a path your CI persists between runs (e.g. GitHub Actions `actions/cache` keyed on the linter version + commit SHA of `spec/`). The cache key fingerprints every input that affects the verdict — script version, root, extension allowlist, allowlist files — so a stale entry can never produce a false PASS.
+
 ### Repo migration (v15 → v16)
 
 ```bash
