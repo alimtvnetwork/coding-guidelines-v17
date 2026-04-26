@@ -47,6 +47,8 @@ allowlist = [
   ".lovable/memory/constraints/standalone-script-standards.md",
   # Tooling README that documents these rules; literal stale forms are required for accurate examples.
   "linter-scripts/README-forbidden-strings.md",
+  # Quickref 'Don't' table cell legitimately demonstrates the forbidden v1 slug to teach the rename; the literal stale form is required for the example to make sense.
+  "spec/17-consolidated-guidelines/00-strictly-avoid-quickref.md",
 ]
 # --- Rule: stale module path (movie-cli v1 references) ---
 [[rule]]
