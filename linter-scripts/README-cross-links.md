@@ -45,6 +45,18 @@ python3 linter-scripts/check-placeholder-comments.py --root spec --repo-root .
 
 It enforces the snippet shape documented in `spec/_template.md` §Placeholder cross-references and runs automatically in the pre-commit hook alongside the cross-link checker.
 
+### Rules at a glance
+
+| Rule | Enforces |
+|------|----------|
+| P-001 | HTML-comment placeholders carry a `TODO:`/`FIXME:` marker on the opener. |
+| P-002 | Body lines are `- [text](link)` bullets. |
+| P-003 | Bullet links are relative `.md` paths (no http(s)/anchor-only). |
+| P-004 | Block contains at least one bullet. |
+| P-005 | No blank lines inside the block. |
+| P-006 | Every opener has a matching closer (`-->` / `</spec-placeholder>`). |
+| P-008 | Opener carries an `@path/to/file.ext:LINE` back-pointer hint so reviewers can `grep -n` straight to the spec section blocked on the pending target. |
+
 ## Allowlist (waivers)
 
 Known-broken links live in `linter-scripts/spec-cross-links.allowlist`,
