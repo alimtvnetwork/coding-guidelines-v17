@@ -196,7 +196,7 @@ function buildHtml({ scope, validator, crossLink, validatorRaw, crossLinkRaw, ge
           <tr class="sev-${f.severity}">
             <td class="num">L${f.line}</td>
             <td class="rule"><code>${escapeHtml(f.rule)}</code></td>
-            <td class="kind">${f.severity === "code-red" ? "🔴 Code Red" : "⚠️ Style"}</td>
+            <td class="kind">${f.severity === "code-red" ? "<span class='dot dot-red'></span> Code Red" : "<span class='dot dot-amber'></span> Style"}</td>
             <td class="msg">${escapeHtml(f.message)}</td>
           </tr>`
         ),
@@ -205,14 +205,14 @@ function buildHtml({ scope, validator, crossLink, validatorRaw, crossLinkRaw, ge
           <tr class="sev-link">
             <td class="num">L${f.line}</td>
             <td class="rule"><code>${escapeHtml(f.kind)}</code></td>
-            <td class="kind">🔗 Link</td>
+            <td class="kind"><span class='dot dot-blue'></span> Link</td>
             <td class="msg">${escapeHtml(f.detail)}</td>
           </tr>`
         ),
       ].join("");
       return `
         <section class="file-block">
-          <h3>📄 ${escapeHtml(file)} <span class="count">(${v.length + l.length})</span></h3>
+          <h3>${escapeHtml(file)} <span class="count">(${v.length + l.length})</span></h3>
           <table>
             <thead><tr><th>Line</th><th>Rule</th><th>Kind</th><th>Detail</th></tr></thead>
             <tbody>${rows}</tbody>
@@ -222,7 +222,7 @@ function buildHtml({ scope, validator, crossLink, validatorRaw, crossLinkRaw, ge
     .join("\n");
 
   const emptyState = grandTotal === 0
-    ? `<p class="empty">No findings in scope (${escapeHtml(scopeLabel)}). 🎉</p>`
+    ? `<p class="empty">No findings in scope (${escapeHtml(scopeLabel)}).</p>`
     : "";
 
   return `<!doctype html>
@@ -262,6 +262,11 @@ function buildHtml({ scope, validator, crossLink, validatorRaw, crossLinkRaw, ge
   tr.sev-code-red td.kind { color: #c53030; }
   tr.sev-style td.kind { color: #b7791f; }
   tr.sev-link td.kind { color: #2b6cb0; }
+  .dot { display: inline-block; width: 0.55rem; height: 0.55rem; border-radius: 50%;
+         margin-right: 0.35rem; vertical-align: middle; }
+  .dot-red { background: #e53e3e; }
+  .dot-amber { background: #d69e2e; }
+  .dot-blue { background: #3182ce; }
   details.raw { margin-top: 2rem; }
   details.raw summary { cursor: pointer; color: #4a5568; font-size: 0.85rem; }
   pre { background: #1a202c; color: #e2e8f0; padding: 0.9rem 1rem; border-radius: 6px;
@@ -280,9 +285,9 @@ function buildHtml({ scope, validator, crossLink, validatorRaw, crossLinkRaw, ge
 
   <div class="summary">
     <div><strong>${grandTotal}</strong><span>Total findings</span></div>
-    <div><strong>${totalCodeRed}</strong><span>🔴 Code Red</span></div>
-    <div><strong>${totalStyle}</strong><span>⚠️ Style</span></div>
-    <div><strong>${totalLink}</strong><span>🔗 Cross-link</span></div>
+    <div><strong>${totalCodeRed}</strong><span>Code Red</span></div>
+    <div><strong>${totalStyle}</strong><span>Style</span></div>
+    <div><strong>${totalLink}</strong><span>Cross-link</span></div>
   </div>
 
   ${emptyState || fileSections}
