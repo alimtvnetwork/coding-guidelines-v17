@@ -617,7 +617,18 @@ def main(argv: list[str] | None = None) -> int:
              "still scans the full tree so new duplicates introduced "
              "by a changed file always surface, even if the colliding "
              "first declaration lives in an unchanged file. Mutually "
-             "exclusive with --changed-files.")
+             "exclusive with --changed-files. Numeric shorthand: a "
+             "bare positive integer N expands to `HEAD~N` (e.g. "
+             "`--diff-base 1` ≡ `--diff-base HEAD~1`); leading `~N` "
+             "or `^N` are also expanded against `HEAD` so "
+             "`--diff-base ~2` ≡ `HEAD~2`. Any other value is passed "
+             "to git verbatim.")
+    ap.add_argument("--diff-prev", nargs="?", const="1", default=None,
+        metavar="N",
+        help="Diff-mode shorthand: compare against `HEAD~N` (default "
+             "N=1, i.e. the previous commit). Equivalent to "
+             "`--diff-base HEAD~N`. Mutually exclusive with "
+             "--diff-base and --changed-files.")
     ap.add_argument("--changed-files", default=None, metavar="PATH",
         help="Diff-mode: read the changed-file list from PATH (one "
              "repo-relative path per line, blanks/`#` comments ignored) "
