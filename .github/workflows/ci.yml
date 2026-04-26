@@ -59,6 +59,7 @@ jobs:
           test -f linter-scripts/check-forbidden-spec-paths.sh      || { echo "::error::check-forbidden-spec-paths.sh missing"; exit 1; }
           test -f linter-scripts/check-forbidden-strings.py         || { echo "::error::check-forbidden-strings.py missing"; exit 1; }
           test -f linter-scripts/check-readme-install-section.py    || { echo "::error::check-readme-install-section.py missing"; exit 1; }
+          test -f linter-scripts/check-placeholder-comments.py      || { echo "::error::check-placeholder-comments.py missing"; exit 1; }
           test -f linter-scripts/forbidden-strings.toml             || { echo "::error::forbidden-strings.toml missing"; exit 1; }
 
       - name: Run Go validator (spec)
@@ -95,6 +96,15 @@ jobs:
         #      no `\` line continuations.
         # Spec: .lovable/memory/constraints/install-command-formatting.md
         run: python3 linter-scripts/check-readme-install-section.py
+
+      - name: Check spec placeholder comments (P-001 … P-007)
+        # Validates `<spec-placeholder>` tags and legacy `<!-- TODO: ... -->`
+        # placeholder blocks across spec/. Catches malformed bullets,
+        # non-imperative wording, missing periods, self-closing tags,
+        # empty bodies, and duplicate `.md` targets BEFORE the cross-link
+        # checker runs. Mirrors the pre-commit hook so CI is the source
+        # of truth on every push.
+        run: python3 linter-scripts/check-placeholder-comments.py
 
       - name: Guard release-install.* against /releases/latest calls
         # Static guard: release-install.sh and release-install.ps1 MUST NOT
