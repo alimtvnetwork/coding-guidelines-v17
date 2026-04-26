@@ -702,19 +702,30 @@ def main(argv: list[str] | None = None) -> int:
     cache_key: str | None = None
     sentinel: Path | None = None
     if args.cache_dir and changed_md is None:
-        cache_key = _compute_cache_key(root, intent_verbs)
-        sentinel = Path(args.cache_dir) / f"{cache_key}.pass"
+        cache_key = _compute_cache_key(root, intent_verbs,
+                                       extensions=extensions)
+        # Sentinels live under a per-extension-allowlist subdirectory
+        # so different ``--extension`` runs are physically segregated
+        # on disk. The segment name is deterministic from the sorted
+        # extensions: ``ext-md``, ``ext-md+mdx``, etc. Long or
+        # otherwise filesystem-hostile allowlists fall back to a
+        # short-hash form (see ``_cache_segment``) to keep the path
+        # legal on Windows + tar-friendly. ``mkdir(parents=True)``
+        # below creates the segment directory on first PASS.
+        segment = _cache_segment(extensions)
+        sentinel = Path(args.cache_dir) / segment / f"{cache_key}.pass"
         if sentinel.is_file():
             if not args.json:
                 print(f"✅ placeholder-comments: cache hit "
-                      f"({cache_key[:12]}…), skipping scan of {args.root}/")
+                      f"({segment}/{cache_key[:12]}…), "
+                      f"skipping scan of {args.root}/")
             else:
                 print("[]")
             return 0
 
     violations: list[Violation] = []
     cross_file_bullets: list[tuple[str, int, str]] = []
-    for md in iter_markdown_files(root):
+    for md in iter_markdown_files(root, extensions=extensions):
         if changed_md is not None and md.resolve() not in changed_md:
             # Unchanged file: still collect its bullets so cross-file
             # P-007 can detect a new collision introduced by a
