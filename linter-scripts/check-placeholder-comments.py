@@ -1297,6 +1297,34 @@ def _dedupe_audit_rows(
 _SIMILARITY_BLANK = "-"
 
 
+# Per-source ``reason`` text for ``ignored-deleted`` rows. The KEY is
+# the provenance tag emitted by :func:`_parse_name_status` /
+# :func:`_normalise_changed_lines` alongside each captured delete; the
+# VALUE is the human-readable explanation that lands on the audit
+# row. Centralised so every surface (text table, JSON payload, CSV
+# export, dedupe footer) reports the same wording for a given source.
+#
+# Vocabulary is intentionally tiny + closed:
+#   * ``diff-D``           — true ``D``-status row from
+#                            ``git diff --name-status``.
+#   * ``changed-files-D``  — authored ``--changed-files`` payload
+#                            shaped exactly ``D\tpath`` (the verbatim
+#                            git wire format some CI runners forward).
+#
+# ``_DELETED_REASON_FALLBACK`` covers any future provenance the
+# parsers add before this map catches up — keeps the audit
+# self-explanatory rather than crashing on a missing key.
+_DELETED_REASON: dict[str, str] = {
+    "diff-D": ("git diff reported D (deleted): file removed in the "
+               "diff range, no post-state to lint"),
+    "changed-files-D": ("--changed-files payload row shaped `D\\tpath`: "
+                        "explicit delete marker, no post-state to lint"),
+}
+_DELETED_REASON_FALLBACK = ("path captured as a delete by the diff "
+                            "intake but provenance is unknown — "
+                            "treated as `ignored-deleted` for safety")
+
+
 # Stable header for the ``--similarity-csv`` export. Frozen at module
 # scope so the column order is part of the contract — downstream
 # spreadsheets / pandas readers can hard-code positions if they want.
