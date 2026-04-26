@@ -622,7 +622,21 @@ def main(argv: list[str] | None = None) -> int:
              "when your spec tree mixes Markdown and MDX (e.g. a "
              "Docusaurus site) and you want the linter to cover "
              "both with a single short flag instead of repeating "
-             "`--extension md --extension mdx` in every CI invocation.")
+             "`--extension md --extension mdx` in every CI invocation. "
+             "UNION vs REPLACEMENT: the flag is ALWAYS a union — it "
+             "appends `mdx` to the active baseline, never replaces "
+             "it. The baseline is `(md,)` when no `--extension` is "
+             "given, OR exactly the set you passed via `--extension` "
+             "when one or more of those flags are present. Examples: "
+             "(1) bare `--include-mdx` → `(md, mdx)` because the "
+             "default baseline is preserved; (2) `--extension rst "
+             "--include-mdx` → `(rst, mdx)` because YOU dropped `md` "
+             "from the baseline by passing an explicit `--extension`; "
+             "(3) `--extension md --extension mdx` ≡ `--include-mdx` "
+             "(same canonical cache segment + key). The rule of "
+             "thumb: if you want `md` in the result, either omit "
+             "`--extension` or include `--extension md` explicitly — "
+             "`--include-mdx` will not re-add it for you.")
     ap.add_argument("--cache-dir", default=None, metavar="DIR",
         help="Enable a content-addressed PASS cache. On a hit (the linter "
              "script + every scanned `.md` hash to the same key as a "
