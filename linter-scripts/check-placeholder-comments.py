@@ -1037,6 +1037,38 @@ def _resolve_changed_md(repo_root: Path, root: Path, *,
 _NAME_STATUS_RE = re.compile(r"^([AMDRCTUX])(\d{0,3})$")
 
 
+@dataclass(frozen=True)
+class _DiffIntakeRow:
+    """One row of the rename/copy intake table.
+
+    Captured from ``git diff --name-status -M -C`` (or, for the
+    ``--changed-files`` path, from rename rows in the user-supplied
+    payload). The table is purely diagnostic — :func:`_resolve_changed_md`
+    still drives off the post-state path list as before, so suppressing
+    the table never changes lint verdicts.
+
+    Fields:
+      * ``kind`` — single-char status: ``"R"`` (renamed) or ``"C"``
+        (copied). Plain A/M rows are NOT captured: they aren't
+        renames and would clutter the table that the operator
+        opted into specifically to audit rename/copy intake.
+      * ``score`` — git's similarity score (0–100) when present,
+        ``None`` when the source row didn't carry one (e.g. an
+        unscored ``R\\told\\tnew`` from hand-edited input).
+      * ``old`` — pre-rename path. May be empty string in
+        pathological inputs where git emits ``R<score>\\t\\tnew``;
+        we render it as ``"(unknown)"`` rather than dropping the
+        row, so the audit trail still reflects that a rename row
+        was seen.
+      * ``new`` — post-rename path. Always non-empty (we filter
+        empty-new rows upstream — they'd be useless for linting).
+    """
+    kind: str
+    score: int | None
+    old: str
+    new: str
+
+
 # Git emits paths in C-quoted form (``"path\twith\ttab"``) when
 # ``core.quotePath`` is true (the default) and the path contains a
 # byte that isn't safe for the terminal — tabs, newlines, control
