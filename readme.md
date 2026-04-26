@@ -551,6 +551,15 @@ npm run lint:readme:canonicals
 
 > **Markdown is intentionally not linted for code-style.** CI lints code in `spec/` and source files only — example snippets in `readme.md` and `docs/` are validated by hand against [`spec/02-coding-guidelines/01-cross-language/04-code-style/`](spec/02-coding-guidelines/01-cross-language/04-code-style/).
 
+#### Linter docs
+
+Topic-specific reference for the scripts above:
+
+- [`linter-scripts/README-rename-intake.md`](linter-scripts/README-rename-intake.md) — **Rename/copy intake schema** for `check-placeholder-comments.py --list-changed-files --with-similarity`. Documents the JSON audit shape (`path`, `status`, `reason`, `similarity`), the closed `status` vocabulary, the scored vs unscored `similarity.score: null` distinction, the `--similarity-legend={auto,on,off}` toggle, the CSV export, and a [ready-to-copy example payload](linter-scripts/examples/rename-intake-audit.json) covering every status × similarity-shape combination.
+- [`linter-scripts/README-cross-links.md`](linter-scripts/README-cross-links.md) — `check-spec-cross-links.py` reference.
+- [`linter-scripts/README-forbidden-strings.md`](linter-scripts/README-forbidden-strings.md) — `check-forbidden-strings.py` reference (rules, waivers, summary report).
+- [`linter-scripts/README-allowlist-cli.md`](linter-scripts/README-allowlist-cli.md) — extension allowlist CLI reference.
+
 ### Repo migration (v15 → v16)
 
 ```bash
