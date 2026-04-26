@@ -27,10 +27,19 @@ Every WordPress plugin built under these conventions **must** expose a `/ping` e
 
 The ping endpoint supports **two authorization modes**. The plugin developer chooses which mode to use based on their security requirements. Both modes are documented here; the developer selects one via `PluginConfigType`.
 
+> **🔴 CODE RED — security update (v4.24+):** Per
+> [Phase 14 §14.5.1](./14-rest-api-conventions.md#1451-security--permission-callbacks--code-red),
+> `__return_true` is **forbidden** as the value of `permission_callback`,
+> including for "public" routes. Mode 1 below now resolves to a named
+> `allowPublicPing()` method whose docblock declares why the route is
+> public. Plugins authored against earlier versions of this spec MUST
+> migrate; the `WP-PERM-001` linter blocks merge on any remaining
+> `__return_true` callback.
+
 ### Mode 1: Non-Authorized (Public)
 
 ```php
-'permission_callback' => '__return_true',
+'permission_callback' => [$this, 'allowPublicPing'],
 ```
 
 | Aspect | Detail |
@@ -39,6 +48,7 @@ The ping endpoint supports **two authorization modes**. The plugin developer cho
 | **Pros** | Zero friction — any HTTP client can ping |
 | **Cons** | Exposes author/version to unauthenticated users |
 | **Security note** | Version exposure may aid targeted attacks; acceptable when the plugin is open-source or version info is already public |
+| **Required helper** | `allowPublicPing(): bool` — returns `true`; docblock MUST state why the route is public (audit trail per §14.5.1 rule 3) |
 
 ### Mode 2: Authorized (Authenticated)
 
@@ -52,6 +62,7 @@ The ping endpoint supports **two authorization modes**. The plugin developer cho
 | **Pros** | Only authenticated users see author/version info |
 | **Cons** | External uptime monitors need credentials |
 | **Security note** | Recommended for closed-source or enterprise plugins |
+| **Required helper** | `checkPingPermission(): bool\|WP_Error` — MUST call `current_user_can()` with a `CapabilityType` enum value, never `is_user_logged_in()` alone (§14.5.1 rule 4) |
 
 ### Configuration via PluginConfigType
 
@@ -67,13 +78,16 @@ enum PluginConfigType: string
 
     /**
      * Resolves the permission callback for the ping endpoint.
+     *
+     * Always returns a [object, method] pair — never the forbidden
+     * '__return_true' string (see Phase 14 §14.5.1).
      */
-    public static function pingPermissionCallback(object $handler): callable|string
+    public static function pingPermissionCallback(object $handler): callable
     {
         $isAuthorized = self::IsPingAuthorized->value === 'true';
 
         if (!$isAuthorized) {
-            return '__return_true';
+            return [$handler, 'allowPublicPing'];
         }
 
         return [$handler, 'checkPingPermission'];
