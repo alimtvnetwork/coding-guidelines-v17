@@ -780,7 +780,9 @@ def main(argv: list[str] | None = None) -> int:
         # untouched in --json mode.
         if changed_audit is not None:
             _render_changed_files_audit(
-                changed_audit, sys.stderr, as_json=args.json,
+                changed_audit, sys.stderr,
+                as_json=args.json,
+                dedupe=args.dedupe_changed_files,
             )
         if not args.json:
             print(f"ℹ️  placeholder-comments: diff-mode active — "
