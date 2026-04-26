@@ -69,16 +69,27 @@ class _Sandbox:
         """Invoke the linter with `--list-changed-files` and return
         the completed process. STDOUT and STDERR are captured as
         separate strings so tests can assert the stream contract.
+
+        The linter's `--root` AND its `cwd` are both set to the
+        sandbox `root` (NOT `spec/`) so payload paths like
+        ``spec/x.md`` resolve to ``<tmp>/spec/x.md`` — i.e. *under*
+        the spec subroot, the way a real repo's relative paths
+        would. Setting `--root` to ``spec/`` would double-stack the
+        prefix and every row would land as ``ignored-out-of-root``.
         """
         cmd = [
             sys.executable, str(_LINTER),
-            "--root", str(self.spec),
+            "--root", str(self.spec),  # post-state files MUST live under here
             "--changed-files", str(self.changed),
             "--list-changed-files",
             *extra,
         ]
+        # `cwd=self.root` so the relative `spec/x.md` payload entries
+        # are resolved against the sandbox root, NOT against the
+        # caller's CWD (which is the project repo and would resolve
+        # to a non-existent path under it).
         return subprocess.run(cmd, capture_output=True, text=True,
-                              check=False)
+                              check=False, cwd=str(self.root))
 
 
 class DeletesOnlyIntakeIsCleanPass(unittest.TestCase):
