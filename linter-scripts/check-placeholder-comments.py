@@ -2117,7 +2117,16 @@ def _resolve_changed_md(repo_root: Path, root: Path, *,
     # ``_DELETED_REASON``'s keys. The audit emitter below maps
     # ``source`` → human-readable ``reason`` so each
     # ``ignored-deleted`` row explains *why* it was classified.
-    deleted_paths: list[tuple[str, str]] = []
+    # Each entry is ``(path, source, new_path | None)``:
+    #   * ``path``     — the OLD-side / deleted repo-relative path.
+    #   * ``source``   — provenance tag, one of ``_DELETED_REASON``'s
+    #                    keys.
+    #   * ``new_path`` — the rename/copy destination when ``source``
+    #                    is an R/C-old tag, else ``None``. Used by
+    #                    :func:`_resolve_deleted_reason` to format the
+    #                    `{new_path}` placeholder so the audit row
+    #                    names where the file went.
+    deleted_paths: list[tuple[str, str, "str | None"]] = []
     # When the caller asked for an audit trail, also collect rename/
     # copy provenance per new-path so the audit constructor below can
     # attach a ``_RenameSimilarity`` to every row whose path came from
@@ -2212,11 +2221,10 @@ def _resolve_changed_md(repo_root: Path, root: Path, *,
                 similarity=sim,
             ))
     if audit is not None:
-        for d, src in deleted_paths:
+        for d, src, new_path in deleted_paths:
             audit.append(_ChangedFileAudit(
                 path=d, status="ignored-deleted",
-                reason=_DELETED_REASON.get(
-                    src, _DELETED_REASON_FALLBACK),
+                reason=_resolve_deleted_reason(src, new_path),
                 # Carry the raw provenance tag onto the audit row so
                 # ``--list-changed-files-verbose`` can surface it
                 # alongside the human-readable reason. Non-deleted
