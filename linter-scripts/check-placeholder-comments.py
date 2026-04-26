@@ -778,6 +778,27 @@ def main(argv: list[str] | None = None) -> int:
              "semantics also apply to the similarity record) and "
              "--only-changed-status (filtering runs after the "
              "metadata is attached).")
+    ap.add_argument("--similarity-csv", default=None, metavar="PATH",
+        help="With --list-changed-files, ALSO export the audit rows "
+             "as CSV to PATH for spreadsheet review (Excel, Numbers, "
+             "LibreOffice, `csvkit`, etc.). Use `-` to write the CSV "
+             "to STDOUT instead — only safe when STDOUT isn't already "
+             "carrying the violation summary or `--json` payload, so "
+             "the recommended pattern is a real file path. The header "
+             "row is always `path,status,reason,kind,score,old_path` "
+             "(stable column order regardless of `--with-similarity`); "
+             "the four similarity columns are populated when the "
+             "underlying row carries a `_RenameSimilarity` and left "
+             "EMPTY otherwise — empty `score` cells distinguish "
+             "*unscored* rename/copy rows (authored `--changed-files` "
+             "payloads without a percentage) from `score=0` (git rated "
+             "the pair entirely dissimilar). Plain A/M/D rows have "
+             "all four similarity cells empty. RFC 4180 quoting via "
+             "the stdlib `csv` module so paths with commas, quotes, "
+             "or newlines round-trip safely. Dedupe + filter run "
+             "BEFORE the export, so the CSV contains exactly the rows "
+             "you'd see in the text/JSON audit. No-op without "
+             "--list-changed-files.")
     ap.add_argument("--github", dest="github", action="store_true",
         default=None,
         help="Emit one GitHub Actions `::error file=…,line=…,title=…::` "
