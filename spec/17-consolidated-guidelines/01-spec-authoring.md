@@ -11,6 +11,15 @@ This is the **standalone consolidated reference** for spec authoring conventions
 
 ---
 
+## Quick start (read this first)
+
+1. **Copy the template:** `cp spec/_template.md spec/<NN-your-module>/01-your-file.md`
+2. **Read the prohibitions:** [`00-strictly-avoid-quickref.md`](./00-strictly-avoid-quickref.md) — 30 seconds, prevents the most common CI failures.
+3. **Before you commit:** run the four sync scripts in order — see [§X.2 Mandatory Execution Order](#x2-mandatory-execution-order). Skipping any step trips `Drift detected in version.json` in CI.
+4. **Validate:** `python linter-scripts/validate-guidelines.py` — must report zero CODE-RED and zero STYLE violations.
+
+---
+
 ## Folder Structure — Numbering Policy
 
 - **`01–20`** — Core Fundamentals (principles, standards, integrations, research)
