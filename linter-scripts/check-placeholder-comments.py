@@ -699,12 +699,20 @@ def main(argv: list[str] | None = None) -> int:
     # walks every `.md` so a changed file colliding with an
     # unchanged target is reported.
     changed_md: set[Path] | None = None
+    # Audit trail of every raw post-state path the diff produced and
+    # how the allowlist filter (extension → under-root → exists)
+    # treated it. ``None`` in full-tree mode (no diff to classify);
+    # always a list (possibly empty) in diff mode. Consumed by the
+    # ``--list-changed-files`` diagnostic.
+    changed_classification: list[dict[str, str]] | None = None
     if args.diff_base or args.changed_files:
         try:
-            changed_md = _resolve_changed_md(
+            changed_md, changed_classification = (
+                _resolve_changed_md_with_classification(
                 repo_root, root,
                 diff_base=args.diff_base,
                 changed_files=args.changed_files,
+                )
             )
         except RuntimeError as e:
             print(f"error: {e}", file=sys.stderr)
@@ -714,9 +722,47 @@ def main(argv: list[str] | None = None) -> int:
         # parseable JSON array on stdout, and a leading human-readable
         # banner would break json.loads(). Plain-text --list-files
         # still benefits from the banner.
-        if not args.json and not (args.list_files and args.json):
+        # ``--list-changed-files`` follows the same rule: in JSON mode
+        # the diagnostic must own stdout exclusively so CI can pipe it
+        # straight into ``json.loads``.
+        if (not args.json
+                and not (args.list_files and args.json)
+                and not (args.list_changed_files and args.json)):
             print(f"ℹ️  placeholder-comments: diff-mode active — "
                   f"{len(changed_md)} changed `.md` file(s) under {args.root}/")
+
+        # ---- --list-changed-files diagnostic short-circuit -------
+        # Must run BEFORE the "empty changed_md → fast PASS" branch
+        # below: a PR that touches only `.py` files leaves
+        # ``changed_md`` empty but ``changed_classification`` full of
+        # ``ignored-extension`` rows — the whole point of the
+        # diagnostic is to surface exactly those rows. Returning
+        # early on the empty-set branch would hide them.
+        if args.list_changed_files:
+            assert changed_classification is not None
+            if args.json:
+                # Single JSON array on stdout, no banner, so
+                # ``json.loads(stdout)`` works on the raw output.
+                print(json.dumps(changed_classification, indent=2,
+                                 ensure_ascii=False))
+            else:
+                n_linted = sum(1 for r in changed_classification
+                               if r["status"] == "linted")
+                n_ignored = len(changed_classification) - n_linted
+                print(f"ℹ️  placeholder-comments: "
+                      f"{len(changed_classification)} changed path(s) "
+                      f"reported by diff — {n_linted} linted, "
+                      f"{n_ignored} ignored")
+                # ``status:22`` accommodates the longest status
+                # literal (``ignored-out-of-root``, 19 chars) plus a
+                # little breathing room so the path column lines up.
+                for r in changed_classification:
+                    print(f"  {r['status']:22s}  {r['path']}")
+                    print(f"    └─ {r['reason']}")
+                print(f"\n  Run without --list-changed-files to "
+                      f"actually lint.")
+            return 0
+
         if not changed_md:
             # Nothing under --root changed → fast PASS. Cross-file P-007
             # has nothing new to report by definition (no new bullets).
@@ -736,6 +782,20 @@ def main(argv: list[str] | None = None) -> int:
                 print(f"✅ placeholder-comments: no spec changes vs. diff base, "
                       "skipping scan.")
             return 0
+    elif args.list_changed_files:
+        # Full-tree mode: there's no diff to classify. Emit an empty
+        # listing + a hint so the operator isn't confused by silence,
+        # then exit 0. We deliberately do NOT error out — a CI matrix
+        # may pass --list-changed-files unconditionally and only some
+        # rows will set --diff-base.
+        if args.json:
+            print("[]")
+        else:
+            print(f"ℹ️  placeholder-comments: --list-changed-files is "
+                  f"a no-op without --diff-base / --changed-files "
+                  f"(full-tree mode has no diff to classify). "
+                  f"Use --list-files for the discovered-file listing.")
+        return 0
 
     # ---- --list-files diagnostic short-circuit -------------------
     # Walk the same iterator the linter would walk and classify each
