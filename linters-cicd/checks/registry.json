@@ -104,5 +104,32 @@
     "languages": {
       "markdown": "checks/spec-links/markdown.py"
     }
+  },
+  "SQLI-RAW-001": {
+    "name": "RawExecuteConcatenation",
+    "level": "error",
+    "spec": "18-wp-plugin-how-to/19-micro-orm-and-root-db.md",
+    "languages": {
+      "php": "checks/sqli-raw-execute/php.py",
+      "typescript": "checks/sqli-raw-execute/typescript.py"
+    }
+  },
+  "SQLI-RAW-002": {
+    "name": "WhereRawWithoutStrictParams",
+    "level": "error",
+    "spec": "18-wp-plugin-how-to/19-micro-orm-and-root-db.md",
+    "languages": {
+      "php": "checks/sqli-where-raw/php.py",
+      "typescript": "checks/sqli-where-raw/typescript.py"
+    }
+  },
+  "SQLI-ORDER-001": {
+    "name": "UnvalidatedOrderOrGroupByIdentifier",
+    "level": "error",
+    "spec": "18-wp-plugin-how-to/19-micro-orm-and-root-db.md",
+    "languages": {
+      "php": "checks/sqli-order-group-by/php.py",
+      "typescript": "checks/sqli-order-group-by/typescript.py"
+    }
   }
 }
