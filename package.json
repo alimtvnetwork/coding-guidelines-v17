@@ -22,6 +22,8 @@
     "lint:ci": "bash scripts/lint-ci.sh",
     "lint:ci:list": "bash scripts/lint-ci.sh --list",
     "lint:ci:no-cache": "bash scripts/lint-ci.sh --no-cache",
+    "lint:ci:step": "bash scripts/lint-ci.sh --step",
+    "lint:ci:from": "bash scripts/lint-ci.sh --from",
     "gen:readme-txt": "node scripts/generate-readme-txt.mjs",
     "prebuild": "node scripts/sync-version.mjs && node scripts/sync-spec-tree.mjs && node scripts/sync-health-score.mjs && node scripts/sync-readme-stats.mjs && python3 linter-scripts/check-readme-canonicals.py && python3 linter-scripts/check-readme-install-section.py",
     "prepare": "husky",
