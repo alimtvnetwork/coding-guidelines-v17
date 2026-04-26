@@ -1,36 +1,33 @@
 #!/usr/bin/env python3
-"""Tests for SQLI-RAW-001, SQLI-RAW-002, and SQLI-ORDER-001.
-
-Locks behaviour for the three new injection-vector linters introduced
-to back the WP-plugin micro-ORM gap analysis:
-
-- SQLI-RAW-001 — rawExecute() concatenation / interpolation
-- SQLI-RAW-002 — whereRaw() without strict ? / :param placeholders
-- SQLI-ORDER-001 — orderBy/groupBy with non-literal identifiers
-"""
+"""Tests for SQLI-RAW-001, SQLI-RAW-002, and SQLI-ORDER-001."""
 from __future__ import annotations
 
+import importlib.util
 import sys
 import tempfile
 import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT / "checks"))
 
-# rawExecute
-sys.path.insert(0, str(ROOT / "checks" / "sqli-raw-execute"))
-from _shared import is_unsafe_first_arg as raw_unsafe  # noqa: E402
 
-# whereRaw
-sys.path.insert(0, str(ROOT / "checks" / "sqli-where-raw"))
-from _shared import (  # noqa: E402
-    diagnose_where_raw, has_placeholders, second_arg_present,
-)
+def _load(mod_name: str, path: Path):
+    spec = importlib.util.spec_from_file_location(mod_name, path)
+    mod = importlib.util.module_from_spec(spec)
+    sys.modules[mod_name] = mod
+    spec.loader.exec_module(mod)
+    return mod
 
-# orderBy / groupBy
-sys.path.insert(0, str(ROOT / "checks" / "sqli-order-group-by"))
-from _shared import is_safe_identifier_arg  # noqa: E402
+
+_raw = _load("sqli_raw_shared", ROOT / "checks" / "sqli-raw-execute" / "_shared.py")
+_where = _load("sqli_where_shared", ROOT / "checks" / "sqli-where-raw" / "_shared.py")
+_order = _load("sqli_order_shared", ROOT / "checks" / "sqli-order-group-by" / "_shared.py")
+
+raw_unsafe = _raw.is_unsafe_first_arg
+diagnose_where_raw = _where.diagnose_where_raw
+has_placeholders = _where.has_placeholders
+second_arg_present = _where.second_arg_present
+is_safe_identifier_arg = _order.is_safe_identifier_arg
 
 
 class TestRawExecuteUnsafeArg(unittest.TestCase):
@@ -73,7 +70,6 @@ class TestWhereRawDiagnosis(unittest.TestCase):
         self.assertFalse(has_placeholders("'a = b'"))
 
     def test_second_arg_detection(self) -> None:
-        # ->whereRaw('a = ?', [$x])  → second arg present
         self.assertTrue(second_arg_present(", [$x])", 0))
         self.assertFalse(second_arg_present(")", 0))
         self.assertFalse(second_arg_present(", [])", 0))
@@ -107,11 +103,10 @@ class TestEndToEndPHPFixture(unittest.TestCase):
         with tempfile.TemporaryDirectory() as td:
             (Path(td) / "demo.php").write_text(source, encoding="utf-8")
             out = Path(td) / "out.sarif"
-            rc = subprocess.call([
+            return subprocess.call([
                 sys.executable, str(check_path),
                 "--path", td, "--format", "sarif", "--output", str(out),
             ])
-            return rc
 
     def test_raw_execute_flags_concat(self) -> None:
         check = ROOT / "checks" / "sqli-raw-execute" / "php.py"
