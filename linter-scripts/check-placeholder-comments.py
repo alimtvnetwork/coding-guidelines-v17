@@ -744,8 +744,34 @@ def main(argv: list[str] | None = None) -> int:
                 f"`{first_rel}:L{first_ln}` as `{first_target}` "
                 "(anchor differences are ignored)."))
 
+    # Build a rel-path → _DiffEntry view so the per-violation
+    # rendering loop (and the JSON serializer) can look up rename
+    # provenance with a string key — matches Violation.file's shape.
+    rename_by_rel: dict[str, _DiffEntry] = {}
+    for p, ent in rename_map.items():
+        try:
+            rename_by_rel[str(p.relative_to(repo_root))] = ent
+        except ValueError:
+            continue
+
     if args.json:
-        print(json.dumps([asdict(v) for v in violations], indent=2))
+        # Backward-compatible: every existing field is unchanged.
+        # ``rename`` is added only when the violation's file came in
+        # via an R/C row, so legacy consumers that key off
+        # ``file``/``line``/``code``/``message`` see no schema drift.
+        payload = []
+        for v in violations:
+            row = asdict(v)
+            ent = rename_by_rel.get(v.file)
+            if ent is not None:
+                row["rename"] = {
+                    "kind": ent.kind,           # "R" or "C"
+                    "from": ent.old_path,
+                    "to": v.file,
+                    "score": ent.score,         # int 0–100 or null
+                }
+            payload.append(row)
+        print(json.dumps(payload, indent=2))
     else:
         if not violations:
             print(f"✅ placeholder-comments: no malformed blocks under {args.root}/")
@@ -769,7 +795,21 @@ def main(argv: list[str] | None = None) -> int:
                     if excerpt is not None:
                         diff_excerpts[rel] = excerpt
             for v in violations:
-                print(f"  {v.file}:{v.line}  [{v.code}] {v.message}")
+                # Suffix renamed/copied violations so the reader knows
+                # the path on disk is the post-rename one and the
+                # placeholder block came in (or moved) with the rename.
+                ent = rename_by_rel.get(v.file)
+                if ent is None:
+                    suffix = ""
+                elif ent.kind == "R":
+                    score = (f", {ent.score}% similar"
+                             if ent.score is not None else "")
+                    suffix = f"  (renamed from `{ent.old_path}`{score})"
+                else:  # "C"
+                    score = (f", {ent.score}% similar"
+                             if ent.score is not None else "")
+                    suffix = f"  (copied from `{ent.old_path}`{score})"
+                print(f"  {v.file}:{v.line}  [{v.code}] {v.message}{suffix}")
                 excerpt = diff_excerpts.get(v.file)
                 if excerpt is not None:
                     snippet = excerpt.render(v.line, args.diff_context)
