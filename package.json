@@ -54,6 +54,7 @@
     "test:release:bake": "bash tests/installer/check-release-bake.sh",
     "test:installer:root": "bash tests/installer/check-root-install-acceptance.sh",
     "test:linters": "python3 linters-cicd/tests/run.py",
+    "test:linter-scripts": "python3 linter-scripts/tests/run.py",
     "codegen:verify": "bash linters-cicd/codegen/scripts/verify-codegen-determinism.sh",
     "codegen:regen": "bash linters-cicd/codegen/scripts/regen-codegen-fixtures.sh",
     "test:pipeline:bool-neg": "bash tests/pipeline/check-bool-neg-001-pipeline.sh",
