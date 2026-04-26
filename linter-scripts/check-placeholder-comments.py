@@ -1383,6 +1383,19 @@ _SIMILARITY_CSV_HEADER_LABELED: tuple[str, ...] = (
     *_SIMILARITY_CSV_HEADER, "score_kind",
 )
 
+# Recognised values for ``--similarity-csv-format``. Centralised so
+# the argparse ``choices=`` list, the writer's dispatch, and the
+# tests all agree on the exact spelling. ``csv`` is the legacy
+# default (RFC 4180 with comma separators); ``tsv`` switches to
+# the stdlib ``csv.excel_tab`` dialect (tab separators) for
+# spreadsheets / pipelines where commas are inconvenient.
+_SIMILARITY_CSV_FORMAT_CSV = "csv"
+_SIMILARITY_CSV_FORMAT_TSV = "tsv"
+_SIMILARITY_CSV_FORMATS: tuple[str, ...] = (
+    _SIMILARITY_CSV_FORMAT_CSV,
+    _SIMILARITY_CSV_FORMAT_TSV,
+)
+
 # Canonical labels for the ``score_kind`` discriminator. Centralised so
 # the JSON serializer, the text-table renderer, the CSV exporter, and
 # the tests all agree on the exact spelling. The vocabulary is
