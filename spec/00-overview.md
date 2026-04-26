@@ -40,8 +40,8 @@ Root index for the entire specification tree. Each top-level folder contains a d
 |---|--------|-------------|
 | 21 | [App](./21-app/00-overview.md) | App-specific specs: features, workflows, architecture |
 | 22 | [App Issues](./22-app-issues/00-overview.md) | App bug analysis, root cause analysis, fix documentation |
-| 23 | [App Database](./23-app-database/00-overview.md) | App-specific data model, table designs, migration strategies |
-| 24 | [App Design System & UI](./24-app-design-system-and-ui/00-overview.md) | App-specific design system, theming, component patterns |
+| 23 | [App DB](./23-app-db/00-overview.md) | App-specific data model, table designs, migration strategies |
+| 24 | [App UI — Design System](./24-app-ui-design-system/00-overview.md) | App-specific UI, design system, theming, component patterns |
 
 ---
 

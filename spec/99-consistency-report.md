@@ -50,8 +50,8 @@
 |--------|----------|--------------------|
 | `21-app/` | ✅ | — (placeholder) |
 | `22-app-issues/` | ✅ | — (placeholder) |
-| `23-app-database/` | ✅ | — (placeholder) |
-| `24-app-design-system-and-ui/` | ✅ | — (placeholder) |
+| `23-app-db/` | ✅ | — (placeholder) |
+| `24-app-ui-design-system/` | ✅ | — (placeholder) |
 
 ---
 

@@ -26,8 +26,8 @@
 - [🔄 CI/CD Pipeline Workflows](#cicd-pipeline-workflows) (18 files)
 - [🔄 Self-Update & App Update](#self-update--app-update) (11 files)
 - [🐛 App Issues](#app-issues) (1 file)
-- [🗄️ App Database](#app-database) (1 file)
-- [🎨 App Design System & UI](#app-design-system--ui) (1 file)
+- [🗄️ App DB](#app-db) (1 file)
+- [🎨 App UI — Design System](#app-ui--design-system) (1 file)
 
 ---
 
@@ -584,17 +584,17 @@
 |------|-------|---------|
 | `spec/22-app-issues/00-overview.md` | App Issues | 1.0.0 |
 
-## 🗄️ App Database
+## 🗄️ App DB
 
 | File | Title | Version |
 |------|-------|---------|
-| `spec/23-app-database/00-overview.md` | App Database | 3.2.0 |
+| `spec/23-app-db/00-overview.md` | App DB | 3.2.0 |
 
-## 🎨 App Design System & UI
+## 🎨 App UI — Design System
 
 | File | Title | Version |
 |------|-------|---------|
-| `spec/24-app-design-system-and-ui/00-overview.md` | App Design System & UI | 3.2.0 |
+| `spec/24-app-ui-design-system/00-overview.md` | App UI — Design System | 3.2.0 |
 
 ---
 

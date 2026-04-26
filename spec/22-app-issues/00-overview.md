@@ -9,13 +9,15 @@
 
 ## Overview
 
-App-specific issue analysis, root cause analysis, bug documentation, and solution guidance at the root spec level. This folder tracks problems encountered during application development, their diagnosis, and their resolution.
+App-specific issue analysis, root-cause analysis, bug documentation, and solution guidance — for whatever project this repo ships. Whether the app is a web app, Chrome extension, browser plugin, CLI tool, mobile app, WordPress plugin, or desktop app, **its bug reports and post-mortems live here.**
+
+This folder tracks problems encountered during application development, their diagnosis, and their resolution.
 
 ---
 
 ## Placement Rule
 
-Any content that analyzes bugs, failures, root causes, or fixes for application-level work belongs here. General coding principle violations or cross-cutting concerns belong in the core fundamentals range (`01–20`).
+Any content that analyzes bugs, failures, root causes, or fixes for application-level work belongs here, regardless of the app's runtime. General coding-principle violations or cross-cutting concerns belong in the core fundamentals range (`01–20`).
 
 ---
 

@@ -120,8 +120,8 @@
 | WordPress plugins | `spec/18-wp-plugin-how-to/` |
 | App-specific features | `spec/21-app/` |
 | Known app bugs/issues | `spec/22-app-issues/` |
-| App-specific database schema | `spec/23-app-database/` |
-| App-specific UI and design system | `spec/24-app-design-system-and-ui/` |
+| App-specific database schema | `spec/23-app-db/` |
+| App-specific UI and design system | `spec/24-app-ui-design-system/` |
 
 ### Reading order within each folder
 

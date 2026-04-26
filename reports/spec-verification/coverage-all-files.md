@@ -190,8 +190,8 @@
 - `spec/02-coding-guidelines/11-security/01-axios-version-control/02-security-notes.md`
 - `spec/02-coding-guidelines/21-app/00-overview.md`
 - `spec/02-coding-guidelines/22-app-issues/00-overview.md`
-- `spec/02-coding-guidelines/23-app-database/00-overview.md`
-- `spec/02-coding-guidelines/24-app-design-system-and-ui/00-overview.md`
+- `spec/02-coding-guidelines/23-app-db/00-overview.md`
+- `spec/02-coding-guidelines/24-app-ui-design-system/00-overview.md`
 - `spec/02-coding-guidelines/consolidated-review-guide-condensed.md`
 - `spec/02-coding-guidelines/consolidated-review-guide.md`
 - `spec/03-error-manage/01-error-resolution/00-error-documentation-guideline.md`
@@ -524,6 +524,6 @@
 - `spec/18-wp-plugin-how-to/00-overview.md`
 - `spec/21-app/00-overview.md`
 - `spec/22-app-issues/00-overview.md`
-- `spec/23-app-database/00-overview.md`
-- `spec/24-app-design-system-and-ui/00-overview.md`
+- `spec/23-app-db/00-overview.md`
+- `spec/24-app-ui-design-system/00-overview.md`
 

@@ -709,7 +709,7 @@
         ]
       },
       {
-        "Folder": "02-coding-guidelines/23-app-database",
+        "Folder": "02-coding-guidelines/23-app-db",
         "MdFiles": 1,
         "Subfolders": 0,
         "HasOverview": true,
@@ -721,7 +721,7 @@
         ]
       },
       {
-        "Folder": "02-coding-guidelines/24-app-design-system-and-ui",
+        "Folder": "02-coding-guidelines/24-app-ui-design-system",
         "MdFiles": 1,
         "Subfolders": 0,
         "HasOverview": true,
@@ -1608,7 +1608,7 @@
         ]
       },
       {
-        "Folder": "23-app-database",
+        "Folder": "23-app-db",
         "MdFiles": 1,
         "Subfolders": 0,
         "HasOverview": true,
@@ -1620,7 +1620,7 @@
         ]
       },
       {
-        "Folder": "24-app-design-system-and-ui",
+        "Folder": "24-app-ui-design-system",
         "MdFiles": 1,
         "Subfolders": 0,
         "HasOverview": true,

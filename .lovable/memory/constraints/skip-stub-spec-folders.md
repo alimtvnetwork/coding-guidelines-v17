@@ -12,8 +12,8 @@ The following four spec folders are **intentional stubs** and must be **excluded
 |--------|-------|--------|
 | `spec/21-app/` | 33 | Placeholder, no app-specific specs yet |
 | `spec/22-app-issues/` | 33 | Placeholder, no issues documented yet |
-| `spec/23-app-database/` | 51 | Placeholder, no schema/acceptance criteria |
-| `spec/24-app-design-system-and-ui/` | 50 | Placeholder, no UI specs yet |
+| `spec/23-app-db/` | 51 | Placeholder, no schema/acceptance criteria |
+| `spec/24-app-ui-design-system/` | 50 | Placeholder, no UI specs yet |
 
 **Why:** These are reserved namespaces for future app-specific content. They score <20 in audits but that is **expected and acceptable** — they are scaffolding, not real specs.
 

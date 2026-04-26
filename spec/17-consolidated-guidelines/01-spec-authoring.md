@@ -14,7 +14,7 @@ This is the **standalone consolidated reference** for spec authoring conventions
 ## Folder Structure — Numbering Policy
 
 - **`01–20`** — Core Fundamentals (principles, standards, integrations, research)
-- **`21+`** — App-Specific content (`21-app`, `22-app-issues`, `23-app-database`, `24-app-design-system-and-ui`)
+- **`21+`** — App-Specific content (`21-app`, `22-app-issues`, `23-app-db`, `24-app-ui-design-system`)
 
 ### Fixed Assignments
 
@@ -37,8 +37,8 @@ This is the **standalone consolidated reference** for spec authoring conventions
 | 15 | `18-wp-plugin-how-to` | WordPress plugin conventions |
 | 21 | `21-app` | App-specific features |
 | 22 | `22-app-issues` | App-specific issues |
-| 23 | `23-app-database` | App-specific database schema |
-| 24 | `24-app-design-system-and-ui` | App-specific UI and design system |
+| 23 | `23-app-db` | App-specific database schema |
+| 24 | `24-app-ui-design-system` | App-specific UI and design system |
 
 ---
 

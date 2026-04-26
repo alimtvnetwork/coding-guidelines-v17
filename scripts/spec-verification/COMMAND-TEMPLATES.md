@@ -101,8 +101,8 @@ Folder profiles (in `profiles.mjs`) reference template keys via the
 | `18-wp-plugin-how-to` | `AC-WP` | `lint:spec-links` |
 | `21-app` | `AC-APP` | `test:unit` |
 | `22-app-issues` | `AC-AI` | `lint:spec-links` |
-| `23-app-database` | `AC-ADB` | `schema:db` |
-| `24-app-design-system-and-ui` | `AC-ADS` | `lint:eslint`, `test:unit` |
+| `23-app-db` | `AC-ADB` | `schema:db` |
+| `24-app-ui-design-system` | `AC-ADS` | `lint:eslint`, `test:unit` |
 
 ---
 

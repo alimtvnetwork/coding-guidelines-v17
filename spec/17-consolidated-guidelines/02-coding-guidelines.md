@@ -28,7 +28,7 @@ The source module `spec/02-coding-guidelines/` contains **16 subfolders**. This 
 | `09-powershell-integration/` | §30 PowerShell Integration | ✅ Reference |
 | `10-research/` | §31 Coding Research Placement | ✅ Reference |
 | `11-security/` | §32 Security & Dependency Pinning | ✅ Full |
-| `21-app/`, `22-app-issues/`, `23-app-database/`, `24-app-design-system-and-ui/` | §33 App-Specific Coding Specs | ✅ Reference |
+| `21-app/`, `22-app-issues/`, `23-app-db/`, `24-app-ui-design-system/` | §33 App-Specific Coding Specs | ✅ Reference |
 
 ---
 
@@ -1136,16 +1136,16 @@ Place research files here when the deliverable is a **decision that updates a co
 
 ## 33. App-Specific Coding Specs
 
-**Source:** `21-app/`, `22-app-issues/`, `23-app-database/`, `24-app-design-system-and-ui/`
+**Source:** `21-app/`, `22-app-issues/`, `23-app-db/`, `24-app-ui-design-system/`
 
-These four subfolders mirror the root-level `spec/21-app/` … `spec/24-app-design-system-and-ui/` folders but contain **coding-specific** rules that only apply to the application layer (not the framework). They are intentionally minimal — most rules live in the cross-language section.
+These four subfolders mirror the root-level `spec/21-app/` … `spec/24-app-ui-design-system/` folders but contain **coding-specific** rules that only apply to the application layer (not the framework). They are intentionally minimal — most rules live in the cross-language section.
 
 | Subfolder | What goes here | What does NOT |
 |-----------|---------------|---------------|
 | `21-app/` | App feature code style overrides | Feature requirements (those go in root `spec/21-app/`) |
 | `22-app-issues/` | Bug-driven coding rule additions | Issue tickets (those go in root `spec/22-app-issues/`) |
-| `23-app-database/` | App-specific schema patterns | Generic DB rules (those go in `spec/04-database-conventions/`) |
-| `24-app-design-system-and-ui/` | App component coding patterns | Design tokens (those live in root `spec/07-design-system/`) |
+| `23-app-db/` | App-specific schema patterns | Generic DB rules (those go in `spec/04-database-conventions/`) |
+| `24-app-ui-design-system/` | App component coding patterns | Design tokens (those live in root `spec/07-design-system/`) |
 
 If a rule applies to **all** apps the team builds, it belongs in `01-cross-language/` instead.
 

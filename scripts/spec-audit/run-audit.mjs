@@ -8,7 +8,7 @@ import { join, basename } from 'node:path';
 
 const SPEC_ROOT = 'spec';
 const OUT_DIR = process.env.SPEC_AUDIT_OUT_DIR || 'spec-audit-output';
-const SKIP_FOLDERS = new Set(['21-app', '22-app-issues', '23-app-database', '24-app-design-system-and-ui']);
+const SKIP_FOLDERS = new Set(['21-app', '22-app-issues', '23-app-db', '24-app-ui-design-system']);
 const API_KEY = process.env.LOVABLE_API_KEY;
 const MODEL = process.env.SPEC_AUDIT_MODEL || 'google/gemini-2.5-flash';
 const GATEWAY_URL = 'https://ai.gateway.lovable.dev/v1/chat/completions';

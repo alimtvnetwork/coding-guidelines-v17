@@ -59,7 +59,7 @@ What this feature/component does and why it exists.
 3. Step 3
 
 ### Data Model
-Tables, fields, relationships affected. Reference `23-app-database/` for schema.
+Tables, fields, relationships affected. Reference `23-app-db/` for schema.
 
 ### API Endpoints
 Routes needed (reference REST conventions from `14-rest-api-conventions.md`).
@@ -117,9 +117,9 @@ Routes needed (reference REST conventions from `14-rest-api-conventions.md`).
 | Bug analysis or fixes | `22-app-issues/` |
 | Research or evaluations | `10-research/` or `02-coding-guidelines/10-research/` |
 | Database schema (core conventions) | `04-database-conventions/` |
-| Database schema (app-specific) | `23-app-database/` |
+| Database schema (app-specific) | `23-app-db/` |
 | Design system tokens (core) | `07-design-system/` |
-| Design system (app-specific) | `24-app-design-system-and-ui/` |
+| Design system (app-specific) | `24-app-ui-design-system/` |
 
 ---
 
@@ -166,15 +166,15 @@ The `21+` range forms a cohesive app-specific layer:
 |--------|---------|-------------|
 | `21-app/` | Feature specs and workflows | **This folder** — defines what to build |
 | `22-app-issues/` | Bug tracking and resolution | References features from `21-app/` |
-| `23-app-database/` | Schema and migration specs | Implements data models from `21-app/` |
-| `24-app-design-system-and-ui/` | UI tokens and component specs | Implements visual specs from `21-app/` |
+| `23-app-db/` | Schema and migration specs | Implements data models from `21-app/` |
+| `24-app-ui-design-system/` | UI tokens and component specs | Implements visual specs from `21-app/` |
 
 ### Dependency Direction
 
 ```
 21-app/ (defines features)
-  ├── 23-app-database/ (implements data layer)
-  ├── 24-app-design-system-and-ui/ (implements UI layer)
+  ├── 23-app-db/ (implements data layer)
+  ├── 24-app-ui-design-system/ (implements UI layer)
   └── 22-app-issues/ (tracks problems)
 ```
 
@@ -188,7 +188,7 @@ Features in `21-app/` drive work in the other three folders. Not the reverse.
 |----------|-------|
 | Write feature specs with no acceptance criteria | Always include testable acceptance criteria |
 | Mix core conventions with app-specific logic | Keep app logic in `21-app/`, conventions in `01–20` |
-| Skip the data model section | Reference `23-app-database/` tables explicitly |
+| Skip the data model section | Reference `23-app-db/` tables explicitly |
 | Write implementation details (code snippets) | Write requirements and behavior, not code |
 | Create specs for trivial features (< 1 day work) | Only spec features with multiple requirements or edge cases |
 

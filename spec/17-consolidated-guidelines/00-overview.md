@@ -49,13 +49,13 @@ This folder provides **standalone, self-contained AI-readable references** for e
 | 13 | [13-app.md](./13-app.md) | `21-app/` — App-specific spec placement and decision guide |
 | 14 | [14-app-issues.md](./14-app-issues.md) | `22-app-issues/` — App bug analysis, issue file template, placement rules |
 | 15 | [15-cicd-pipeline-workflows.md](./15-cicd-pipeline-workflows.md) | `12-cicd-pipeline-workflows/` — CI/CD pipeline specs, deployment workflows, install scripts, code signing |
-| 16 | [16-app-design-system-and-ui.md](./16-app-design-system-and-ui.md) | `24-app-design-system-and-ui/` — App-specific design system extending core tokens |
+| 16 | [16-app-design-system-and-ui.md](./16-app-design-system-and-ui.md) | `24-app-ui-design-system/` — App-specific design system extending core tokens |
 | 17 | [17-self-update-app-update.md](./17-self-update-app-update.md) | `14-update/` — CLI self-update, rename-first deploy, handoff, release pipeline, install scripts |
 | 18 | [18-database-conventions.md](./18-database-conventions.md) | `04-database-conventions/` — Database naming, PK/FK patterns, singular tables, booleans, views, ORM, schema design |
 | 19 | [19-gap-analysis.md](./19-gap-analysis.md) | Gap analysis — coverage matrix, implementability scores, priority recommendations |
 | 20 | [20-wp-plugin-conventions.md](./20-wp-plugin-conventions.md) | `18-wp-plugin-how-to/` — WordPress plugin Gold Standard architecture, traits, enums, REST API |
 | 21 | [21-lovable-folder-structure.md](./21-lovable-folder-structure.md) | `.lovable/` folder structure — memory, tasks, suggestions, strictly-avoid, AI reading order |
-| 22 | [22-app-database.md](./22-app-database.md) | `23-app-database/` — App-specific schema design, migration strategy, query patterns, ORM integration |
+| 22 | [22-app-database.md](./22-app-database.md) | `23-app-db/` — App-specific schema design, migration strategy, query patterns, ORM integration |
 | 23 | [23-generic-cli.md](./23-generic-cli.md) | `13-generic-cli/` — CLI creation blueprint: project structure, subcommands, flags, config, output, errors, help, database, build, testing, shell completion |
 | 24 | [24-folder-mapping.md](./24-folder-mapping.md) | **Meta** — Bidirectional folder-by-folder mapping: every source spec folder ↔ consolidated file, with coverage heatmap and blind-spots |
 | 25 | [25-blind-ai-implementability-audit.md](./25-blind-ai-implementability-audit.md) | **Meta** — Critical-gap analysis: where a blind AI receiving only this folder will fail (linter blindness, waiver syntax, sync contracts, error registry) |

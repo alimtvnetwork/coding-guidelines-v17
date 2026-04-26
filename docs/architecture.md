@@ -86,7 +86,7 @@ spec/
 ├── 16-generic-release/             # Versioned release pipeline
 ├── 17-consolidated-guidelines/     # Master consolidated reference
 ├── 18-wp-plugin-how-to/            # WordPress plugin Gold Standard
-├── 21-app/ … 24-app-design-system-and-ui/   # App-local specs (never synced from gitmap)
+├── 21-app/ … 24-app-ui-design-system/   # App-local specs (never synced from gitmap)
 └── health-dashboard.md             # Global self-assessment
 ```
 

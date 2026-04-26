@@ -190,7 +190,7 @@ export const FOLDER_PROFILES = {
     then: () => "Every issue file contains all four sections and references at least one commit or PR.",
     commandKeys: ["lint:spec-links"],
   },
-  "23-app-database": {
+  "23-app-db": {
     tag: "AC-ADB",
     title: (s) => `App-database conformance: ${slugTitle(s)}`,
     given: () => "Validate app database migrations against the schema-design rules.",
@@ -198,7 +198,7 @@ export const FOLDER_PROFILES = {
     then: () => "Migrations are forward-only; PascalCase naming is preserved; new columns are nullable with no DEFAULT (Rule 12).",
     commandKeys: ["schema:db"],
   },
-  "24-app-design-system-and-ui": {
+  "24-app-ui-design-system": {
     tag: "AC-ADS",
     title: (s) => `App design-system conformance: ${slugTitle(s)}`,
     given: () => "Scan app UI for raw colors and untokenized spacing; render Storybook (or equivalent) snapshot suite.",

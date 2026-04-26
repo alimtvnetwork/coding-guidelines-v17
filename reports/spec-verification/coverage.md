@@ -40,6 +40,6 @@
 - `spec/18-wp-plugin-how-to/00-overview.md`
 - `spec/21-app/00-overview.md`
 - `spec/22-app-issues/00-overview.md`
-- `spec/23-app-database/00-overview.md`
-- `spec/24-app-design-system-and-ui/00-overview.md`
+- `spec/23-app-db/00-overview.md`
+- `spec/24-app-ui-design-system/00-overview.md`
 

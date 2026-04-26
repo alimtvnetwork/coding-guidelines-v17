@@ -46,13 +46,13 @@ All five critical handoff files now publish explicit Source-Folder Coverage Maps
 | 13 | `13-app.md` | `21-app/` | **210+** | — | — | **88%** | None | ⬆ +18 |
 | 14 | `14-app-issues.md` | `22-app-issues/` | **210+** | — | — | **85%** | None | ⬆ +25 |
 | 15 | `15-cicd-pipeline-workflows.md` | `12-cicd-pipeline-workflows/` | 422 | 5,140 | 8% | 92% | None | — |
-| 16 | `16-app-design-system-and-ui.md` | `24-app-design-system-and-ui/` + error modal colors | **530+** | — | — | **93%** | None | ⬆ +5 |
+| 16 | `16-app-design-system-and-ui.md` | `24-app-ui-design-system/` + error modal colors | **530+** | — | — | **93%** | None | ⬆ +5 |
 | 17 | `17-self-update-app-update.md` | `14-update/` | 441 | 4,486 | 10% | 93% | None | — |
 | 18 | `18-database-conventions.md` | `04-database-conventions/` | 945 | 2,321 | 41% | 95% | None | — |
 | 19 | `19-gap-analysis.md` | — (meta) | — | — | — | — | — | — |
 | 20 | `20-wp-plugin-conventions.md` | `18-wp-plugin-how-to/` | **570+** | 17,088 | 3% | **92%** | None | ⬆ +4 |
 | 21 | `21-lovable-folder-structure.md` | `.lovable/` | **220+** | — | — | **91%** | None | ⬆ +6 |
-| 22 | `22-app-database.md` | `23-app-database/` | **310+** | — | — | **90%** | None | 🆕 New |
+| 22 | `22-app-database.md` | `23-app-db/` | **310+** | — | — | **90%** | None | 🆕 New |
 
 ---
 

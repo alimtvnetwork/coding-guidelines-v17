@@ -63,8 +63,8 @@ Each row in the master matrix below contains:
 | 18 | `18-wp-plugin-how-to/` | WP plugin foundation/architecture, enums and coding style, traits/composition, logging/error handling, helpers/responses/integration, input validation, reference implementations, WP integration patterns, testing, deployment, frontend/template patterns, design system, admin UI, REST API conventions, settings architecture, error handling extraction, data file patterns, frontend JS patterns | [`20-wp-plugin-conventions.md`](./20-wp-plugin-conventions.md) | [`02-coding-guidelines.md`](./02-coding-guidelines.md) §php, [`03-error-management.md`](./03-error-management.md) | ✅ Full |
 | 21 | `21-app/` | App-specific spec placement and decision guide | [`13-app.md`](./13-app.md) | [`14-app-issues.md`](./14-app-issues.md), [`22-app-database.md`](./22-app-database.md), [`16-app-design-system-and-ui.md`](./16-app-design-system-and-ui.md) | 🟡 Partial — placeholder, expanded inside app-* consolidated files |
 | 22 | `22-app-issues/` | App bug analysis, issue file template, placement rules | [`14-app-issues.md`](./14-app-issues.md) | [`13-app.md`](./13-app.md) | 🟡 Partial — placeholder folder |
-| 23 | `23-app-database/` | App-database conventions overlay on top of `04-database-conventions/` | [`22-app-database.md`](./22-app-database.md) | [`18-database-conventions.md`](./18-database-conventions.md), [`05-split-db-architecture.md`](./05-split-db-architecture.md) | ✅ Full |
-| 24 | `24-app-design-system-and-ui/` | App-design overlay on top of `07-design-system/` | [`16-app-design-system-and-ui.md`](./16-app-design-system-and-ui.md) | [`07-design-system.md`](./07-design-system.md), [`08-docs-viewer-ui.md`](./08-docs-viewer-ui.md), [`09-code-block-system.md`](./09-code-block-system.md) | ✅ Full |
+| 23 | `23-app-db/` | App-database conventions overlay on top of `04-database-conventions/` | [`22-app-database.md`](./22-app-database.md) | [`18-database-conventions.md`](./18-database-conventions.md), [`05-split-db-architecture.md`](./05-split-db-architecture.md) | ✅ Full |
+| 24 | `24-app-ui-design-system/` | App-design overlay on top of `07-design-system/` | [`16-app-design-system-and-ui.md`](./16-app-design-system-and-ui.md) | [`07-design-system.md`](./07-design-system.md), [`08-docs-viewer-ui.md`](./08-docs-viewer-ui.md), [`09-code-block-system.md`](./09-code-block-system.md) | ✅ Full |
 
 ---
 
@@ -76,9 +76,9 @@ Each row in the master matrix below contains:
 | `02-coding-guidelines.md` | `02-coding-guidelines/` (all 16 subfolders) | `11-powershell-integration/`, `13-generic-cli/`, `18-wp-plugin-how-to/`, `03-error-manage/` |
 | `03-error-management.md` | `03-error-manage/` | `02-coding-guidelines/11-security/`, `13-generic-cli/07-error-handling/`, `18-wp-plugin-how-to/04-logging-and-error-handling/` |
 | `04-enum-standards.md` | `02-coding-guidelines/` (cross-language enum subsections) | `13-generic-cli/15-constants-reference/` |
-| `05-split-db-architecture.md` | `05-split-db-architecture/` | `04-database-conventions/07-split-db-pattern/`, `23-app-database/` |
+| `05-split-db-architecture.md` | `05-split-db-architecture/` | `04-database-conventions/07-split-db-pattern/`, `23-app-db/` |
 | `06-seedable-config.md` | `06-seedable-config-architecture/` | `05-split-db-architecture/`, `13-generic-cli/05-configuration/` |
-| `07-design-system.md` | `07-design-system/` | `08-docs-viewer-ui/`, `09-code-block-system/`, `24-app-design-system-and-ui/` |
+| `07-design-system.md` | `07-design-system/` | `08-docs-viewer-ui/`, `09-code-block-system/`, `24-app-ui-design-system/` |
 | `08-docs-viewer-ui.md` | `08-docs-viewer-ui/` | `07-design-system/`, `09-code-block-system/` |
 | `09-code-block-system.md` | `09-code-block-system/` | `07-design-system/07-code-blocks/`, `08-docs-viewer-ui/` |
 | `10-powershell-integration.md` | `11-powershell-integration/` | `02-coding-guidelines/09-powershell-integration/` |
@@ -87,13 +87,13 @@ Each row in the master matrix below contains:
 | `13-app.md` | `21-app/` | `02-coding-guidelines/21-app/` |
 | `14-app-issues.md` | `22-app-issues/` | `02-coding-guidelines/22-app-issues/`, `21-app/` |
 | `15-cicd-pipeline-workflows.md` | `12-cicd-pipeline-workflows/` | `14-update/`, `15-distribution-and-runner/`, `16-generic-release/` |
-| `16-app-design-system-and-ui.md` | `24-app-design-system-and-ui/` | `07-design-system/`, `02-coding-guidelines/24-app-design-system-and-ui/` |
+| `16-app-design-system-and-ui.md` | `24-app-ui-design-system/` | `07-design-system/`, `02-coding-guidelines/24-app-ui-design-system/` |
 | `17-self-update-app-update.md` | `14-update/` | `12-cicd-pipeline-workflows/06-self-update-mechanism/`, `15-distribution-and-runner/`, `16-generic-release/08-version-pinned-release-installers/` |
-| `18-database-conventions.md` | `04-database-conventions/` | `05-split-db-architecture/`, `23-app-database/`, `02-coding-guidelines/23-app-database/` |
+| `18-database-conventions.md` | `04-database-conventions/` | `05-split-db-architecture/`, `23-app-db/`, `02-coding-guidelines/23-app-db/` |
 | `19-gap-analysis.md` | (meta — analyzes all consolidated files) | All folders |
 | `20-wp-plugin-conventions.md` | `18-wp-plugin-how-to/` | `02-coding-guidelines/04-php/`, `07-design-system/`, `03-error-manage/` |
 | `21-lovable-folder-structure.md` | `01-spec-authoring-guide/01-folder-structure.md` | `01-spec-authoring-guide/03-required-files/` |
-| `22-app-database.md` | `23-app-database/` | `04-database-conventions/`, `05-split-db-architecture/` |
+| `22-app-database.md` | `23-app-db/` | `04-database-conventions/`, `05-split-db-architecture/` |
 | `23-generic-cli.md` | `13-generic-cli/` | `02-coding-guidelines/`, `03-error-manage/`, `06-seedable-config-architecture/` |
 | `24-folder-mapping.md` | (this file — meta-index) | All folders |
 

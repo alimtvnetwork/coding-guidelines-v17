@@ -46,8 +46,8 @@
 | 11 | `11-security/` | 6 | ✅ | ✅ | — |
 | 21 | `21-app/` | 1 | ✅ | — | — |
 | 22 | `22-app-issues/` | 1 | ✅ | — | — |
-| 23 | `23-app-database/` | 1 | ✅ | — | — |
-| 24 | `24-app-design-system-and-ui/` | 1 | ✅ | — | — |
+| 23 | `23-app-db/` | 1 | ✅ | — | — |
+| 24 | `24-app-ui-design-system/` | 1 | ✅ | — | — |
 
 **Total:** 5 root files + 14 subfolders (~121 files)
 

@@ -9,7 +9,7 @@
 
 This is the **standalone consolidated reference** for app-specific database design. An AI reading only this file must be able to design, implement, and validate the application's data model — including table schemas, migration strategies, query patterns, and data integrity rules — without consulting source specs.
 
-**Source:** `spec/23-app-database/` + `spec/04-database-conventions/` (naming rules) + `spec/05-split-db-architecture/` (SQLite partitioning)
+**Source:** `spec/23-app-db/` + `spec/04-database-conventions/` (naming rules) + `spec/05-split-db-architecture/` (SQLite partitioning)
 
 ---
 
@@ -328,7 +328,7 @@ func (User) TableName() string {
 
 ## 9. Schema Documentation Requirements
 
-Every app table MUST be documented in `spec/23-app-database/` with:
+Every app table MUST be documented in `spec/23-app-db/` with:
 
 | Section | Content |
 |---------|---------|
@@ -401,7 +401,7 @@ Every app table MUST be documented in `spec/23-app-database/` with:
 | App-specific features | [13-app.md](./13-app.md) |
 | Enum standards (for lookup tables) | [04-enum-standards.md](./04-enum-standards.md) |
 | App design system (related app spec) | [16-app-design-system-and-ui.md](./16-app-design-system-and-ui.md) |
-| Source spec folder | `spec/23-app-database/` |
+| Source spec folder | `spec/23-app-db/` |
 
 ---
 
