@@ -593,6 +593,23 @@ def main(argv: list[str] | None = None) -> int:
              "(e.g. line not in any captured hunk) simply omit the "
              "key, so legacy parsers keying off `file`/`line`/`code`/"
              "`message` keep working unchanged.")
+    ap.add_argument("--list-files", action="store_true",
+        help="Diagnostic: print exactly which `.md` files were "
+             "discovered under --root and how each one will be "
+             "treated for the current allowlist settings, then exit "
+             "0 without linting. Each file is classified as "
+             "`linted` (per-file violations will be reported) or "
+             "`cross-file-only` (file is scanned only for bullet "
+             "collection so cross-file P-007 collisions still "
+             "surface, but its own per-file violations are "
+             "suppressed — only happens in diff mode for unchanged "
+             "files). Honours --diff-base / --changed-files: in "
+             "full-tree mode every discovered file is `linted`. In "
+             "--json mode the output is a JSON array of "
+             "`{\"path\": str, \"status\": str, \"reason\": str}` "
+             "objects so CI scripts can parse it directly. Useful "
+             "for debugging \"why didn't the linter check this "
+             "file?\" without running the full scan.")
     args = ap.parse_args(argv)
 
     root = Path(args.root).resolve()
