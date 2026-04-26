@@ -1519,14 +1519,20 @@ def _render_rename_intake_table(rows: list[_DiffIntakeRow],
     Output shape::
 
         ── rename/copy intake (3 row(s)) ──
+        score = git similarity % (0–100); n/a = unscored input
         kind  score  old                            →  new
         R     092    spec/old-name.md               →  spec/new-name.md
-        R     ---    spec/legacy/intro.md           →  spec/intro.md
+        R     n/a    spec/legacy/intro.md           →  spec/intro.md
         C     057    spec/template.md               →  spec/feature/intro.md
 
     * ``kind`` is one column wide (R or C).
     * ``score`` is right-padded to 5 chars; rows without a similarity
-      score render ``---`` so the column stays vertically aligned.
+      score render ``n/a`` (the project-wide "not available" sentinel,
+      :data:`_SCORE_UNSCORED_TEXT`) so the column stays vertically
+      aligned AND so a reader can't confuse "no score reported" with
+      "score was 0". Scored rows render as zero-padded percents
+      (``000``..``100``) — fixed-width on purpose so columns line up
+      whether git emitted ``R7``, ``R75``, or ``R100``.
     * ``old`` is left-padded to the longest old-path width (capped
       at a sensible max so a single 200-char path doesn't push the
       arrow off-screen). Paths longer than the cap are truncated
@@ -1535,6 +1541,14 @@ def _render_rename_intake_table(rows: list[_DiffIntakeRow],
       ``status`` output.
     * ``new`` is unpadded (it's the last column, no alignment
       needed downstream).
+
+    A one-line legend (``score = git similarity % (0–100); n/a =
+    unscored input``) is printed between the header banner and the
+    column headers ONLY when the table actually contains at least
+    one unscored row — for a table that's 100 % scored the legend
+    would be noise, so we suppress it. The legend is unconditional
+    when the operator force-renders an empty table so the schema
+    is documented even with zero rows.
 
     The header row count uses singular/plural (``1 row`` vs.
     ``N rows``) so a forced-ON empty table reads naturally as
@@ -1562,6 +1576,11 @@ def _render_rename_intake_table(rows: list[_DiffIntakeRow],
         # Forced-ON empty table: emit the header, then a hint that
         # explains why the body is empty. Saves the operator a
         # round-trip to the docs when they expected to see rows.
+        # Legend is shown unconditionally on empty so the operator
+        # has the score-vocabulary documented even when no row
+        # demonstrates it.
+        print(f"  score = git similarity % (0–100); "
+              f"{_SCORE_UNSCORED_TEXT} = unscored input", file=stream)
         print("  (no rename or copy rows in this diff)", file=stream)
         print("", file=stream)
         return
@@ -1572,14 +1591,22 @@ def _render_rename_intake_table(rows: list[_DiffIntakeRow],
     old_display = [_truncate_left(r.old or "(unknown)", _MAX_OLD_WIDTH)
                    for r in rows]
     old_width = max((len(s) for s in old_display), default=0)
+    # Legend only when at least one row is actually unscored —
+    # otherwise it's noise. ``any`` short-circuits so the cost is
+    # O(first-unscored-row) on tables that have one.
+    if any(r.score is None for r in rows):
+        print(f"  score = git similarity % (0–100); "
+              f"{_SCORE_UNSCORED_TEXT} = unscored input", file=stream)
     # Header row. ``kind`` is fixed-4-wide ("kind"), ``score`` is
-    # fixed-5-wide so unscored ``---`` rows align under "score".
+    # fixed-5-wide so unscored ``n/a`` rows align under "score"
+    # alongside zero-padded percents like ``092`` / ``100``.
     print(f"  kind  score  {'old':<{old_width}}  →  new", file=stream)
     for r, old_disp in zip(rows, old_display):
-        score_disp = f"{r.score:03d}" if r.score is not None else "---"
+        score_disp = (f"{r.score:03d}" if r.score is not None
+                      else _SCORE_UNSCORED_TEXT)
         # Pad ``score_disp`` to 5 chars so a 3-digit score (e.g.
-        # ``100``) and the 3-char ``---`` both end at the same
-        # column boundary as the 5-wide "score" header.
+        # ``100``) and the 3-char ``n/a`` sentinel both end at the
+        # same column boundary as the 5-wide "score" header.
         print(f"  {r.kind:<4s}  {score_disp:<5s}  "
               f"{old_disp:<{old_width}}  →  {r.new}",
               file=stream)
