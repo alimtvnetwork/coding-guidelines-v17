@@ -744,6 +744,13 @@ def main(argv: list[str] | None = None) -> int:
         # Always rendered to STDERR so --json STDOUT stays a single
         # parseable document under every override. The table itself
         # is purely diagnostic — verdicts never depend on it.
+        #
+        # Format selection (text table vs. JSON object): under
+        # ``--json`` we switch the intake renderer to its JSON
+        # variant so machine consumers can ingest STDERR with the
+        # same parser they use for STDOUT (each STDERR line that
+        # looks like JSON is a complete, self-contained document).
+        # Without ``--json`` we keep the human text table.
         if rename_intake is not None:
             should_render = (
                 args.diff_rename_log is True
@@ -752,7 +759,12 @@ def main(argv: list[str] | None = None) -> int:
                     and not args.json)
             )
             if should_render:
-                _render_rename_intake_table(rename_intake, sys.stderr)
+                if args.json:
+                    _render_rename_intake_json(
+                        rename_intake, sys.stderr)
+                else:
+                    _render_rename_intake_table(
+                        rename_intake, sys.stderr)
         if not args.json:
             print(f"ℹ️  placeholder-comments: diff-mode active — "
                   f"{len(changed_md)} changed `.md` file(s) under {args.root}/")
@@ -1121,6 +1133,13 @@ class _DiffIntakeRow:
       * ``score`` — git's similarity score (0–100) when present,
         ``None`` when the source row didn't carry one (e.g. an
         unscored ``R\\told\\tnew`` from hand-edited input).
+        The text renderer surfaces the scored / unscored distinction
+        as ``092`` (zero-padded percent) vs. ``n/a`` (explicit
+        "not available", never confused with the literal score
+        ``0``); the JSON renderer pairs ``"score": <int|null>``
+        with an explicit ``"score_status": "scored"`` /
+        ``"unscored"`` field so machine consumers don't have to
+        special-case ``null`` interpretation.
       * ``old`` — pre-rename path. May be empty string in
         pathological inputs where git emits ``R<score>\\t\\tnew``;
         we render it as ``"(unknown)"`` rather than dropping the
@@ -1133,6 +1152,85 @@ class _DiffIntakeRow:
     score: int | None
     old: str
     new: str
+
+
+# Score-display sentinels (single source of truth so text + JSON
+# renderers, tests, and operator docs stay in sync):
+#
+# * ``_SCORE_UNSCORED_TEXT`` — what the text table prints when
+#   ``_DiffIntakeRow.score is None``. ``"n/a"`` is deliberately
+#   chosen over the previous ``"---"`` placeholder: ``---`` reads
+#   as "missing data / unknown", which is ambiguous with "score
+#   was 0" for a reader skimming the column. ``n/a`` is the
+#   conventional "not applicable / not available" marker and
+#   removes any chance of conflation with a real similarity score.
+#   Width is 3 chars so it slots into the same 5-wide ``score``
+#   column without disturbing alignment with zero-padded
+#   percents (``000``..``100``).
+# * ``_SCORE_STATUS_SCORED`` / ``_SCORE_STATUS_UNSCORED`` — the
+#   string values for the JSON ``score_status`` field. Lowercase,
+#   stable (do NOT change without a schema bump) so downstream
+#   parsers can match on a fixed vocabulary.
+_SCORE_UNSCORED_TEXT = "n/a"
+_SCORE_STATUS_SCORED = "scored"
+_SCORE_STATUS_UNSCORED = "unscored"
+
+
+def _intake_row_to_json(row: "_DiffIntakeRow") -> dict:
+    """Serialise a :class:`_DiffIntakeRow` to a JSON-safe dict.
+
+    Shape::
+
+        {"kind": "R" | "C",
+         "score": <int 0..100> | null,
+         "score_status": "scored" | "unscored",
+         "old": "<path>" | "",
+         "new": "<path>"}
+
+    The redundancy between ``score`` and ``score_status`` is
+    intentional: it lets a strict consumer key off the labelled
+    enum (``score_status``) without having to interpret ``null``
+    as "unscored" by convention. The numeric ``score`` field
+    stays ``null`` (not ``0``, not ``-1``) for unscored rows so
+    downstream type checkers can model it as ``Optional[int]``.
+    """
+    return {
+        "kind": row.kind,
+        "score": row.score,
+        "score_status": (_SCORE_STATUS_SCORED if row.score is not None
+                         else _SCORE_STATUS_UNSCORED),
+        "old": row.old,
+        "new": row.new,
+    }
+
+
+def _render_rename_intake_json(rows: list["_DiffIntakeRow"],
+                                stream) -> None:
+    """Emit the rename/copy intake as a JSON object to ``stream``
+    (always STDERR — the STDOUT verdict JSON stays a single
+    parseable document, see :func:`_render_rename_intake_table`'s
+    contract).
+
+    Shape::
+
+        {"rename_intake": {
+            "row_count": <int>,
+            "rows": [<row>, ...]
+         }}
+
+    Wrapping the array under a named key (rather than emitting a
+    bare array) leaves room to add sibling fields later
+    (e.g. ``"truncated": true`` for very-large PRs) without a
+    schema bump.
+    """
+    payload = {
+        "rename_intake": {
+            "row_count": len(rows),
+            "rows": [_intake_row_to_json(r) for r in rows],
+        }
+    }
+    json.dump(payload, stream, separators=(",", ":"))
+    stream.write("\n")
 
 
 # Git emits paths in C-quoted form (``"path\twith\ttab"``) when
@@ -1433,14 +1531,20 @@ def _render_rename_intake_table(rows: list[_DiffIntakeRow],
     Output shape::
 
         ── rename/copy intake (3 row(s)) ──
+        score = git similarity % (0–100); n/a = unscored input
         kind  score  old                            →  new
         R     092    spec/old-name.md               →  spec/new-name.md
-        R     ---    spec/legacy/intro.md           →  spec/intro.md
+        R     n/a    spec/legacy/intro.md           →  spec/intro.md
         C     057    spec/template.md               →  spec/feature/intro.md
 
     * ``kind`` is one column wide (R or C).
     * ``score`` is right-padded to 5 chars; rows without a similarity
-      score render ``---`` so the column stays vertically aligned.
+      score render ``n/a`` (the project-wide "not available" sentinel,
+      :data:`_SCORE_UNSCORED_TEXT`) so the column stays vertically
+      aligned AND so a reader can't confuse "no score reported" with
+      "score was 0". Scored rows render as zero-padded percents
+      (``000``..``100``) — fixed-width on purpose so columns line up
+      whether git emitted ``R7``, ``R75``, or ``R100``.
     * ``old`` is left-padded to the longest old-path width (capped
       at a sensible max so a single 200-char path doesn't push the
       arrow off-screen). Paths longer than the cap are truncated
@@ -1449,6 +1553,14 @@ def _render_rename_intake_table(rows: list[_DiffIntakeRow],
       ``status`` output.
     * ``new`` is unpadded (it's the last column, no alignment
       needed downstream).
+
+    A one-line legend (``score = git similarity % (0–100); n/a =
+    unscored input``) is printed between the header banner and the
+    column headers ONLY when the table actually contains at least
+    one unscored row — for a table that's 100 % scored the legend
+    would be noise, so we suppress it. The legend is unconditional
+    when the operator force-renders an empty table so the schema
+    is documented even with zero rows.
 
     The header row count uses singular/plural (``1 row`` vs.
     ``N rows``) so a forced-ON empty table reads naturally as
@@ -1476,6 +1588,11 @@ def _render_rename_intake_table(rows: list[_DiffIntakeRow],
         # Forced-ON empty table: emit the header, then a hint that
         # explains why the body is empty. Saves the operator a
         # round-trip to the docs when they expected to see rows.
+        # Legend is shown unconditionally on empty so the operator
+        # has the score-vocabulary documented even when no row
+        # demonstrates it.
+        print(f"  score = git similarity % (0–100); "
+              f"{_SCORE_UNSCORED_TEXT} = unscored input", file=stream)
         print("  (no rename or copy rows in this diff)", file=stream)
         print("", file=stream)
         return
@@ -1486,14 +1603,22 @@ def _render_rename_intake_table(rows: list[_DiffIntakeRow],
     old_display = [_truncate_left(r.old or "(unknown)", _MAX_OLD_WIDTH)
                    for r in rows]
     old_width = max((len(s) for s in old_display), default=0)
+    # Legend only when at least one row is actually unscored —
+    # otherwise it's noise. ``any`` short-circuits so the cost is
+    # O(first-unscored-row) on tables that have one.
+    if any(r.score is None for r in rows):
+        print(f"  score = git similarity % (0–100); "
+              f"{_SCORE_UNSCORED_TEXT} = unscored input", file=stream)
     # Header row. ``kind`` is fixed-4-wide ("kind"), ``score`` is
-    # fixed-5-wide so unscored ``---`` rows align under "score".
+    # fixed-5-wide so unscored ``n/a`` rows align under "score"
+    # alongside zero-padded percents like ``092`` / ``100``.
     print(f"  kind  score  {'old':<{old_width}}  →  new", file=stream)
     for r, old_disp in zip(rows, old_display):
-        score_disp = f"{r.score:03d}" if r.score is not None else "---"
+        score_disp = (f"{r.score:03d}" if r.score is not None
+                      else _SCORE_UNSCORED_TEXT)
         # Pad ``score_disp`` to 5 chars so a 3-digit score (e.g.
-        # ``100``) and the 3-char ``---`` both end at the same
-        # column boundary as the 5-wide "score" header.
+        # ``100``) and the 3-char ``n/a`` sentinel both end at the
+        # same column boundary as the 5-wide "score" header.
         print(f"  {r.kind:<4s}  {score_disp:<5s}  "
               f"{old_disp:<{old_width}}  →  {r.new}",
               file=stream)

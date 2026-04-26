@@ -147,7 +147,14 @@ class DiffRenameLogForceOn(unittest.TestCase):
     def test_force_on_in_json_keeps_stdout_clean(self) -> None:
         """The strongest invariant: even when the operator forces
         the table ON in --json mode, STDOUT must remain a single
-        parseable JSON document. Table goes to STDERR only."""
+        parseable JSON document. Intake goes to STDERR only.
+
+        Under ``--json`` the STDERR renderer switches to its JSON
+        variant (``{"rename_intake": ...}``) so machine consumers
+        can parse both streams uniformly. The text-table banner
+        ``rename/copy intake (N row(s))`` MUST NOT appear in this
+        mode — see ``test_intake_score_display`` for the full
+        labelled-score contract."""
         with tempfile.TemporaryDirectory() as td:
             spec, changed = _make_repo_with_renames(Path(td))
             rc, out, err = _run(
@@ -157,9 +164,12 @@ class DiffRenameLogForceOn(unittest.TestCase):
                 cwd=Path(td),
             )
             self.assertEqual(rc, 0)
-            self.assertIn("rename/copy intake", err)
             import json as _json
+            # STDOUT remains a single parseable verdict document.
             _json.loads(out)
+            # STDERR carries the JSON intake (NOT the text banner).
+            self.assertNotIn("rename/copy intake (", err)
+            self.assertIn("rename_intake", err)
 
 
 class DiffRenameLogForceOff(unittest.TestCase):
@@ -270,6 +280,12 @@ class RenameIntakeRendererUnit(unittest.TestCase):
         self.assertNotIn("a" * 200, text)
 
     def test_renderer_aligns_unscored_rows_under_score_column(self) -> None:
+        """Mixed scored + unscored rows must align under the score
+        column. Locating data rows by their leading ``  R   `` prefix
+        (rather than by absolute line index) keeps this robust to
+        the optional vocabulary legend printed when an unscored row
+        is present — see ``test_intake_score_display`` for the
+        legend contract."""
         rows = [
             self.chk._DiffIntakeRow("R", 92, "spec/a.md", "spec/x.md"),
             self.chk._DiffIntakeRow("R", None, "spec/b.md", "spec/y.md"),
@@ -277,11 +293,12 @@ class RenameIntakeRendererUnit(unittest.TestCase):
         buf = io.StringIO()
         self.chk._render_rename_intake_table(rows, buf)
         lines = buf.getvalue().splitlines()
-        # Find the column position of the OLD value in each data
-        # row — they must match exactly. If alignment broke, the
-        # OLD column would shift by one row vs. the next.
-        a_idx = lines[2].index("spec/a.md")
-        b_idx = lines[3].index("spec/b.md")
+        # Find data rows by content, not by index — the legend
+        # line shifts indices but never appears between data rows.
+        data_lines = [ln for ln in lines if ln.startswith("  R ")]
+        self.assertEqual(len(data_lines), 2)
+        a_idx = data_lines[0].index("spec/a.md")
+        b_idx = data_lines[1].index("spec/b.md")
         self.assertEqual(a_idx, b_idx)
 
     def test_renderer_handles_empty_old_as_unknown(self) -> None:
