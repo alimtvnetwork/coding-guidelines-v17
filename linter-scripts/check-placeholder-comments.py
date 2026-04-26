@@ -936,9 +936,12 @@ def main(argv: list[str] | None = None) -> int:
     return 1 if violations else 0
 
 
-def _resolve_changed_md(repo_root: Path, root: Path, *,
-                        diff_base: str | None,
-                        changed_files: str | None) -> set[Path]:
+def _resolve_changed_md(
+    repo_root: Path, root: Path, *,
+    diff_base: str | None,
+    changed_files: str | None,
+    intake: list[_DiffIntakeRow] | None = None,
+) -> set[Path]:
     """Resolve the set of `.md` files under ``root`` that are changed.
 
     Two input modes:
@@ -974,6 +977,14 @@ def _resolve_changed_md(repo_root: Path, root: Path, *,
         spec scan)
       * actually present on disk (a Modified path that was reverted
         in a later commit of the same push won't exist)
+
+    Optional ``intake`` out-param: when a list is provided, it's
+    threaded into the underlying parser (:func:`_parse_name_status`
+    or :func:`_normalise_changed_lines`) so the caller receives the
+    rename/copy intake table for the active diff source. Caller's
+    responsibility: an empty list ⇒ no R/C rows seen (NOT "diagnostic
+    disabled"), ``None`` ⇒ "I don't want the table at all". This
+    split keeps the disable-the-flag path zero-allocation.
     """
     # Each entry is the post-state repo-relative path. Rename/copy
     # rows contribute only their NEW side; deletes contribute nothing
@@ -994,7 +1005,7 @@ def _resolve_changed_md(repo_root: Path, root: Path, *,
                 f"git diff vs. {diff_base!r} failed (exit {e.returncode}): "
                 f"{e.stderr.strip() or '(no stderr)'}"
             ) from e
-        raw = _parse_name_status(proc.stdout)
+        raw = _parse_name_status(proc.stdout, intake=intake)
     else:
         assert changed_files is not None
         if changed_files == "-":
@@ -1006,7 +1017,7 @@ def _resolve_changed_md(repo_root: Path, root: Path, *,
                 raise RuntimeError(
                     f"--changed-files {changed_files!r} unreadable: {e}"
                 ) from e
-        raw = _normalise_changed_lines(lines)
+        raw = _normalise_changed_lines(lines, intake=intake)
     out: set[Path] = set()
     for line in raw:
         s = line.strip()
