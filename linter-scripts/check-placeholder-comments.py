@@ -744,6 +744,13 @@ def main(argv: list[str] | None = None) -> int:
         # Always rendered to STDERR so --json STDOUT stays a single
         # parseable document under every override. The table itself
         # is purely diagnostic — verdicts never depend on it.
+        #
+        # Format selection (text table vs. JSON object): under
+        # ``--json`` we switch the intake renderer to its JSON
+        # variant so machine consumers can ingest STDERR with the
+        # same parser they use for STDOUT (each STDERR line that
+        # looks like JSON is a complete, self-contained document).
+        # Without ``--json`` we keep the human text table.
         if rename_intake is not None:
             should_render = (
                 args.diff_rename_log is True
@@ -752,7 +759,12 @@ def main(argv: list[str] | None = None) -> int:
                     and not args.json)
             )
             if should_render:
-                _render_rename_intake_table(rename_intake, sys.stderr)
+                if args.json:
+                    _render_rename_intake_json(
+                        rename_intake, sys.stderr)
+                else:
+                    _render_rename_intake_table(
+                        rename_intake, sys.stderr)
         if not args.json:
             print(f"ℹ️  placeholder-comments: diff-mode active — "
                   f"{len(changed_md)} changed `.md` file(s) under {args.root}/")
