@@ -5,6 +5,53 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  # ── Manual / API-driven runs ──────────────────────────────────
+  # Exposes the diff-mode placeholder linter knobs as workflow
+  # inputs so operators can re-run the pipeline against any base
+  # without touching this file. Defaults reproduce the automatic
+  # behaviour for `push` / `pull_request` events; overrides are
+  # resolved in the `Resolve placeholder-linter diff base` step
+  # below. All inputs flow through the env block on the `lint`
+  # job — never read `inputs.*` directly inside `run:` blocks
+  # (per GitHub's "untrusted input" hardening guidance).
+  workflow_dispatch:
+    inputs:
+      placeholder_diff_strategy:
+        description: >-
+          How to pick the diff base for the placeholder linter.
+          `auto` mirrors push/PR behaviour (event.before / PR base),
+          `full_scan` disables diff mode entirely, `previous_commit`
+          uses HEAD~1, `merge_base_main` uses the merge-base with
+          origin/main, `custom` uses the value of
+          `placeholder_diff_base_ref`.
+        type: choice
+        required: false
+        default: auto
+        options:
+          - auto
+          - full_scan
+          - previous_commit
+          - merge_base_main
+          - custom
+      placeholder_diff_base_ref:
+        description: >-
+          Custom diff base ref (e.g. `origin/release/v5`, a SHA, or
+          a tag like `v4.24.0`). Used only when
+          `placeholder_diff_strategy` is `custom`. Must be reachable
+          from HEAD after `actions/checkout` (this workflow uses
+          `fetch-depth: 0`, so any branch / tag / SHA on the remote
+          works).
+        type: string
+        required: false
+        default: ""
+      placeholder_disable_cache:
+        description: >-
+          When true, bypass the placeholder-linter PASS cache for
+          this run. Useful when re-running to confirm a fix without
+          relying on a cached PASS sentinel.
+        type: boolean
+        required: false
+        default: false
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -17,6 +64,17 @@ jobs:
   lint:
     name: Linter Scripts Validation
     runs-on: ubuntu-latest
+    # ── Workflow-input plumbing ───────────────────────────────────
+    # Hoist the three placeholder-linter inputs into the job env so
+    # every downstream step reads from `$PLACEHOLDER_*` instead of
+    # inlining `${{ inputs.* }}` (which would be a script-injection
+    # vector if the input ever held shell metacharacters). For
+    # non-`workflow_dispatch` events the inputs are absent, so
+    # `||` falls back to the original auto behaviour.
+    env:
+      PLACEHOLDER_DIFF_STRATEGY: ${{ inputs.placeholder_diff_strategy || 'auto' }}
+      PLACEHOLDER_DIFF_BASE_REF: ${{ inputs.placeholder_diff_base_ref || '' }}
+      PLACEHOLDER_DISABLE_CACHE: ${{ inputs.placeholder_disable_cache || false }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -115,6 +173,11 @@ jobs:
         # On a hit, the next step skips the full spec scan and exits 0
         # in <100ms instead of re-reading every spec file.
         id: placeholder-cache
+        # Skip restoring the cache when the operator asked to bypass
+        # it (e.g. confirming a fix). `if` short-circuits both the
+        # restore *and* the implicit save, so a disable-cache run
+        # also can't write a fresh sentinel.
+        if: ${{ env.PLACEHOLDER_DISABLE_CACHE != 'true' }}
         uses: actions/cache@v4
         with:
           path: .cache/lint-placeholder
@@ -125,35 +188,94 @@ jobs:
 
       - name: Resolve placeholder-linter diff base
         # Picks the right base ref for diff-mode placeholder linting:
-        #   * pull_request → github.event.pull_request.base.sha
-        #     (the merge-base GitHub itself uses for the PR diff).
-        #   * push        → github.event.before, UNLESS it's the all-
-        #     zero sentinel (new branch / force-push beyond the
-        #     fetched history) — in that case we fall back to the
-        #     full scan by leaving DIFF_BASE empty.
-        # Empty DIFF_BASE = full-tree mode (same as pre-diff CI).
+        #
+        #   strategy = auto             → pull_request: PR base
+        #                                 push:         event.before
+        #                                 dispatch:     same as push
+        #              full_scan        → "" (disable diff mode)
+        #              previous_commit  → HEAD~1
+        #              merge_base_main  → `git merge-base HEAD
+        #                                 origin/main` (falls back to
+        #                                 main if no origin remote)
+        #              custom           → PLACEHOLDER_DIFF_BASE_REF
+        #                                 (rejected if empty)
+        #
+        # In every strategy the resolved ref is verified to be
+        # reachable in the local history. If not, we degrade to
+        # full_scan with a `::warning::` rather than failing — the
+        # full scan is always correct, just slower.
+        #
+        # `inputs.*` are read via the job-level env block, never
+        # inlined into the script body, so a malicious input value
+        # can't break out of the quoted variable expansion.
         id: diff-base
         run: |
           set -euo pipefail
-          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            base="${{ github.event.pull_request.base.sha }}"
-          else
-            base="${{ github.event.before }}"
-            if [[ "$base" == "0000000000000000000000000000000000000000" ]]; then
-              base=""
-            fi
-          fi
-          # Verify the base commit is actually present locally; if
-          # the cache or shallow clone trimmed it, drop back to full.
+          strategy="${PLACEHOLDER_DIFF_STRATEGY:-auto}"
+          base=""
+          case "$strategy" in
+            full_scan)
+              echo "Strategy: full_scan (diff mode disabled by workflow input)"
+              ;;
+            previous_commit)
+              base="HEAD~1"
+              # `git rev-parse` resolves the symbolic ref to a SHA
+              # so a downstream `git cat-file -e` check works the
+              # same way for symbolic and literal inputs.
+              base="$(git rev-parse --verify "$base^{commit}" 2>/dev/null || true)"
+              ;;
+            merge_base_main)
+              # Prefer `origin/main` (the remote tracking branch left
+              # by actions/checkout); fall back to local `main` for
+              # workflows that check out without a remote.
+              for ref in origin/main main; do
+                if git rev-parse --verify "$ref^{commit}" >/dev/null 2>&1; then
+                  base="$(git merge-base HEAD "$ref" || true)"
+                  break
+                fi
+              done
+              ;;
+            custom)
+              ref="${PLACEHOLDER_DIFF_BASE_REF:-}"
+              if [[ -z "$ref" ]]; then
+                echo "::error::placeholder_diff_strategy=custom requires placeholder_diff_base_ref"
+                exit 2
+              fi
+              base="$(git rev-parse --verify "$ref^{commit}" 2>/dev/null || true)"
+              if [[ -z "$base" ]]; then
+                echo "::error::custom diff base '$ref' is not a valid ref in the checked-out history"
+                exit 2
+              fi
+              ;;
+            auto|"")
+              if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+                base="${{ github.event.pull_request.base.sha }}"
+              else
+                base="${{ github.event.before }}"
+                if [[ "$base" == "0000000000000000000000000000000000000000" ]]; then
+                  base=""
+                fi
+              fi
+              ;;
+            *)
+              echo "::error::unknown placeholder_diff_strategy '$strategy' (allowed: auto, full_scan, previous_commit, merge_base_main, custom)"
+              exit 2
+              ;;
+          esac
+          # Reachability guard: if the resolved ref isn't in the
+          # local history (shallow clone, deleted upstream branch,
+          # cache-tampering), degrade to a full scan rather than
+          # failing. The full scan is always correct, just slower.
           if [[ -n "$base" ]] && ! git cat-file -e "$base^{commit}" 2>/dev/null; then
-            echo "::warning::diff base $base not in local history — running full scan"
+            echo "::warning::diff base '$base' not in local history — running full scan"
             base=""
           fi
           echo "ref=$base" >> "$GITHUB_OUTPUT"
+          echo "strategy=$strategy" >> "$GITHUB_OUTPUT"
           if [[ -n "$base" ]]; then
-            echo "Diff base: $base"
+            echo "Diff base: $base (strategy: $strategy)"
           else
-            echo "Diff base: (none — full-tree scan)"
+            echo "Diff base: (none — full-tree scan, strategy: $strategy)"
           fi
 
       - name: Check spec placeholder comments (P-001 … P-008)
@@ -176,16 +298,26 @@ jobs:
         # introduced by the current diff. When the base is empty
         # (force-push, new branch, base trimmed by shallow clone) the
         # script falls back to the full-tree scan automatically.
+        #
+        # Workflow inputs honoured:
+        #   * placeholder_diff_strategy / placeholder_diff_base_ref
+        #     drive `--diff-base` via the previous step's output.
+        #   * placeholder_disable_cache toggles `--cache-dir` so a
+        #     re-run can force a full re-scan without poisoning the
+        #     stored sentinel.
         run: |
+          set -euo pipefail
           base="${{ steps.diff-base.outputs.ref }}"
+          args=()
           if [[ -n "$base" ]]; then
-            python3 linter-scripts/check-placeholder-comments.py \
-              --diff-base "$base" \
-              --cache-dir .cache/lint-placeholder
-          else
-            python3 linter-scripts/check-placeholder-comments.py \
-              --cache-dir .cache/lint-placeholder
+            args+=(--diff-base "$base")
           fi
+          if [[ "${PLACEHOLDER_DISABLE_CACHE:-false}" != "true" ]]; then
+            args+=(--cache-dir .cache/lint-placeholder)
+          else
+            echo "ℹ️  placeholder cache disabled by workflow input"
+          fi
+          python3 linter-scripts/check-placeholder-comments.py "${args[@]}"
 
       - name: Guard release-install.* against /releases/latest calls
         # Static guard: release-install.sh and release-install.ps1 MUST NOT
