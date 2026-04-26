@@ -636,6 +636,25 @@ def main(argv: list[str] | None = None) -> int:
 
     intent_verbs = DEFAULT_INTENT_VERBS | {v.lower() for v in args.allow_verb}
 
+    # ---- Resolve --extension allowlist ---------------------------
+    # ``--extension`` is repeatable; ``None`` (no flag passed) keeps
+    # the historical ``("md",)`` behaviour. We normalise to lowercase,
+    # strip any leading dot the user typed by accident, and dedupe via
+    # ``dict.fromkeys`` so the FIRST occurrence wins (preserves the
+    # CLI order in error messages without affecting the cache segment,
+    # which sorts independently). The result is a tuple so it can
+    # flow through ``iter_markdown_files`` and the cache key as a
+    # hashable, append-safe value.
+    if args.extension is None:
+        extensions = DEFAULT_EXTENSIONS
+    else:
+        cleaned = [e.lstrip(".").lower() for e in args.extension if e.strip()]
+        if not cleaned:
+            print("error: --extension requires at least one non-empty value",
+                  file=sys.stderr)
+            return 2
+        extensions = tuple(dict.fromkeys(cleaned))
+
     # ---- Resolve diff-mode changed-file allowlist (if any) -------
     # ``changed_md`` is None ⇒ full-tree mode (legacy behaviour).
     # ``changed_md`` is a set of resolved Paths ⇒ diff mode: only
