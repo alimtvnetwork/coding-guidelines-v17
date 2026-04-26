@@ -1297,6 +1297,34 @@ def _dedupe_audit_rows(
 _SIMILARITY_BLANK = "-"
 
 
+# Per-source ``reason`` text for ``ignored-deleted`` rows. The KEY is
+# the provenance tag emitted by :func:`_parse_name_status` /
+# :func:`_normalise_changed_lines` alongside each captured delete; the
+# VALUE is the human-readable explanation that lands on the audit
+# row. Centralised so every surface (text table, JSON payload, CSV
+# export, dedupe footer) reports the same wording for a given source.
+#
+# Vocabulary is intentionally tiny + closed:
+#   * ``diff-D``           — true ``D``-status row from
+#                            ``git diff --name-status``.
+#   * ``changed-files-D``  — authored ``--changed-files`` payload
+#                            shaped exactly ``D\tpath`` (the verbatim
+#                            git wire format some CI runners forward).
+#
+# ``_DELETED_REASON_FALLBACK`` covers any future provenance the
+# parsers add before this map catches up — keeps the audit
+# self-explanatory rather than crashing on a missing key.
+_DELETED_REASON: dict[str, str] = {
+    "diff-D": ("git diff reported D (deleted): file removed in the "
+               "diff range, no post-state to lint"),
+    "changed-files-D": ("--changed-files payload row shaped `D\\tpath`: "
+                        "explicit delete marker, no post-state to lint"),
+}
+_DELETED_REASON_FALLBACK = ("path captured as a delete by the diff "
+                            "intake but provenance is unknown — "
+                            "treated as `ignored-deleted` for safety")
+
+
 # Stable header for the ``--similarity-csv`` export. Frozen at module
 # scope so the column order is part of the contract — downstream
 # spreadsheets / pandas readers can hard-code positions if they want.
@@ -1738,7 +1766,12 @@ def _resolve_changed_md(repo_root: Path, root: Path, *,
     # with a leading ``\x00D\x00`` sentinel so the audit pass can
     # mark them ``ignored-deleted`` without re-parsing the diff.
     raw: list[str] = []
-    deleted_paths: list[str] = []
+    # Each entry is ``(path, source)`` where ``source`` is one of
+    # ``_DELETED_REASON``'s keys. The audit emitter below maps
+    # ``source`` → human-readable ``reason`` so each
+    # ``ignored-deleted`` row in BOTH the text table AND the JSON
+    # payload explains *why* it was classified.
+    deleted_paths: list[tuple[str, str]] = []
     # When the caller asked for an audit trail, also collect rename/
     # copy provenance per new-path so the audit constructor below can
     # attach a ``_RenameSimilarity`` to every row whose path came from
@@ -1833,11 +1866,11 @@ def _resolve_changed_md(repo_root: Path, root: Path, *,
                 similarity=sim,
             ))
     if audit is not None:
-        for d in deleted_paths:
+        for d, src in deleted_paths:
             audit.append(_ChangedFileAudit(
                 path=d, status="ignored-deleted",
-                reason="git reported D (deleted): no post-state "
-                       "file to lint",
+                reason=_DELETED_REASON.get(
+                    src, _DELETED_REASON_FALLBACK),
             ))
     return out
 
@@ -1935,7 +1968,7 @@ def _unquote_git_path(field: str) -> str:
 
 def _parse_name_status(stdout: str,
                        *,
-                       deleted: list[str] | None = None,
+                       deleted: "list[tuple[str, str]] | None" = None,
                        similarities: "dict[str, _RenameSimilarity] | None" = None,
                        ) -> list[str]:
     """Extract the post-state path from each ``git diff --name-status``
@@ -1944,10 +1977,15 @@ def _parse_name_status(stdout: str,
     Unknown / malformed rows are skipped silently — the linter's job
     is to lint placeholders, not to police git plumbing output.
 
-    When ``deleted`` is provided, every ``D``-status row's path is
-    appended to it (in input order, after :func:`_unquote_git_path`).
-    The audit trail uses this to surface ``ignored-deleted`` rows
-    without re-parsing the diff.
+    When ``deleted`` is provided, every ``D``-status row contributes
+    a ``(path, source)`` tuple — in input order, after
+    :func:`_unquote_git_path`. The ``source`` is always ``"diff-D"``
+    here (rows come straight from ``git diff --name-status``); the
+    audit-trail emitter uses the tag to look up the per-provenance
+    ``reason`` string in :data:`_DELETED_REASON` so each
+    ``ignored-deleted`` row explains *why* it was classified that
+    way (and JSON consumers see the same wording in the ``reason``
+    field).
 
     When ``similarities`` is provided, every ``R``/``C`` row contributes
     one ``new_path → _RenameSimilarity`` entry. The mapping key is the
@@ -2015,7 +2053,7 @@ def _parse_name_status(stdout: str,
             # audit trail only — never returned for linting because
             # there is no post-state file to scan.
             if cols[1] != "":
-                deleted.append(_unquote_git_path(cols[1]))
+                deleted.append((_unquote_git_path(cols[1]), "diff-D"))
         # T / U / X intentionally dropped — see docstring.
     return out
 
@@ -2041,7 +2079,7 @@ _RENAME_ARROW_RE = re.compile(r"^\s*(?P<old>.+?)\s*=>\s*(?P<new>.+?)\s*$")
 
 def _normalise_changed_lines(lines: list[str],
                              *,
-                             deleted: list[str] | None = None,
+                             deleted: "list[tuple[str, str]] | None" = None,
                              similarities: "dict[str, _RenameSimilarity] | None" = None,
                              ) -> list[str]:
     """Collapse rename-bearing rows in a ``--changed-files`` payload
@@ -2049,11 +2087,15 @@ def _normalise_changed_lines(lines: list[str],
 
     When ``deleted`` is provided and a row is recognisable as a
     delete (``D\\tpath`` — the exact shape ``git diff --name-status``
-    emits), the path is captured into ``deleted`` and the row is
-    NOT forwarded to the caller. Without ``deleted`` (the default),
-    such a row falls through to the generic tab-form branch and the
-    bare path travels downstream to be filtered by extension/root
-    checks — same end result as before this audit-trail addition.
+    emits), the path is captured into ``deleted`` as a
+    ``(path, "changed-files-D")`` tuple and the row is NOT forwarded
+    to the caller. The provenance tag distinguishes it from true
+    diff ``D`` rows so the audit emitter (and the JSON payload that
+    serialises it) can surface a different ``reason`` string per
+    source. Without ``deleted`` (the default), such a row falls
+    through to the generic tab-form branch and the bare path travels
+    downstream to be filtered by extension/root checks — same end
+    result as before this audit-trail addition.
 
     Plain paths (no tab, no ``=>``) pass through unchanged. Comments
     and blanks are *not* stripped here — the caller does that on the
@@ -2115,7 +2157,8 @@ def _normalise_changed_lines(lines: list[str],
                     and len(cols) == 2
                     and cols[0] == "D"
                     and cols[1] != ""):
-                deleted.append(_unquote_git_path(cols[1]))
+                deleted.append((_unquote_git_path(cols[1]),
+                                "changed-files-D"))
                 continue
             new_col = ""
             for c in reversed(cols):

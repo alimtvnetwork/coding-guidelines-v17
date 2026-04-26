@@ -48,6 +48,35 @@ Without `--with-similarity` the `similarity` key is **explicitly
 removed** from every record so dashboards parsing the legacy schema
 continue to work unchanged. The flag is purely additive.
 
+### `reason` for `ignored-deleted` rows
+
+The `reason` field on `ignored-deleted` rows is **per-source** so a
+reviewer (or a JSON consumer) can see *why* a path was classified as
+deleted. Two source vocabularies are emitted today, both surfaced
+identically in the text table and the `--json` payload:
+
+| Source | Triggered by | `reason` substring (stable for log-grep / `jq`) |
+|---|---|---|
+| `diff-D` | A real `D`-status row from `git diff --name-status` | `git diff reported D (deleted)` |
+| `changed-files-D` | An authored `--changed-files` payload row shaped exactly `D\tpath` | `--changed-files payload row shaped` |
+
+JSON example for a `D\tspec/gone.md` payload:
+
+```json
+{
+  "path": "spec/gone.md",
+  "status": "ignored-deleted",
+  "reason": "--changed-files payload row shaped `D\\tpath`: explicit delete marker, no post-state to lint"
+}
+```
+
+The full `reason` text is intentionally not part of the machine
+contract (it may be re-worded for clarity), but the substrings above
+are stable and safe to grep / `jq -e` in CI logs. New provenance tags
+will be added alongside their parser changes; an unknown tag falls
+back to a clearly labelled "provenance unknown" reason rather than
+crashing.
+
 ### `similarity` sub-object
 
 When `--with-similarity` is on, every record carries a `similarity`
