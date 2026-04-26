@@ -64,7 +64,7 @@ table, CSV export). Use it when wiring a dashboard, writing a
 | `ignored-extension` | Path is under `--root` but its suffix isn't in the allowlist (e.g. a `.txt` change while linting `.md`). | `extension '<.ext or (none)>' not in allowlist <sorted list>` |
 | `ignored-out-of-root` | Path resolves outside `--root` (e.g. a top-level `README.md` change while linting `spec/`). | `path is outside --root <resolved-abs-path>` |
 | `ignored-missing` | Post-state path no longer exists on disk — typically reverted in a later commit of the same push, or filtered out by `.gitignore` on checkout. | `post-state path is not on disk (reverted later in the push, or filtered by .gitignore on checkout)` |
-| `ignored-deleted` | A `D`-status row, **or** the OLD side of a rename/copy: there is no post-state file to scan. `reason` is per-source — see [next sub-section](#ignored-deleted-reason-format). | (per-source — see below) |
+| `ignored-deleted` | A `D`-status row, **or** the OLD side of a rename / copy row (the pre-rename / pre-copy path): there is no post-state file to scan at that path. `reason` is per-source — see [next sub-section](#ignored-deleted-reason-format). For renames / copies the OLD side is captured **in addition** to the NEW side's `matched` (or `ignored-*`) row, so the audit names every path the diff mentioned. | (per-source — see below) |
 
 The five values are **the only ones the renderer will ever emit**;
 adding a new status is a major-version contract change announced in
@@ -86,14 +86,42 @@ a given source.
 |---|---|---|---|
 | `diff-D` | A real `D`-status row from `git diff --name-status` | `git diff reported D (deleted): file removed in the diff range, no post-state to lint` | `git diff reported D (deleted)` |
 | `changed-files-D` | An authored `--changed-files` payload row shaped exactly `` `D\tpath` `` | `` --changed-files payload row shaped `D\tpath`: explicit delete marker, no post-state to lint `` | `` --changed-files payload row shaped `` |
+| `diff-R-old` | OLD side of an `R`-status row from `git diff --name-status -M -C` | `` OLD side of a git rename (`R` row): file moved to `<new_path>` in the diff range, no post-state at this path to lint `` | `OLD side of a git rename` |
+| `diff-C-old` | OLD (source) side of a `C`-status (copy) row from `git diff --name-status -M -C` | `` OLD (source) side of a git copy (`C` row): duplicated to `<new_path>` in the diff range, no modification at this path to lint `` | `OLD (source) side of a git copy` |
+| `changed-files-R-old` | OLD side of an authored `--changed-files` rename row (tab form `R<score>?\told\tnew` **or** arrow form `old => new`) | `` OLD side of a `--changed-files` rename row: file moved to `<new_path>`, no post-state at this path to lint `` | ``OLD side of a `--changed-files` rename`` |
+| `changed-files-C-old` | OLD (source) side of an authored `--changed-files` copy row (tab form `C<score>?\told\tnew`) | `` OLD (source) side of a `--changed-files` copy row: duplicated to `<new_path>`, no modification at this path to lint `` | ``OLD (source) side of a `--changed-files` copy`` |
 | *(unknown future tag)* | Captured as a delete by a parser this map hasn't caught up with | `path captured as a delete by the diff intake but provenance is unknown — treated as ignored-deleted for safety` | `provenance is unknown` |
 
 The full sentence may be re-worded for clarity in a future minor
 release; the **substring column** is what's safe to grep for in CI
-log scrapers. To switch on the machine-readable tag instead of the
-wording, pass `--list-changed-files-verbose` and read the `source`
-field — see [Verbose mode](#verbose-mode---list-changed-files-verbose)
+log scrapers. The four R/C-old reasons embed the destination path
+(the `<new_path>` placeholder above) so a reviewer can follow the
+rename without consulting the diff itself — that destination is
+the path of the corresponding `matched` / `ignored-*` audit row
+for the NEW side. To switch on the machine-readable tag instead
+of the wording, pass `--list-changed-files-verbose` and read the
+`source` field — see [Verbose mode](#verbose-mode---list-changed-files-verbose)
 below.
+
+#### Pairing OLD-side rows with their NEW-side row
+
+Every rename / copy contributes **two** audit rows: the NEW-side
+row (carrying the `matched` / `ignored-*` status and, when
+`--with-similarity` is on, the `similarity` object with the score)
+and the OLD-side `ignored-deleted` row (carrying the
+`{diff,changed-files}-{R,C}-old` source tag). To pair them
+programmatically:
+
+1. Walk the audit and bucket rows by `status`.
+2. For each `ignored-deleted` row whose `source` ends in `-old`,
+   parse the destination out of the `reason` text — or, more
+   robustly, look up the corresponding NEW-side row by
+   `similarity.old_path == ignored_deleted_row.path` and
+   `similarity.kind == 'R' or 'C'`.
+
+The second form is the recommended machine-pairing path because
+it doesn't depend on `reason` wording (which is allowed to drift
+across minor releases).
 
 ### Examples in every output surface
 
@@ -156,9 +184,23 @@ course differ).
     "status": "ignored-deleted",
     "reason": "--changed-files payload row shaped `D\\tpath`: explicit delete marker, no post-state to lint",
     "similarity": null
+  },
+  {
+    "path": "spec/old.md",
+    "status": "ignored-deleted",
+    "reason": "OLD side of a `--changed-files` rename row: file moved to `spec/new.md`, no post-state at this path to lint",
+    "similarity": null
   }
 ]
 ```
+
+The trailing `spec/old.md` row is the rename's OLD side, captured
+from the `R090	spec/old.md	spec/new.md` payload row. It is
+`ignored-deleted` because there is no post-state file at
+`spec/old.md` to lint (the file moved to `spec/new.md`, which is
+the row above with the `R` similarity object). The OLD-side row
+itself carries `similarity: null` — the score lives on the
+NEW-side row only.
 
 #### Text table (default `--list-changed-files`, `--with-similarity`)
 
@@ -172,7 +214,8 @@ course differ).
   ignored-out-of-root  outside/x.md     -     -      -            path is outside --root /repo/spec
   ignored-missing      spec/missing.md  -     -      -            post-state path is not on disk (reverted later in the push, or filtered by .gitignore on checkout)
   ignored-deleted      spec/gone.md     -     -      -            --changed-files payload row shaped `D\tpath`: explicit delete marker, no post-state to lint
-  totals: matched=1  ignored-extension=1  ignored-out-of-root=1  ignored-missing=2  ignored-deleted=1
+  ignored-deleted      spec/old.md      -     -      -            OLD side of a `--changed-files` rename row: file moved to `spec/new.md`, no post-state at this path to lint
+  totals: matched=1  ignored-extension=1  ignored-out-of-root=1  ignored-missing=2  ignored-deleted=2
 ```
 
 With `--list-changed-files-verbose` the same run grows a `source`
@@ -195,6 +238,7 @@ spec/notes.txt,ignored-extension,extension '.txt' not in allowlist ['.md'],,,
 outside/x.md,ignored-out-of-root,path is outside --root /repo/spec,,,
 spec/missing.md,ignored-missing,"post-state path is not on disk (reverted later in the push, or filtered by .gitignore on checkout)",,,
 spec/gone.md,ignored-deleted,"--changed-files payload row shaped `D\tpath`: explicit delete marker, no post-state to lint",,,
+spec/old.md,ignored-deleted,"OLD side of a `--changed-files` rename row: file moved to `spec/new.md`, no post-state at this path to lint",,,
 ```
 
 Cross-surface invariants — true for every status, every output:
