@@ -255,8 +255,11 @@ function groupBy(arr, keyFn) {
   return m;
 }
 
-function buildHtml({ scope, validator, crossLink, validatorRaw, crossLinkRaw, generatedAt }) {
-  const scopeLabel = scope ? `${scope.size} changed spec file(s)` : "entire repo";
+function buildHtml({ scope, scopeLabel, validator, crossLink, validatorRaw, crossLinkRaw, generatedAt }) {
+  const scopedFileCount = scope ? scope.size : null;
+  const scopeBadge = scope === null
+    ? scopeLabel
+    : `${scopedFileCount} ${scopeLabel}`;
   const totalCodeRed = validator.filter((f) => f.severity === "code-red").length;
   const totalStyle = validator.filter((f) => f.severity === "style").length;
   const totalLink = crossLink.length;
@@ -305,7 +308,7 @@ function buildHtml({ scope, validator, crossLink, validatorRaw, crossLinkRaw, ge
     .join("\n");
 
   const emptyState = grandTotal === 0
-    ? `<p class="empty">No findings in scope (${escapeHtml(scopeLabel)}).</p>`
+    ? `<p class="empty">No findings in scope (${escapeHtml(scopeBadge)}).</p>`
     : "";
 
   return `<!doctype html>
@@ -362,7 +365,7 @@ function buildHtml({ scope, validator, crossLink, validatorRaw, crossLinkRaw, ge
 <body>
   <h1>Spec Change Report</h1>
   <p class="meta">
-    Generated <strong>${escapeHtml(generatedAt)}</strong> · Scope: ${escapeHtml(scopeLabel)} ·
+    Generated <strong>${escapeHtml(generatedAt)}</strong> · Scope: ${escapeHtml(scopeBadge)} ·
     <span class="status ${statusClass}">${status}</span>
   </p>
 
