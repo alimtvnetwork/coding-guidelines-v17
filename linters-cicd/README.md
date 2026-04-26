@@ -153,6 +153,12 @@ calls), fixtures, unit tests, and a 7-step checklist written for
 an autonomous AI agent. It lands a new CI-blocking rule in one
 iteration without touching any shared library.
 
+Before you write the first fixture, read
+[`docs/fixture-and-diagnostics-format.md`](./docs/fixture-and-diagnostics-format.md).
+It is the single source of truth for fixture filenames, the
+`Finding` shape, the text/SARIF output format, and the four
+unit-test contracts every rule must satisfy.
+
 ---
 
 ## Supported languages matrix

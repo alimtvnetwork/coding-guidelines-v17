@@ -12,6 +12,14 @@ leftover `var_dump()` / `print_r()` / `error_log()` debug calls in
 PHP) plus its fixtures and unit tests. Every file is the minimum
 viable shape for a real production rule. Copy → rename → adapt.
 
+> **Before you copy:** read
+> [`../../docs/fixture-and-diagnostics-format.md`](../../docs/fixture-and-diagnostics-format.md)
+> once. It documents the fixture filename rules, the `Finding`
+> dataclass, the exact text + SARIF output the harness produces,
+> and the four unit-test contracts every rule must pass. Following
+> that doc means you do not have to reverse-engineer any sibling
+> check.
+
 ---
 
 ## What you get
