@@ -68,8 +68,12 @@ Tables for rule comparisons:
 
 ## Cross-References
 
-- [Related module](../NN-related-module/00-overview.md) — file-relative paths only, always include `.md`
+Add file-relative links here. Always include `.md`. Examples (replace before committing):
+
+```
+- [Related module](../NN-related-module/00-overview.md)
 - [Strictly-avoid quick reference](../17-consolidated-guidelines/00-strictly-avoid-quickref.md)
+```
 
 ---
 

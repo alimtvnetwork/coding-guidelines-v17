@@ -70,6 +70,28 @@ Install once per clone:
 bash scripts/hooks/install-hooks.sh
 ```
 
+### 4b. Per-change validation report
+
+✅ **Shipped** in `scripts/spec-change-report.mjs`. Generates a styled HTML + PDF report scoping validator + cross-link findings to the spec files you actually changed.
+
+```bash
+# Default — only files you've touched in git
+node scripts/spec-change-report.mjs
+
+# Full repo (useful for baseline / nightly)
+node scripts/spec-change-report.mjs --all
+
+# Custom output dir
+node scripts/spec-change-report.mjs --out ./reports
+```
+
+Output (default `/mnt/documents/`):
+
+- `spec-change-report-<timestamp>.html` — always
+- `spec-change-report-<timestamp>.pdf`  — when `wkhtmltopdf` or Chromium is available
+
+Exit code is `1` when any findings exist (CI-friendly), `0` when clean.
+
 ### 5. Live preview wired into the docs viewer
 The viewer already reads `src/data/specTree.json`. Add a dev-mode watch (or `bun run sync:watch`) that re-runs `sync-spec-tree.mjs` on `spec/**/*.md` save. Authors see their doc render in the live preview within ~1 s.
 
