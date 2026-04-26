@@ -126,6 +126,11 @@ under `languages`.
 # 7a. Unit tests must all pass
 python3 linters-cicd/tests/run.py
 
+# 7b-fast. One-shot smoke run — verifies just the rule(s) you
+# edited (or the starter kit) against their own fixtures. Use
+# this for quick iteration before the full 7b/7c/7d sweep.
+bash linters-cicd/run-all.sh --smoke --include-template --format text
+
 # 7b. The orchestrator must dispatch your rule
 bash linters-cicd/run-all.sh \
   --path linters-cicd/checks/<your-slug>/fixtures \
