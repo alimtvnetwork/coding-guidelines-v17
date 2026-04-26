@@ -213,6 +213,7 @@ def lint_file(path: Path, repo_root: Path) -> list[Violation]:
         tag_open = TAG_OPEN_RE.search(line)
         if tag_open:
             open_line = i + 1
+            opener_text = line[tag_open.start():tag_open.end()]
             # Same-line open+close — degenerate empty block.
             if TAG_CLOSE in line[tag_open.end():]:
                 out.append(Violation(rel, open_line, "P-004",
@@ -229,6 +230,7 @@ def lint_file(path: Path, repo_root: Path) -> list[Violation]:
             if bullet_count == 0:
                 out.append(Violation(rel, open_line, "P-004",
                     "`<spec-placeholder>` block contains no valid bullet rows."))
+            _check_hint(rel, open_line, opener_text, out, form="tag")
             continue
 
         # ---- HTML-comment placeholder (legacy) ----------------------
@@ -242,6 +244,7 @@ def lint_file(path: Path, repo_root: Path) -> list[Violation]:
             i += 1
             continue
         open_line = i + 1
+        opener_text = line[m.start():]
         body, i, closed = _consume_block(lines, i + 1, COMMENT_CLOSE)
         if not closed:
             out.append(Violation(rel, open_line, "P-006",
@@ -251,6 +254,7 @@ def lint_file(path: Path, repo_root: Path) -> list[Violation]:
         if bullet_count == 0:
             out.append(Violation(rel, open_line, "P-004",
                 "Placeholder block contains no valid bullet rows."))
+        _check_hint(rel, open_line, opener_text, out, form="comment")
 
     return out
 
