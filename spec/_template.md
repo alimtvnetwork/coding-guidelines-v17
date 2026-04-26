@@ -111,6 +111,7 @@ Guidelines for placeholders (both formats):
 - Remove the `<spec-placeholder>` / `</spec-placeholder>` wrappers (or `<!--`/`-->` for the legacy form) once the target exists.
 - If the anchor (`#section-anchor`) is unknown, omit it and add it later.
 - Prefer `<spec-placeholder>` for new authoring — only it is recognised by the cross-link checker's selective ignore.
+- Don't reserve the same target file in more than one placeholder — the linter's P-007 rule flags duplicates within a file *and* across files (anchor differences are collapsed). If two specs really need to link to the same future doc, activate the placeholder once it lands and let the live link be referenced from both places.
 
 ### How to activate placeholders
 

@@ -43,6 +43,10 @@ Rules enforced (lightweight, no AST):
          contiguous per template guidance).
   P-006  Every opening marker must have a matching closer
          (``-->`` or ``</spec-placeholder>``).
+  P-007  Two or more placeholder bullets must not point at the same
+         target ``.md`` file (anchor ignored — duplicates pointing at
+         different sections of the same file still collapse to one
+         pending activation). Detected within a file and across files.
 
 Only multi-line comment blocks that start with the ``TODO:``/``FIXME:``
 marker on the opening line are linted. Single-line comments and
@@ -143,8 +147,13 @@ def strip_inline_code(text: str) -> str:
 
 
 def _validate_body(rel: str, open_line: int, body: list[tuple[int, str]],
-                   out: list[Violation]) -> int:
-    """Apply P-002/P-003/P-005 to a body and return valid bullet count."""
+                   out: list[Violation],
+                   bullets: list[tuple[int, str]] | None = None) -> int:
+    """Apply P-002/P-003/P-005 to a body and return valid bullet count.
+
+    When ``bullets`` is provided, every valid bullet is appended as
+    ``(line, target)`` for later cross-block duplicate analysis (P-007).
+    """
     bullet_count = 0
     for ln, content in body:
         if not content.strip():
@@ -168,14 +177,25 @@ def _validate_body(rel: str, open_line: int, body: list[tuple[int, str]],
                 f"Placeholder link `{target}` must point at a `.md` file."))
             continue
         bullet_count += 1
+        if bullets is not None:
+            bullets.append((ln, target))
     return bullet_count
 
 
-def lint_file(path: Path, repo_root: Path) -> list[Violation]:
+def lint_file(path: Path, repo_root: Path,
+              valid_bullets: list[tuple[str, int, str]] | None = None,
+              ) -> list[Violation]:
+    """Lint one markdown file.
+
+    When ``valid_bullets`` is provided, every successfully-validated
+    bullet is appended as ``(rel_file, line, target)`` so the caller
+    can run cross-file duplicate detection (P-007).
+    """
     rel = str(path.relative_to(repo_root))
     text = path.read_text(encoding="utf-8")
     lines = strip_inline_code(strip_code_fences(text)).splitlines()
     out: list[Violation] = []
+    file_bullets: list[tuple[int, str]] = []
 
     i = 0
     n = len(lines)
@@ -204,7 +224,7 @@ def lint_file(path: Path, repo_root: Path) -> list[Violation]:
                     "`<spec-placeholder>` opened but never closed "
                     "(missing `</spec-placeholder>`)."))
                 continue
-            bullet_count = _validate_body(rel, open_line, body, out)
+            bullet_count = _validate_body(rel, open_line, body, out, file_bullets)
             if bullet_count == 0:
                 out.append(Violation(rel, open_line, "P-004",
                     "`<spec-placeholder>` block contains no valid bullet rows."))
@@ -226,10 +246,31 @@ def lint_file(path: Path, repo_root: Path) -> list[Violation]:
             out.append(Violation(rel, open_line, "P-006",
                 "Placeholder comment opened but never closed (missing `-->`)."))
             continue
-        bullet_count = _validate_body(rel, open_line, body, out)
+        bullet_count = _validate_body(rel, open_line, body, out, file_bullets)
         if bullet_count == 0:
             out.append(Violation(rel, open_line, "P-004",
                 "Placeholder block contains no valid bullet rows."))
+
+    # ---- P-007 within-file duplicates ------------------------------
+    # Resolve each bullet to a canonical (file, target_path) key. We
+    # strip the anchor because two placeholders pointing at different
+    # sections of the same target file still collapse to a single
+    # activation step, which is what P-007 is designed to surface.
+    seen: dict[str, tuple[int, str]] = {}
+    for ln, target in file_bullets:
+        key = _canonical_target(rel, target, repo_root)
+        if key in seen:
+            first_ln, first_target = seen[key]
+            out.append(Violation(rel, ln, "P-007",
+                f"Duplicate placeholder target `{target}` — already "
+                f"declared at L{first_ln} as `{first_target}` "
+                "(anchor differences are ignored)."))
+        else:
+            seen[key] = (ln, target)
+
+    if valid_bullets is not None:
+        for ln, target in file_bullets:
+            valid_bullets.append((rel, ln, target))
 
     return out
 
@@ -257,6 +298,24 @@ def _consume_block(lines: list[str], start: int, close_marker: str
     return body, i, False
 
 
+def _canonical_target(source_rel: str, target: str, repo_root: Path) -> str:
+    """Resolve a placeholder bullet's link to a canonical repo-relative
+    path string. Anchor is stripped so different anchors on the same
+    target file collapse to the same key. Path resolution is purely
+    syntactic (no I/O) — the target file may not exist yet, which is
+    the whole point of placeholders.
+    """
+    path_part = target.split("#", 1)[0]
+    source_dir = (repo_root / source_rel).parent
+    try:
+        resolved = (source_dir / path_part).resolve()
+        return str(resolved.relative_to(repo_root.resolve()))
+    except (ValueError, OSError):
+        # Fall back to the literal path if it escapes the repo root —
+        # still gives consistent grouping for duplicate detection.
+        return path_part
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--root", default="spec",
@@ -274,8 +333,33 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     violations: list[Violation] = []
+    cross_file_bullets: list[tuple[str, int, str]] = []
     for md in iter_markdown_files(root):
-        violations.extend(lint_file(md, repo_root))
+        violations.extend(lint_file(md, repo_root, cross_file_bullets))
+
+    # ---- P-007 cross-file duplicates -------------------------------
+    # Group every valid bullet across the scan by canonical target.
+    # Within-file duplicates are already reported above, so we only
+    # surface groups whose entries span ≥2 distinct files. The
+    # *second* and later occurrences are flagged, pointing back at
+    # the first declaration site for fast triage.
+    by_target: dict[str, list[tuple[str, int, str]]] = {}
+    for rel, ln, target in cross_file_bullets:
+        by_target.setdefault(_canonical_target(rel, target, repo_root), []).append(
+            (rel, ln, target)
+        )
+    for key, entries in by_target.items():
+        files_seen = {e[0] for e in entries}
+        if len(files_seen) < 2:
+            continue
+        first_rel, first_ln, first_target = entries[0]
+        for rel, ln, target in entries[1:]:
+            if rel == first_rel:
+                continue  # already reported by the within-file pass
+            violations.append(Violation(rel, ln, "P-007",
+                f"Duplicate placeholder target `{target}` — also declared at "
+                f"`{first_rel}:L{first_ln}` as `{first_target}` "
+                "(anchor differences are ignored)."))
 
     if args.json:
         print(json.dumps([asdict(v) for v in violations], indent=2))
