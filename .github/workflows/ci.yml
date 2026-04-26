@@ -20,6 +20,13 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          # Diff-based placeholder linting needs the base commit
+          # (push: github.event.before, PR: PR base) reachable from
+          # HEAD so `git diff <base>...HEAD` works. fetch-depth: 0
+          # is the safest blanket choice — the spec tree is small
+          # and a full clone still completes in <2s on warm runners.
+          fetch-depth: 0
 
       - name: Setup Go
         uses: actions/setup-go@v5
@@ -116,6 +123,39 @@ jobs:
           # any input changes — partial restores would be unsafe
           # because the sentinel filename IS the fingerprint.
 
+      - name: Resolve placeholder-linter diff base
+        # Picks the right base ref for diff-mode placeholder linting:
+        #   * pull_request → github.event.pull_request.base.sha
+        #     (the merge-base GitHub itself uses for the PR diff).
+        #   * push        → github.event.before, UNLESS it's the all-
+        #     zero sentinel (new branch / force-push beyond the
+        #     fetched history) — in that case we fall back to the
+        #     full scan by leaving DIFF_BASE empty.
+        # Empty DIFF_BASE = full-tree mode (same as pre-diff CI).
+        id: diff-base
+        run: |
+          set -euo pipefail
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            base="${{ github.event.pull_request.base.sha }}"
+          else
+            base="${{ github.event.before }}"
+            if [[ "$base" == "0000000000000000000000000000000000000000" ]]; then
+              base=""
+            fi
+          fi
+          # Verify the base commit is actually present locally; if
+          # the cache or shallow clone trimmed it, drop back to full.
+          if [[ -n "$base" ]] && ! git cat-file -e "$base^{commit}" 2>/dev/null; then
+            echo "::warning::diff base $base not in local history — running full scan"
+            base=""
+          fi
+          echo "ref=$base" >> "$GITHUB_OUTPUT"
+          if [[ -n "$base" ]]; then
+            echo "Diff base: $base"
+          else
+            echo "Diff base: (none — full-tree scan)"
+          fi
+
       - name: Check spec placeholder comments (P-001 … P-008)
         # Validates `<spec-placeholder>` tags and legacy `<!-- TODO: ... -->`
         # placeholder blocks across spec/. Catches malformed bullets,
@@ -128,7 +168,24 @@ jobs:
         # rebases, retries) skip the scan when nothing relevant
         # changed. Failed runs never write a sentinel, so a fix → break
         # → re-fix loop can't restore a stale PASS.
-        run: python3 linter-scripts/check-placeholder-comments.py --cache-dir .cache/lint-placeholder
+        # `--diff-base` (when populated) restricts per-file violation
+        # reporting to `.md` files actually changed in this push/PR.
+        # Cross-file P-007 still walks the full tree so a new bullet
+        # in a changed file that collides with an unchanged file is
+        # still failed — the optimisation never hides a regression
+        # introduced by the current diff. When the base is empty
+        # (force-push, new branch, base trimmed by shallow clone) the
+        # script falls back to the full-tree scan automatically.
+        run: |
+          base="${{ steps.diff-base.outputs.ref }}"
+          if [[ -n "$base" ]]; then
+            python3 linter-scripts/check-placeholder-comments.py \
+              --diff-base "$base" \
+              --cache-dir .cache/lint-placeholder
+          else
+            python3 linter-scripts/check-placeholder-comments.py \
+              --cache-dir .cache/lint-placeholder
+          fi
 
       - name: Guard release-install.* against /releases/latest calls
         # Static guard: release-install.sh and release-install.ps1 MUST NOT
