@@ -136,6 +136,9 @@ no file under `linters-cicd/` has been modified.
 | `CODE-RED-006` File length ≤ 300 | error | universal |
 | `CODE-RED-008` Positive conditions | error | go, ts |
 | `STYLE-002` No `else` after `return` | warning | go, ts |
+| `SQLI-RAW-001` rawExecute concatenation | error | php, ts |
+| `SQLI-RAW-002` whereRaw without strict params | error | php, ts |
+| `SQLI-ORDER-001` Unvalidated orderBy/groupBy ident | error | php, ts |
 
 Future phases add PHP, Python, Rust, and any language you ask for —
 plugin model documented in
