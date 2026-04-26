@@ -90,6 +90,26 @@ from dataclasses import dataclass, asdict
 from pathlib import Path
 from typing import Iterable
 
+# --- Shared reason vocabulary import ---------------------------------
+# The closed ``ignored-deleted`` source vocabulary and the per-source
+# reason templates live in a sibling, snake-cased module
+# (``audit_reason_vocab.py``) so the test suite can import the exact
+# same constants the audit emitter uses — guaranteeing tag spellings
+# never drift between production code and assertions.
+#
+# When this file is invoked directly (``python check-placeholder-
+# comments.py``), Python prepends the script's directory to
+# ``sys.path[0]`` and ``import audit_reason_vocab`` resolves
+# naturally. When the file is loaded through ``importlib.util.
+# spec_from_file_location`` (the test ``conftest_shim``), ``sys.path``
+# is NOT auto-augmented, so we defensively prepend the script's
+# directory if and only if it isn't already on the path. This is a
+# no-op in the common direct-invocation case.
+_SCRIPT_DIR = str(Path(__file__).resolve().parent)
+if _SCRIPT_DIR not in sys.path:
+    sys.path.insert(0, _SCRIPT_DIR)
+import audit_reason_vocab as _vocab  # noqa: E402
+
 
 # --- HTML-comment placeholder (legacy form) ---------------------------
 # Opening marker must be on the same line as ``<!--`` so we can detect
