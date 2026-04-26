@@ -637,6 +637,33 @@ def main(argv: list[str] | None = None) -> int:
              "thumb: if you want `md` in the result, either omit "
              "`--extension` or include `--extension md` explicitly — "
              "`--include-mdx` will not re-add it for you.")
+    ap.add_argument("--include-txt", action="store_true",
+        help="Convenience shortcut for `--extension txt`: scan `.txt` "
+             "files in addition to whatever the active extension "
+             "allowlist already includes (which still defaults to "
+             "`.md`). Mirrors `--include-mdx` exactly — same union "
+             "semantics, same cache-segment canonicalisation. The "
+             "resulting allowlist is the union, deduped and sorted, "
+             "so `--include-txt` and `--extension txt` land in the "
+             "same cache segment (`ext-md+txt/`). Useful when your "
+             "spec tree mixes Markdown with plain-text artifacts "
+             "(e.g. legacy `README.txt`, hand-authored release notes) "
+             "and you want the linter to cover both with one short "
+             "flag instead of repeating `--extension md --extension "
+             "txt` in every CI invocation. UNION vs REPLACEMENT: "
+             "always a union — appends `txt` to the active baseline, "
+             "never replaces it. The baseline is `(md,)` when no "
+             "`--extension` is given, OR exactly the set you passed "
+             "via `--extension` when one or more of those flags are "
+             "present. Examples: (1) bare `--include-txt` → `(md, "
+             "txt)`; (2) `--extension rst --include-txt` → `(rst, "
+             "txt)` because YOU dropped `md` from the baseline; (3) "
+             "`--extension md --extension txt` ≡ `--include-txt` "
+             "(same canonical cache segment + key). Composes with "
+             "`--include-mdx`: passing both yields `(md, mdx, txt)` "
+             "(or `(md, txt, mdx)` — order is CLI-order-stable for "
+             "diagnostics, but the cache segment + key sort "
+             "independently so the two orderings collapse).")
     ap.add_argument("--cache-dir", default=None, metavar="DIR",
         help="Enable a content-addressed PASS cache. On a hit (the linter "
              "script + every scanned `.md` hash to the same key as a "
@@ -889,6 +916,17 @@ def main(argv: list[str] | None = None) -> int:
     # baseline) collapse to the same canonical segment + cache key.
     if args.include_mdx and "mdx" not in cleaned:
         cleaned.append("mdx")
+    # ``--include-txt`` mirrors ``--include-mdx`` exactly: it's a
+    # convenience union (NOT a replacement) appending ``txt`` to
+    # whatever baseline the previous block built. Order in
+    # ``cleaned`` reflects CLI order (``--include-mdx`` before
+    # ``--include-txt`` → ``(..., mdx, txt)``) which only affects
+    # diagnostic output; ``_cache_segment`` and ``_compute_cache_key``
+    # sort independently so ``--include-mdx --include-txt`` and
+    # ``--include-txt --include-mdx`` produce byte-identical
+    # sentinels and the segment collapses to ``ext-md+mdx+txt/``.
+    if args.include_txt and "txt" not in cleaned:
+        cleaned.append("txt")
     extensions = tuple(dict.fromkeys(cleaned))
 
     # ---- Resolve diff-mode changed-file allowlist (if any) -------
