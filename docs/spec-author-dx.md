@@ -75,22 +75,37 @@ bash scripts/hooks/install-hooks.sh
 ✅ **Shipped** in `scripts/spec-change-report.mjs`. Generates a styled HTML + PDF report scoping validator + cross-link findings to the spec files you actually changed.
 
 ```bash
-# Default — only files you've touched in git
+# Default — staged + unstaged + untracked spec files
 node scripts/spec-change-report.mjs
 
 # Full repo (useful for baseline / nightly)
 node scripts/spec-change-report.mjs --all
 
+# Only what's in the git index (mirrors what the pre-commit hook sees)
+node scripts/spec-change-report.mjs --staged
+
+# Only modified-but-unstaged + untracked (in-flight work, no commit yet)
+node scripts/spec-change-report.mjs --unstaged
+
+# Skip PDF rendering (HTML only — fastest, no headless browser needed)
+node scripts/spec-change-report.mjs --html-only        # alias: --no-pdf
+
 # Custom output dir
 node scripts/spec-change-report.mjs --out ./reports
+
+# Show full usage and exit codes
+node scripts/spec-change-report.mjs --help
 ```
+
+`--all`, `--staged`, and `--unstaged` are mutually exclusive — picking more than one exits with code `3` and prints the usage block.
 
 Output (default `/mnt/documents/`):
 
 - `spec-change-report-<timestamp>.html` — always
-- `spec-change-report-<timestamp>.pdf`  — when `wkhtmltopdf` or Chromium is available
+- `spec-change-report-<timestamp>.pdf`  — when `wkhtmltopdf` or Chromium is available **and** `--html-only` was not passed
 
-Exit code is `1` when any findings exist (CI-friendly), `0` when clean.
+Exit codes: `0` clean · `1` findings · `2` validator crash · `3` invalid CLI flags.
+
 
 ### 5. Live preview wired into the docs viewer
 The viewer already reads `src/data/specTree.json`. Add a dev-mode watch (or `bun run sync:watch`) that re-runs `sync-spec-tree.mjs` on `spec/**/*.md` save. Authors see their doc render in the live preview within ~1 s.

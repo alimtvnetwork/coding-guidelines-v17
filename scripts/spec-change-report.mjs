@@ -8,14 +8,20 @@
 // report (and, when wkhtmltopdf / Chromium is available, a PDF too).
 //
 // Usage:
-//   node scripts/spec-change-report.mjs                # only changed files
-//   node scripts/spec-change-report.mjs --all          # full repo
+//   node scripts/spec-change-report.mjs                # staged+unstaged+untracked
+//   node scripts/spec-change-report.mjs --all          # full repo, no scoping
+//   node scripts/spec-change-report.mjs --staged       # only staged spec files
+//   node scripts/spec-change-report.mjs --unstaged     # only unstaged + untracked
+//   node scripts/spec-change-report.mjs --html-only    # skip PDF rendering
+//   node scripts/spec-change-report.mjs --no-pdf       # alias for --html-only
 //   node scripts/spec-change-report.mjs --out <dir>    # custom out dir
+//   node scripts/spec-change-report.mjs --help         # show usage
 //
 // Exit codes:
 //   0  no findings in scope
 //   1  findings present (CI-friendly)
 //   2  validator crashed
+//   3  invalid CLI flag combination
 //
 // Documented in: docs/spec-author-dx.md (Wave 2 add-on)
 // =====================================================================
@@ -27,44 +33,121 @@ import { fileURLToPath } from "node:url";
 import { tmpdir } from "node:os";
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const ARGS = new Set(process.argv.slice(2));
-const OUT_DIR_FLAG_INDEX = process.argv.indexOf("--out");
-const OUT_DIR =
-  OUT_DIR_FLAG_INDEX !== -1 && process.argv[OUT_DIR_FLAG_INDEX + 1]
-    ? resolve(process.argv[OUT_DIR_FLAG_INDEX + 1])
-    : "/mnt/documents";
-const SCOPE_ALL = ARGS.has("--all");
+
+// ---------------------------------------------------------------------
+// CLI parsing
+// ---------------------------------------------------------------------
+const USAGE = `Usage: node scripts/spec-change-report.mjs [options]
+
+Scoping (mutually exclusive — pick at most one):
+  --all          Validate the entire repo, no scoping
+  --staged       Only spec files in the git index (git diff --cached)
+  --unstaged     Only modified-but-unstaged + untracked spec files
+  (default)      Union of staged + unstaged + untracked
+
+Output:
+  --html-only    Skip PDF rendering (alias: --no-pdf)
+  --out <dir>    Output directory (default: /mnt/documents)
+
+Other:
+  --help, -h     Show this message
+
+Exit codes: 0 clean · 1 findings · 2 validator crash · 3 bad CLI flags`;
+
+function parseArgs(argv) {
+  const flags = {
+    scopeAll: false,
+    scopeStaged: false,
+    scopeUnstaged: false,
+    htmlOnly: false,
+    outDir: "/mnt/documents",
+    help: false,
+  };
+  for (let i = 0; i < argv.length; i++) {
+    const a = argv[i];
+    switch (a) {
+      case "--all":      flags.scopeAll = true; break;
+      case "--staged":   flags.scopeStaged = true; break;
+      case "--unstaged": flags.scopeUnstaged = true; break;
+      case "--html-only":
+      case "--no-pdf":   flags.htmlOnly = true; break;
+      case "--out": {
+        const next = argv[i + 1];
+        if (!next || next.startsWith("--")) {
+          console.error(`[spec-change-report] --out requires a directory path`);
+          process.exit(3);
+        }
+        flags.outDir = resolve(next);
+        i += 1;
+        break;
+      }
+      case "--help":
+      case "-h": flags.help = true; break;
+      default:
+        console.error(`[spec-change-report] unknown flag: ${a}`);
+        console.error(USAGE);
+        process.exit(3);
+    }
+  }
+  const scopeFlags = [flags.scopeAll, flags.scopeStaged, flags.scopeUnstaged].filter(Boolean).length;
+  if (scopeFlags > 1) {
+    console.error(`[spec-change-report] --all, --staged, and --unstaged are mutually exclusive`);
+    console.error(USAGE);
+    process.exit(3);
+  }
+  return flags;
+}
+
+const FLAGS = parseArgs(process.argv.slice(2));
+if (FLAGS.help) {
+  console.log(USAGE);
+  process.exit(0);
+}
+const OUT_DIR = FLAGS.outDir;
 
 // ---------------------------------------------------------------------
 // 1. Determine which spec files changed
 // ---------------------------------------------------------------------
-function listChangedSpecFiles() {
-  if (SCOPE_ALL) return null; // null == no scoping
+function readGit(cmd) {
   try {
-    const staged = execSync("git diff --cached --name-only --diff-filter=ACMR", {
-      cwd: REPO_ROOT,
-      encoding: "utf8",
-    });
-    const unstaged = execSync("git diff --name-only --diff-filter=ACMR", {
-      cwd: REPO_ROOT,
-      encoding: "utf8",
-    });
-    const untracked = execSync("git ls-files --others --exclude-standard", {
-      cwd: REPO_ROOT,
-      encoding: "utf8",
-    });
-    const set = new Set(
-      [staged, unstaged, untracked]
-        .join("\n")
-        .split("\n")
-        .map((s) => s.trim())
-        .filter((s) => s.startsWith("spec/") && s.endsWith(".md"))
-    );
-    return set;
+    return execSync(cmd, { cwd: REPO_ROOT, encoding: "utf8" });
   } catch (err) {
-    console.warn(`[spec-change-report] git diff failed: ${err.message}`);
-    return new Set();
+    console.warn(`[spec-change-report] git command failed: ${cmd}\n  ${err.message}`);
+    return "";
   }
+}
+
+function filterSpecMarkdown(blob) {
+  return blob
+    .split("\n")
+    .map((s) => s.trim())
+    .filter((s) => s.startsWith("spec/") && s.endsWith(".md"));
+}
+
+function listChangedSpecFiles() {
+  if (FLAGS.scopeAll) return { scope: null, label: "entire repo" };
+
+  const staged   = readGit("git diff --cached --name-only --diff-filter=ACMR");
+  const unstaged = readGit("git diff --name-only --diff-filter=ACMR");
+  const untracked = readGit("git ls-files --others --exclude-standard");
+
+  let files = [];
+  let label = "";
+  if (FLAGS.scopeStaged) {
+    files = filterSpecMarkdown(staged);
+    label = "staged spec files";
+  } else if (FLAGS.scopeUnstaged) {
+    files = [...filterSpecMarkdown(unstaged), ...filterSpecMarkdown(untracked)];
+    label = "unstaged + untracked spec files";
+  } else {
+    files = [
+      ...filterSpecMarkdown(staged),
+      ...filterSpecMarkdown(unstaged),
+      ...filterSpecMarkdown(untracked),
+    ];
+    label = "changed spec files (staged + unstaged + untracked)";
+  }
+  return { scope: new Set(files), label };
 }
 
 // ---------------------------------------------------------------------
@@ -172,8 +255,11 @@ function groupBy(arr, keyFn) {
   return m;
 }
 
-function buildHtml({ scope, validator, crossLink, validatorRaw, crossLinkRaw, generatedAt }) {
-  const scopeLabel = scope ? `${scope.size} changed spec file(s)` : "entire repo";
+function buildHtml({ scope, scopeLabel, validator, crossLink, validatorRaw, crossLinkRaw, generatedAt }) {
+  const scopedFileCount = scope ? scope.size : null;
+  const scopeBadge = scope === null
+    ? scopeLabel
+    : `${scopedFileCount} ${scopeLabel}`;
   const totalCodeRed = validator.filter((f) => f.severity === "code-red").length;
   const totalStyle = validator.filter((f) => f.severity === "style").length;
   const totalLink = crossLink.length;
@@ -222,7 +308,7 @@ function buildHtml({ scope, validator, crossLink, validatorRaw, crossLinkRaw, ge
     .join("\n");
 
   const emptyState = grandTotal === 0
-    ? `<p class="empty">No findings in scope (${escapeHtml(scopeLabel)}).</p>`
+    ? `<p class="empty">No findings in scope (${escapeHtml(scopeBadge)}).</p>`
     : "";
 
   return `<!doctype html>
@@ -279,7 +365,7 @@ function buildHtml({ scope, validator, crossLink, validatorRaw, crossLinkRaw, ge
 <body>
   <h1>Spec Change Report</h1>
   <p class="meta">
-    Generated <strong>${escapeHtml(generatedAt)}</strong> · Scope: ${escapeHtml(scopeLabel)} ·
+    Generated <strong>${escapeHtml(generatedAt)}</strong> · Scope: ${escapeHtml(scopeBadge)} ·
     <span class="status ${statusClass}">${status}</span>
   </p>
 
@@ -310,6 +396,7 @@ function buildHtml({ scope, validator, crossLink, validatorRaw, crossLinkRaw, ge
 // 6. Optional PDF rendering
 // ---------------------------------------------------------------------
 function tryRenderPdf(htmlPath, pdfPath) {
+  if (FLAGS.htmlOnly) return "skipped";
   // Chromium's headless renderer cannot serve files from FUSE-mounted
   // paths (e.g. /mnt/documents) — it falls back to "view source" mode
   // and prints raw HTML. Copy the HTML to a real tmp dir, render there,
@@ -350,7 +437,7 @@ function tryRenderPdf(htmlPath, pdfPath) {
 // 7. Main
 // ---------------------------------------------------------------------
 function main() {
-  const scope = listChangedSpecFiles();
+  const { scope, label: scopeLabel } = listChangedSpecFiles();
   const v = runValidator();
   const c = runCrossLinkChecker();
 
@@ -366,6 +453,7 @@ function main() {
 
   const html = buildHtml({
     scope,
+    scopeLabel,
     validator,
     crossLink,
     validatorRaw: v.stdout,
@@ -383,13 +471,15 @@ function main() {
   const findings = validator.length + crossLink.length;
 
   console.log(`[spec-change-report] HTML: ${relative(REPO_ROOT, htmlPath)}`);
-  if (pdfRenderer) {
+  if (pdfRenderer === "skipped") {
+    console.log(`[spec-change-report]  PDF: skipped (--html-only)`);
+  } else if (pdfRenderer) {
     console.log(`[spec-change-report]  PDF: ${relative(REPO_ROOT, pdfPath)} (via ${pdfRenderer})`);
   } else {
     console.log(`[spec-change-report]  PDF: skipped (no wkhtmltopdf / chromium found)`);
   }
   console.log(
-    `[spec-change-report] Scope: ${scope ? scope.size + " changed file(s)" : "all"} · ` +
+    `[spec-change-report] Scope: ${scope === null ? "all" : scope.size + " file(s) — " + scopeLabel} · ` +
       `Findings: ${findings} (${validator.filter((f) => f.severity === "code-red").length} code-red, ` +
       `${validator.filter((f) => f.severity === "style").length} style, ${crossLink.length} link)`
   );
