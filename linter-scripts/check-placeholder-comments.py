@@ -522,6 +522,18 @@ def main(argv: list[str] | None = None) -> int:
              "the content hash collide. Side benefit: `rm -rf "
              "<cache-dir>/ext-mdx/` nukes one allowlist's sentinels "
              "without touching the others.")
+    ap.add_argument("--include-mdx", action="store_true",
+        help="Convenience shortcut for `--extension mdx`: scan `.mdx` "
+             "files in addition to whatever the active extension "
+             "allowlist already includes (which still defaults to "
+             "`.md`). Composes with explicit `--extension` flags — "
+             "the resulting allowlist is the union, deduped and "
+             "sorted, so `--include-mdx` and `--extension mdx` land "
+             "in the same cache segment (`ext-md+mdx/`). Use this "
+             "when your spec tree mixes Markdown and MDX (e.g. a "
+             "Docusaurus site) and you want the linter to cover "
+             "both with a single short flag instead of repeating "
+             "`--extension md --extension mdx` in every CI invocation.")
     ap.add_argument("--cache-dir", default=None, metavar="DIR",
         help="Enable a content-addressed PASS cache. On a hit (the linter "
              "script + every scanned `.md` hash to the same key as a "
