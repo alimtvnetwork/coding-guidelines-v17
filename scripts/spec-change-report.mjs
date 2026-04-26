@@ -178,7 +178,7 @@ function buildHtml({ scope, validator, crossLink, validatorRaw, crossLinkRaw, ge
   const totalStyle = validator.filter((f) => f.severity === "style").length;
   const totalLink = crossLink.length;
   const grandTotal = totalCodeRed + totalStyle + totalLink;
-  const status = grandTotal === 0 ? "✅ Clean" : "❌ Findings present";
+  const status = grandTotal === 0 ? "Clean" : "Findings present";
   const statusClass = grandTotal === 0 ? "ok" : "fail";
 
   const validatorByFile = groupBy(validator, (f) => f.file);
