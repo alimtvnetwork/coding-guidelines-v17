@@ -756,6 +756,34 @@ def main(argv: list[str] | None = None) -> int:
               file=sys.stderr)
         return 2
 
+    # ``--diff-prev`` is a shorthand for ``--diff-base HEAD~N`` (default
+    # N=1). It's mutually exclusive with both --diff-base and
+    # --changed-files: stacking it with --diff-base would silently lose
+    # one of the two refs, and stacking it with --changed-files would
+    # mix two distinct intake sources. We resolve --diff-prev into
+    # ``args.diff_base`` so every downstream code path keeps using a
+    # single attribute.
+    if args.diff_prev is not None:
+        if args.diff_base:
+            print("error: --diff-prev and --diff-base are mutually exclusive",
+                  file=sys.stderr)
+            return 2
+        if args.changed_files:
+            print("error: --diff-prev and --changed-files are mutually exclusive",
+                  file=sys.stderr)
+            return 2
+        prev_raw = str(args.diff_prev).strip()
+        if not prev_raw.isdigit() or int(prev_raw) < 0:
+            print(f"error: --diff-prev requires a non-negative integer "
+                  f"(got {args.diff_prev!r})", file=sys.stderr)
+            return 2
+        args.diff_base = f"HEAD~{int(prev_raw)}"
+    elif args.diff_base:
+        # Apply numeric / ~N / ^N shorthand expansion to whatever the
+        # user typed. Non-shorthand refs pass through unchanged, so a
+        # plain ``--diff-base origin/main`` still hits git verbatim.
+        args.diff_base = _normalize_diff_base(args.diff_base)
+
     if args.diff_context < 0:
         print(f"error: --diff-context must be >= 0 (got {args.diff_context})",
               file=sys.stderr)
