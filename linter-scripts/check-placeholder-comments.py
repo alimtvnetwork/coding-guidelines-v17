@@ -911,6 +911,7 @@ def main(argv: list[str] | None = None) -> int:
                 dedupe=args.dedupe_changed_files,
                 only_statuses=(frozenset(args.only_changed_status)
                                if args.only_changed_status else None),
+                with_similarity=args.with_similarity,
             )
         if not args.json:
             print(f"ℹ️  placeholder-comments: diff-mode active — "
