@@ -180,11 +180,93 @@ class Violation:
     message: str
 
 
-def iter_markdown_files(root: Path) -> Iterable[Path]:
-    for p in sorted(root.rglob("*.md")):
-        if any(part.startswith(".") for part in p.relative_to(root).parts):
+# Default file extensions discovered when --extension is not given.
+# Historical behaviour was ``.md``-only; widening the set is opt-in
+# via the CLI so existing callers see no change.
+DEFAULT_EXTENSIONS: tuple[str, ...] = ("md",)
+
+
+def iter_markdown_files(
+    root: Path,
+    *,
+    extensions: tuple[str, ...] = DEFAULT_EXTENSIONS,
+    include: tuple[str, ...] = (),
+    exclude: tuple[str, ...] = (),
+) -> Iterable[Path]:
+    """Yield spec source files under ``root`` for the linter to scan.
+
+    ``extensions``  is a tuple of bare extension names (no leading
+                    dot) — e.g. ``("md", "mdx", "txt")``. Each is
+                    glob-matched as ``*.<ext>`` under ``root``.
+    ``include``     is a tuple of glob patterns evaluated against the
+                    file's repo-relative POSIX path. If non-empty, a
+                    file must match at least one pattern to be
+                    yielded (whitelist). An empty tuple disables the
+                    whitelist (everything passes that stage).
+    ``exclude``     is a tuple of glob patterns evaluated against the
+                    same path. A file matching any pattern is
+                    dropped (blacklist).
+
+    Hidden directories (``.foo/``) are always excluded — that filter
+    pre-dates --include/--exclude and stays unconditional so a stray
+    ``--include "**/*.md"`` can't accidentally pull in ``node_modules``-
+    style hidden caches. Authors who genuinely want a hidden file
+    must use a different layout; the linter will not budge here.
+
+    The yielded order is deterministic (sorted by path) so cache
+    keys, ``--list-files`` output, and violation ordering stay
+    stable across runs and across machines.
+    """
+    # Walk each extension separately so the per-extension
+    # ``rglob("*.ext")`` filter avoids the cost of listing
+    # everything and post-filtering. The combined sort below
+    # restores total order across extensions.
+    candidates: list[Path] = []
+    for ext in extensions:
+        # Strip a stray leading dot so ``--extension .md`` works the
+        # same as ``--extension md``. Empty / whitespace-only entries
+        # are silently dropped (CLI validation rejects them earlier
+        # but defending here keeps the helper safe to call directly).
+        ext_clean = ext.lstrip(".").strip()
+        if not ext_clean:
+            continue
+        candidates.extend(root.rglob(f"*.{ext_clean}"))
+    for p in sorted(set(candidates)):
+        rel = p.relative_to(root)
+        # Hidden-directory guard — see docstring.
+        if any(part.startswith(".") for part in rel.parts):
+            continue
+        # Pattern matching uses POSIX-style separators so authors can
+        # write the same patterns on Windows + Linux + macOS.
+        rel_posix = rel.as_posix()
+        if include and not any(_match_glob(rel_posix, pat) for pat in include):
+            continue
+        if any(_match_glob(rel_posix, pat) for pat in exclude):
             continue
         yield p
+
+
+def _match_glob(rel_posix: str, pattern: str) -> bool:
+    """Match ``rel_posix`` against ``pattern`` using shell-style globs.
+
+    Supports ``**`` for recursive matching (Python 3.13's
+    ``PurePosixPath.full_match`` is the canonical implementation —
+    it understands ``**`` natively and uses POSIX-style anchoring,
+    which is what authors expect from ``.gitignore``-flavoured
+    patterns).
+
+    A pattern without any path separator (``*.md``) is matched
+    against the file's basename in addition to its full path so
+    the common case ``--exclude "CHANGELOG.md"`` works without
+    forcing the user to write ``**/CHANGELOG.md``.
+    """
+    from pathlib import PurePosixPath
+    p = PurePosixPath(rel_posix)
+    if p.full_match(pattern):
+        return True
+    if "/" not in pattern and PurePosixPath(p.name).full_match(pattern):
+        return True
+    return False
 
 
 def strip_code_fences(text: str) -> str:
@@ -610,6 +692,40 @@ def main(argv: list[str] | None = None) -> int:
              "objects so CI scripts can parse it directly. Useful "
              "for debugging \"why didn't the linter check this "
              "file?\" without running the full scan.")
+    ap.add_argument("--extension", action="append", default=None,
+        metavar="EXT",
+        help="Bare extension name (no leading dot) to discover under "
+             "--root. Repeatable. Defaults to `md` (preserves "
+             "historical behaviour). Pass e.g. "
+             "`--extension md --extension mdx --extension txt` to "
+             "widen the scan to MDX docs and plain-text spec stubs. "
+             "Each extension is matched as `*.<ext>`; case-sensitive "
+             "on POSIX. The cache key includes the resolved "
+             "extension list so a narrower or wider scope can never "
+             "satisfy a PASS sentinel from a different scope.")
+    ap.add_argument("--include", action="append", default=[],
+        metavar="GLOB",
+        help="Glob pattern (matched against the repo-relative POSIX "
+             "path) that a file MUST match to be discovered. "
+             "Repeatable: a file passes if it matches ANY pattern. "
+             "Supports `**` for recursive matching, e.g. "
+             "`--include 'spec/**/*.md'`. A pattern without a "
+             "separator (e.g. `--include 'README.md'`) is matched "
+             "against the basename too, so the common single-file "
+             "case works without `**/`. Empty by default (every "
+             "discovered file passes the include stage). The "
+             "hidden-directory exclusion (anything under `.foo/`) "
+             "is unconditional and not affected by --include.")
+    ap.add_argument("--exclude", action="append", default=[],
+        metavar="GLOB",
+        help="Glob pattern that drops a file from discovery. "
+             "Repeatable: a file is dropped if it matches ANY "
+             "pattern. Same syntax as --include (full-path or "
+             "basename match, `**` supported). Applied AFTER "
+             "--include so an excluded file can never re-enter via "
+             "a broader include. Use to skip vendored docs, "
+             "auto-generated changelogs, etc.: "
+             "`--exclude 'vendor/**' --exclude 'CHANGELOG.md'`.")
     args = ap.parse_args(argv)
 
     root = Path(args.root).resolve()
@@ -627,6 +743,53 @@ def main(argv: list[str] | None = None) -> int:
         print(f"error: --diff-context must be >= 0 (got {args.diff_context})",
               file=sys.stderr)
         return 2
+
+    # ---- Resolve discovery filters: --extension / --include / --exclude
+    # Centralised here so every call site (main scan loop,
+    # ``--list-files``, cache-key fingerprint) sees the SAME tuple.
+    # If extensions is None the user didn't pass --extension at all
+    # ⇒ historical default of (.md only). An explicit empty list
+    # (``--extension ""``) is rejected because it would discover
+    # nothing — almost certainly user error.
+    if args.extension is None:
+        extensions = DEFAULT_EXTENSIONS
+    else:
+        cleaned = tuple(e.lstrip(".").strip() for e in args.extension)
+        if any(not e for e in cleaned):
+            print("error: --extension values must be non-empty "
+                  "(remove blank entries)", file=sys.stderr)
+            return 2
+        # De-duplicate while preserving first-seen order so the
+        # cache key stays stable across redundant CLI invocations
+        # (``--extension md --extension md`` ⇒ same key as one).
+        seen: set[str] = set()
+        deduped: list[str] = []
+        for e in cleaned:
+            if e not in seen:
+                seen.add(e)
+                deduped.append(e)
+        extensions = tuple(deduped)
+    include_globs = tuple(args.include)
+    exclude_globs = tuple(args.exclude)
+
+    # Validate every glob eagerly so a typo surfaces with a clean
+    # error rather than ``re.error`` deep inside the iterator.
+    # ``PurePosixPath.full_match`` raises ``ValueError`` on a
+    # malformed pattern; we wrap that to a friendlier message.
+    from pathlib import PurePosixPath
+    for label, pats in (("--include", include_globs),
+                        ("--exclude", exclude_globs)):
+        for pat in pats:
+            if not pat.strip():
+                print(f"error: {label} patterns must be non-empty",
+                      file=sys.stderr)
+                return 2
+            try:
+                PurePosixPath("probe").full_match(pat)
+            except ValueError as e:
+                print(f"error: {label} {pat!r} is not a valid glob: {e}",
+                      file=sys.stderr)
+                return 2
 
     # ---- Resolve the tri-state --show-diff-excerpts flag ----------
     # ``show_excerpts_human`` / ``show_excerpts_json`` are the single
@@ -727,7 +890,12 @@ def main(argv: list[str] | None = None) -> int:
     # running the full lint.
     if args.list_files:
         rows: list[dict[str, str]] = []
-        for md in iter_markdown_files(root):
+        for md in iter_markdown_files(
+            root,
+            extensions=extensions,
+            include=include_globs,
+            exclude=exclude_globs,
+        ):
             rel = str(md.relative_to(repo_root))
             if changed_md is None:
                 # Full-tree mode: every discovered file is linted.
@@ -758,7 +926,8 @@ def main(argv: list[str] | None = None) -> int:
             n_cross = sum(1 for r in rows
                           if r["status"] == "cross-file-only")
             mode = "diff" if changed_md is not None else "full-tree"
-            print(f"ℹ️  placeholder-comments: {len(rows)} `.md` "
+            ext_blurb = "/".join(f".{e}" for e in extensions)
+            print(f"ℹ️  placeholder-comments: {len(rows)} {ext_blurb} "
                   f"file(s) discovered under {args.root}/ "
                   f"({mode} mode) — {n_linted} linted, "
                   f"{n_cross} cross-file-only")
@@ -786,7 +955,12 @@ def main(argv: list[str] | None = None) -> int:
     cache_key: str | None = None
     sentinel: Path | None = None
     if args.cache_dir and changed_md is None:
-        cache_key = _compute_cache_key(root, intent_verbs)
+        cache_key = _compute_cache_key(
+            root, intent_verbs,
+            extensions=extensions,
+            include=include_globs,
+            exclude=exclude_globs,
+        )
         sentinel = Path(args.cache_dir) / f"{cache_key}.pass"
         if sentinel.is_file():
             if not args.json:
@@ -798,7 +972,12 @@ def main(argv: list[str] | None = None) -> int:
 
     violations: list[Violation] = []
     cross_file_bullets: list[tuple[str, int, str]] = []
-    for md in iter_markdown_files(root):
+    for md in iter_markdown_files(
+        root,
+        extensions=extensions,
+        include=include_globs,
+        exclude=exclude_globs,
+    ):
         if changed_md is not None and md.resolve() not in changed_md:
             # Unchanged file: still collect its bullets so cross-file
             # P-007 can detect a new collision introduced by a
@@ -1828,26 +2007,48 @@ def _format_github_annotations(violations: list[Violation]) -> Iterable[str]:
         )
 
 
-def _compute_cache_key(root: Path, intent_verbs: frozenset[str] | set[str]) -> str:
+def _compute_cache_key(
+    root: Path,
+    intent_verbs: frozenset[str] | set[str],
+    *,
+    extensions: tuple[str, ...] = DEFAULT_EXTENSIONS,
+    include: tuple[str, ...] = (),
+    exclude: tuple[str, ...] = (),
+) -> str:
     """Build a SHA-256 fingerprint of every input that affects the verdict.
 
     Inputs (in deterministic order):
       1. The absolute, resolved scan root.
       2. The sorted, canonicalised imperative-verb allowlist.
-      3. The SHA-256 of the linter script itself (so a logic change
+      3. The discovery filter triple — extensions (sorted), include
+         globs (sorted), exclude globs (sorted). These narrow or
+         widen the file set so a PASS sentinel from one filter
+         configuration MUST NOT satisfy a different one. Sorting
+         here is what makes ``--include a --include b`` and
+         ``--include b --include a`` produce the same key (CLI order
+         doesn't change the file set).
+      4. The SHA-256 of the linter script itself (so a logic change
          invalidates every cached PASS automatically).
-      4. For every `.md` under the root (sorted by path, dotfiles
+      5. For every discovered file (sorted by path, dotfiles
          excluded — same filter as ``iter_markdown_files``):
          ``<repo-relative-path>\\0<sha256-of-bytes>\\n``
 
     Anything outside this set (mtimes, permissions, sibling files,
     environment variables) is intentionally excluded so the key is
     reproducible across machines and CI shards.
+
+    The cache key version tag is bumped from ``v1`` to ``v2``
+    because the discovery-filter inputs change the schema. Old
+    ``*.pass`` sentinels will simply miss (extra disk space, never
+    a wrong verdict) and the next clean run rewrites them.
     """
     h = hashlib.sha256()
-    h.update(b"placeholder-comments-cache-v1\n")
+    h.update(b"placeholder-comments-cache-v2\n")
     h.update(f"root={root}\n".encode("utf-8"))
     h.update(("verbs=" + ",".join(sorted(intent_verbs)) + "\n").encode("utf-8"))
+    h.update(("exts=" + ",".join(sorted(extensions)) + "\n").encode("utf-8"))
+    h.update(("include=" + ",".join(sorted(include)) + "\n").encode("utf-8"))
+    h.update(("exclude=" + ",".join(sorted(exclude)) + "\n").encode("utf-8"))
     try:
         script_bytes = Path(__file__).resolve().read_bytes()
         h.update(b"script=" + hashlib.sha256(script_bytes).hexdigest().encode() + b"\n")
@@ -1855,7 +2056,12 @@ def _compute_cache_key(root: Path, intent_verbs: frozenset[str] | set[str]) -> s
         # __file__ unreadable (zipapp / frozen). Fall back to a stable
         # tag so the cache still works, just with coarser invalidation.
         h.update(b"script=unknown\n")
-    for md in iter_markdown_files(root):
+    for md in iter_markdown_files(
+        root,
+        extensions=extensions,
+        include=include,
+        exclude=exclude,
+    ):
         try:
             data = md.read_bytes()
         except OSError:

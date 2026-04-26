@@ -68,7 +68,10 @@ class ListFilesFullTree(unittest.TestCase):
             rc, out, err = _run("--root", "spec", "--repo-root", ".",
                                 "--list-files", cwd=tdp)
         self.assertEqual(rc, 0, f"stderr={err}")
-        self.assertIn("3 `.md` file(s) discovered", out)
+        # Banner mentions the configured extensions so authors can
+        # eyeball whether their --extension list took effect. The
+        # default is ``md`` only, no leading-backtick decoration.
+        self.assertIn("3 .md file(s) discovered", out)
         self.assertIn("(full-tree mode)", out)
         self.assertIn("3 linted, 0 cross-file-only", out)
         # Status column on every listing row must be ``linted``;
