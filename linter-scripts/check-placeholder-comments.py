@@ -1615,6 +1615,7 @@ _RENAME_ARROW_RE = re.compile(r"^\s*(?P<old>.+?)\s*=>\s*(?P<new>.+?)\s*$")
 def _normalise_changed_lines(lines: list[str],
                              *,
                              deleted: list[str] | None = None,
+                             similarities: "dict[str, _RenameSimilarity] | None" = None,
                              ) -> list[str]:
     """Collapse rename-bearing rows in a ``--changed-files`` payload
     down to their post-rename path.
@@ -1650,6 +1651,16 @@ def _normalise_changed_lines(lines: list[str],
       Windows input) is passed through verbatim so the caller's
       blank/comment filter can still discard it on the same line
       number.
+
+    When ``similarities`` is provided, R/C-shaped tab rows AND arrow
+    rows contribute one ``new_path → _RenameSimilarity`` entry. Tab
+    rows whose first column matches ``R<digits>?`` / ``C<digits>?``
+    record both the kind letter and (when present) the numeric score;
+    a kind letter without digits records ``score=None``. Arrow rows
+    (``OLD => NEW``) are recorded as ``kind="R", score=None`` because
+    git status doesn't emit a similarity percentage in short form —
+    we know it's a rename, but not how close. Plain paths (no
+    rename signal at all) are not recorded.
     """
     out: list[str] = []
     for line in lines:
@@ -1685,16 +1696,48 @@ def _normalise_changed_lines(lines: list[str],
                     new_col = c
                     break
             if new_col:
-                out.append(_unquote_git_path(new_col))
+                new_path = _unquote_git_path(new_col)
+                out.append(new_path)
+                # Recover similarity metadata when the leading column
+                # is an R/C marker. We tolerate the same scoreless and
+                # scored shapes ``_NAME_STATUS_RE`` accepts; anything
+                # else (a bare tab-padded path, e.g. ``\tspec/x.md``)
+                # is left without a similarity record so the renderer
+                # falls back to dashes.
+                if similarities is not None and cols and cols[0]:
+                    head = _NAME_STATUS_RE.match(cols[0])
+                    if head and head.group(1) in ("R", "C"):
+                        # Find the OLD-side path: it's the
+                        # *first* non-empty column after cols[0],
+                        # excluding the new path we just consumed.
+                        old_path = ""
+                        for c in cols[1:]:
+                            if c != "" and _unquote_git_path(c) != new_path:
+                                old_path = _unquote_git_path(c)
+                                break
+                        score_raw = head.group(2)
+                        similarities[new_path] = _RenameSimilarity(
+                            kind=head.group(1),
+                            score=int(score_raw) if score_raw else None,
+                            old_path=old_path,
+                        )
             continue
         # Arrow form: `OLD => NEW`.
         m = _RENAME_ARROW_RE.match(line)
         if m:
-            new_path = m.group("new")
+            new_path_raw = m.group("new")
             # Trim at boundaries (regex already did greedy-min) but
             # don't touch interior whitespace. Then unquote in case
             # the user pasted a C-quoted form from ``git status``.
-            out.append(_unquote_git_path(new_path.strip()))
+            unquoted_new = _unquote_git_path(new_path_raw.strip())
+            out.append(unquoted_new)
+            if similarities is not None:
+                old_path_raw = m.group("old")
+                similarities[unquoted_new] = _RenameSimilarity(
+                    kind="R",
+                    score=None,
+                    old_path=_unquote_git_path(old_path_raw.strip()),
+                )
             continue
         out.append(line)
     return out
