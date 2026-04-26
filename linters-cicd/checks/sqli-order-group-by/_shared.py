@@ -18,11 +18,23 @@ ORDER_GROUP_CALL_RE = re.compile(
 STRING_LITERAL_RE = re.compile(
     r"""^\s*(?:'[A-Za-z_][A-Za-z0-9_.]*'|"[A-Za-z_][A-Za-z0-9_.]*"|`[A-Za-z_][A-Za-z0-9_.]*`)\s*$"""
 )
+# Allow-list lookups must be ALL-CAPS constants (PHP/TS) or
+# variables whose name explicitly contains "allow" / "whitelist".
+# Anything else (including superglobals like $_GET) is rejected.
 ALLOWLIST_LOOKUP_RE = re.compile(
-    r"""^\s*(?:[A-Z][A-Z0-9_]*|\$?[A-Za-z_]\w*)\s*\[[^\]]+\]\s*$"""
+    r"""^\s*(?:[A-Z][A-Z0-9_]*|\$(?:allow|whitelist)[A-Za-z0-9_]*)\s*\[[^\]]+\]\s*$""",
+    re.IGNORECASE,
 )
 ALLOWLIST_PROP_RE = re.compile(
     r"""^\s*[A-Z][A-Z0-9_]*\.[A-Za-z_]\w*\s*$"""
+)
+
+# Hard-block superglobals and common request handles even if they
+# happen to look like allow-list patterns.
+TAINTED_PREFIXES = (
+    "$_get", "$_post", "$_request", "$_cookie", "$_server", "$_files",
+    "req.query", "req.body", "req.params", "request.query",
+    "request.body", "request.params", "ctx.query", "ctx.params",
 )
 
 
