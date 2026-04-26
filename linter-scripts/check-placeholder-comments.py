@@ -80,6 +80,8 @@ from __future__ import annotations
 
 import argparse
 import json
+import hashlib
+import os
 import re
 import sys
 from dataclasses import dataclass, asdict
@@ -144,13 +146,6 @@ class Violation:
     line: int
     code: str
     message: str
-    # 1-indexed inclusive [start, end] line range of the enclosing
-    # placeholder block. Used by the human-readable renderer to print
-    # the exact offending snippet. Defaults to (line, line) for
-    # standalone errors that have no block context (e.g. P-004
-    # self-closing tag).
-    block_start: int = 0
-    block_end: int = 0
 
 
 def iter_markdown_files(root: Path) -> Iterable[Path]:
@@ -249,39 +244,33 @@ def _validate_intent(rel: str, line_no: int, marker: str, text: str,
 
 def _validate_body(rel: str, open_line: int, body: list[tuple[int, str]],
                    out: list[Violation],
-                   bullets: list[tuple[int, str]] | None = None,
-                   block_end: int = 0) -> int:
+                   bullets: list[tuple[int, str]] | None = None) -> int:
     """Apply P-002/P-003/P-005 to a body and return valid bullet count.
 
     When ``bullets`` is provided, every valid bullet is appended as
     ``(line, target)`` for later cross-block duplicate analysis (P-007).
     """
     bullet_count = 0
-    be = block_end or (body[-1][0] if body else open_line)
     for ln, content in body:
         if not content.strip():
             out.append(Violation(rel, ln, "P-005",
-                "Blank line inside placeholder block; keep it contiguous.",
-                open_line, be))
+                "Blank line inside placeholder block; keep it contiguous."))
             continue
         bm = BULLET_LINK_RE.match(content)
         if not bm:
             out.append(Violation(rel, ln, "P-002",
-                "Placeholder body line is not a `- [text](link)` bullet.",
-                open_line, be))
+                "Placeholder body line is not a `- [text](link)` bullet."))
             continue
         target = bm.group(1)
         if target.startswith(("http://", "https://", "mailto:", "#")):
             out.append(Violation(rel, ln, "P-003",
                 f"Placeholder link `{target}` must be a relative `.md` path, "
-                "not external/anchor-only.",
-                open_line, be))
+                "not external/anchor-only."))
             continue
         path_part = target.split("#", 1)[0]
         if not path_part.endswith(".md"):
             out.append(Violation(rel, ln, "P-003",
-                f"Placeholder link `{target}` must point at a `.md` file.",
-                open_line, be))
+                f"Placeholder link `{target}` must point at a `.md` file."))
             continue
         bullet_count += 1
         if bullets is not None:
@@ -318,8 +307,7 @@ def lint_file(path: Path, repo_root: Path,
         tag_self = TAG_SELF_CLOSE_RE.search(line)
         if tag_self:
             out.append(Violation(rel, i + 1, "P-004",
-                "Self-closing `<spec-placeholder/>` has no bullet rows; remove or expand it.",
-                i + 1, i + 1))
+                "Self-closing `<spec-placeholder/>` has no bullet rows; remove or expand it."))
             i += 1
             continue
         tag_open = TAG_OPEN_RE.search(line)
@@ -338,23 +326,19 @@ def lint_file(path: Path, repo_root: Path,
             # Same-line open+close — degenerate empty block.
             if TAG_CLOSE in line[tag_open.end():]:
                 out.append(Violation(rel, open_line, "P-004",
-                    "`<spec-placeholder>` block is empty (no bullet rows).",
-                    open_line, open_line))
+                    "`<spec-placeholder>` block is empty (no bullet rows)."))
                 i += 1
                 continue
             body, i, closed = _consume_block(lines, i + 1, TAG_CLOSE)
             if not closed:
                 out.append(Violation(rel, open_line, "P-006",
                     "`<spec-placeholder>` opened but never closed "
-                    "(missing `</spec-placeholder>`).",
-                    open_line, min(len(lines), open_line + max(1, len(body)))))
+                    "(missing `</spec-placeholder>`)."))
                 continue
-            block_end = i  # `i` is now 1 past the close-marker line (1-indexed line == i)
-            bullet_count = _validate_body(rel, open_line, body, out, file_bullets, block_end)
+            bullet_count = _validate_body(rel, open_line, body, out, file_bullets)
             if bullet_count == 0:
                 out.append(Violation(rel, open_line, "P-004",
-                    "`<spec-placeholder>` block contains no valid bullet rows.",
-                    open_line, block_end))
+                    "`<spec-placeholder>` block contains no valid bullet rows."))
             continue
 
         # ---- HTML-comment placeholder (legacy) ----------------------
@@ -375,23 +359,19 @@ def lint_file(path: Path, repo_root: Path,
             _validate_intent(rel, i + 1, marker, intent_text, out, intent_verbs)
         if COMMENT_CLOSE in line[m.end():] or COMMENT_CLOSE in line[m.start():]:
             out.append(Violation(rel, i + 1, "P-004",
-                "Placeholder comment has no bullet rows; remove or expand it.",
-                i + 1, i + 1))
+                "Placeholder comment has no bullet rows; remove or expand it."))
             i += 1
             continue
         open_line = i + 1
         body, i, closed = _consume_block(lines, i + 1, COMMENT_CLOSE)
         if not closed:
             out.append(Violation(rel, open_line, "P-006",
-                "Placeholder comment opened but never closed (missing `-->`).",
-                open_line, min(len(lines), open_line + max(1, len(body)))))
+                "Placeholder comment opened but never closed (missing `-->`)."))
             continue
-        block_end = i
-        bullet_count = _validate_body(rel, open_line, body, out, file_bullets, block_end)
+        bullet_count = _validate_body(rel, open_line, body, out, file_bullets)
         if bullet_count == 0:
             out.append(Violation(rel, open_line, "P-004",
-                "Placeholder block contains no valid bullet rows.",
-                open_line, block_end))
+                "Placeholder block contains no valid bullet rows."))
 
     # ---- P-007 within-file duplicates ------------------------------
     # Resolve each bullet to a canonical (file, target_path) key. We
@@ -406,8 +386,7 @@ def lint_file(path: Path, repo_root: Path,
             out.append(Violation(rel, ln, "P-007",
                 f"Duplicate placeholder target `{target}` — already "
                 f"declared at L{first_ln} as `{first_target}` "
-                "(anchor differences are ignored).",
-                ln, ln))
+                "(anchor differences are ignored)."))
         else:
             seen[key] = (ln, target)
 
@@ -471,6 +450,17 @@ def main(argv: list[str] | None = None) -> int:
         metavar="VERB",
         help="Add an extra imperative verb to the P-001 allowlist "
              "(repeatable). Use lowercase, hyphens allowed.")
+    ap.add_argument("--cache-dir", default=None, metavar="DIR",
+        help="Enable a content-addressed PASS cache. On a hit (the linter "
+             "script + every scanned `.md` hash to the same key as a "
+             "previously-cached PASS) the scan is skipped and exit 0 is "
+             "returned immediately. Misses run normally and write a fresh "
+             "sentinel only on success. Stale or poisoned sentinels are "
+             "ignored because the key is recomputed from the working tree "
+             "every run.")
+    ap.add_argument("--no-cache-write", action="store_true",
+        help="With --cache-dir, read the sentinel but never write it. "
+             "Useful for read-only / forked-repo CI runs.")
     args = ap.parse_args(argv)
 
     root = Path(args.root).resolve()
@@ -480,6 +470,26 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     intent_verbs = DEFAULT_INTENT_VERBS | {v.lower() for v in args.allow_verb}
+
+    # ---- Cache fast-path ------------------------------------------
+    # The cache key fingerprints every input that can change the
+    # linter's verdict: the linter script itself, the resolved root,
+    # the imperative-verb allowlist (P-001 widening), and every `.md`
+    # under the root. A hit short-circuits the scan; a miss falls
+    # through to the full lint and writes a sentinel only if the
+    # scan ends clean (exit 0).
+    cache_key: str | None = None
+    sentinel: Path | None = None
+    if args.cache_dir:
+        cache_key = _compute_cache_key(root, intent_verbs)
+        sentinel = Path(args.cache_dir) / f"{cache_key}.pass"
+        if sentinel.is_file():
+            if not args.json:
+                print(f"✅ placeholder-comments: cache hit "
+                      f"({cache_key[:12]}…), skipping scan of {args.root}/")
+            else:
+                print("[]")
+            return 0
 
     violations: list[Violation] = []
     cross_file_bullets: list[tuple[str, int, str]] = []
@@ -508,8 +518,7 @@ def main(argv: list[str] | None = None) -> int:
             violations.append(Violation(rel, ln, "P-007",
                 f"Duplicate placeholder target `{target}` — also declared at "
                 f"`{first_rel}:L{first_ln}` as `{first_target}` "
-                "(anchor differences are ignored).",
-                ln, ln))
+                "(anchor differences are ignored)."))
 
     if args.json:
         print(json.dumps([asdict(v) for v in violations], indent=2))
@@ -518,94 +527,64 @@ def main(argv: list[str] | None = None) -> int:
             print(f"✅ placeholder-comments: no malformed blocks under {args.root}/")
         else:
             print(f"❌ placeholder-comments: {len(violations)} violation(s):\n")
-            file_cache: dict[str, list[str]] = {}
             for v in violations:
-                _render_violation(v, repo_root, file_cache)
-            print("  See linter-scripts/check-placeholder-comments.py for rule docs.")
+                print(f"  {v.file}:{v.line}  [{v.code}] {v.message}")
+            print("\n  See linter-scripts/check-placeholder-comments.py for rule docs.")
+
+    # ---- Persist sentinel on clean runs only ----------------------
+    # Failed runs MUST NOT poison the cache: a future "fix" might
+    # re-introduce the same hash via revert, and we'd then skip the
+    # scan and miss the regression. Only PASS gets cached.
+    if sentinel is not None and not violations and not args.no_cache_write:
+        try:
+            sentinel.parent.mkdir(parents=True, exist_ok=True)
+            sentinel.write_text(
+                f"placeholder-comments PASS\nkey={cache_key}\n",
+                encoding="utf-8",
+            )
+        except OSError as e:
+            # Cache write failures are advisory — never fail the run.
+            print(f"::warning::placeholder-comments: cache write failed: {e}",
+                  file=sys.stderr)
 
     return 1 if violations else 0
 
 
-# --- Suggested-fix templates per rule code ----------------------------
-# Each entry shows a *minimal* corrected example so authors can see
-# exactly what shape the linter expects. We intentionally keep these
-# inline strings rather than reading from `_template.md` so the
-# suggestion is self-contained even if the template moves.
-_SUGGESTIONS: dict[str, str] = {
-    "P-001": (
-        "<!-- TODO: activate when target file is created\n"
-        "- [Target Title](../NN-module-name/00-overview.md)\n"
-        "-->"
-    ),
-    "P-002": (
-        "<spec-placeholder reason=\"activate when target file is created\">\n"
-        "- [Target Title](../NN-module-name/00-overview.md)\n"
-        "</spec-placeholder>"
-    ),
-    "P-003": (
-        "<spec-placeholder reason=\"activate when target file is created\">\n"
-        "- [Target Title](../NN-module-name/01-file-name.md#section-anchor)\n"
-        "</spec-placeholder>"
-    ),
-    "P-004": (
-        "<spec-placeholder reason=\"activate when target file is created\">\n"
-        "- [Target Title](../NN-module-name/00-overview.md)\n"
-        "</spec-placeholder>"
-    ),
-    "P-005": (
-        "<spec-placeholder reason=\"activate when target file is created\">\n"
-        "- [First Target](../NN-module-name/00-overview.md)\n"
-        "- [Second Target](../NN-module-name/01-file-name.md)\n"
-        "</spec-placeholder>"
-    ),
-    "P-006": (
-        "<spec-placeholder reason=\"activate when target file is created\">\n"
-        "- [Target Title](../NN-module-name/00-overview.md)\n"
-        "</spec-placeholder>   ← don't forget the closing tag"
-    ),
-    "P-007": (
-        "<spec-placeholder reason=\"activate when target file is created\">\n"
-        "- [Target Title](../NN-module-name/00-overview.md#one-section)\n"
-        "</spec-placeholder>\n"
-        "# Remove the second placeholder pointing at the same .md file,\n"
-        "# or merge both anchors into a single bullet group."
-    ),
-}
+def _compute_cache_key(root: Path, intent_verbs: frozenset[str] | set[str]) -> str:
+    """Build a SHA-256 fingerprint of every input that affects the verdict.
 
+    Inputs (in deterministic order):
+      1. The absolute, resolved scan root.
+      2. The sorted, canonicalised imperative-verb allowlist.
+      3. The SHA-256 of the linter script itself (so a logic change
+         invalidates every cached PASS automatically).
+      4. For every `.md` under the root (sorted by path, dotfiles
+         excluded — same filter as ``iter_markdown_files``):
+         ``<repo-relative-path>\\0<sha256-of-bytes>\\n``
 
-def _render_violation(v: Violation, repo_root: Path,
-                      cache: dict[str, list[str]]) -> None:
-    """Pretty-print one violation: header, numbered snippet, suggestion."""
-    print(f"  {v.file}:{v.line}  [{v.code}] {v.message}")
-    src = cache.get(v.file)
-    if src is None:
+    Anything outside this set (mtimes, permissions, sibling files,
+    environment variables) is intentionally excluded so the key is
+    reproducible across machines and CI shards.
+    """
+    h = hashlib.sha256()
+    h.update(b"placeholder-comments-cache-v1\n")
+    h.update(f"root={root}\n".encode("utf-8"))
+    h.update(("verbs=" + ",".join(sorted(intent_verbs)) + "\n").encode("utf-8"))
+    try:
+        script_bytes = Path(__file__).resolve().read_bytes()
+        h.update(b"script=" + hashlib.sha256(script_bytes).hexdigest().encode() + b"\n")
+    except OSError:
+        # __file__ unreadable (zipapp / frozen). Fall back to a stable
+        # tag so the cache still works, just with coarser invalidation.
+        h.update(b"script=unknown\n")
+    for md in iter_markdown_files(root):
         try:
-            src = (repo_root / v.file).read_text(encoding="utf-8").splitlines()
+            data = md.read_bytes()
         except OSError:
-            src = []
-        cache[v.file] = src
-
-    # Determine the snippet window. Prefer the recorded block range;
-    # fall back to ±1 line around the offending line so we always
-    # print *something* useful even for malformed-range edge cases.
-    if src:
-        start = v.block_start or v.line
-        end = v.block_end or v.line
-        if start < 1: start = 1
-        if end < start: end = start
-        if end > len(src): end = len(src)
-        if start > len(src): start = len(src)
-        width = len(str(end))
-        print("    --- offending block ---")
-        for ln in range(start, end + 1):
-            marker = ">" if ln == v.line else " "
-            print(f"    {marker} {ln:>{width}} | {src[ln - 1]}")
-    suggestion = _SUGGESTIONS.get(v.code)
-    if suggestion:
-        print("    --- suggested fix ---")
-        for sline in suggestion.splitlines():
-            print(f"      {sline}")
-    print()
+            continue
+        rel = str(md.relative_to(root)).encode("utf-8")
+        h.update(rel + b"\0" + hashlib.sha256(data).hexdigest().encode() + b"\n")
+    return h.hexdigest()
 
 
 if __name__ == "__main__":

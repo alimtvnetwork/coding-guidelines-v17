@@ -97,14 +97,38 @@ jobs:
         # Spec: .lovable/memory/constraints/install-command-formatting.md
         run: python3 linter-scripts/check-readme-install-section.py
 
-      - name: Check spec placeholder comments (P-001 … P-007)
+      - name: Restore placeholder-linter PASS cache
+        # Two-layer safety:
+        #   1. The cache key is content-derived from the linter script
+        #      itself + every spec/**/*.md, so any edit invalidates it.
+        #   2. The script independently recomputes the same fingerprint
+        #      from the working tree before trusting any restored
+        #      sentinel — a stale or poisoned hit can never let bugs
+        #      slip through.
+        # On a hit, the next step skips the full spec scan and exits 0
+        # in <100ms instead of re-reading every spec file.
+        id: placeholder-cache
+        uses: actions/cache@v4
+        with:
+          path: .cache/lint-placeholder
+          key: ${{ runner.os }}-placeholder-lint-v1-${{ hashFiles('linter-scripts/check-placeholder-comments.py', 'spec/**/*.md') }}
+          # No restore-keys: we deliberately want a strict miss when
+          # any input changes — partial restores would be unsafe
+          # because the sentinel filename IS the fingerprint.
+
+      - name: Check spec placeholder comments (P-001 … P-008)
         # Validates `<spec-placeholder>` tags and legacy `<!-- TODO: ... -->`
         # placeholder blocks across spec/. Catches malformed bullets,
         # non-imperative wording, missing periods, self-closing tags,
-        # empty bodies, and duplicate `.md` targets BEFORE the cross-link
+        # empty bodies, duplicate `.md` targets, and missing
+        # `@path:line` back-pointer hints BEFORE the cross-link
         # checker runs. Mirrors the pre-commit hook so CI is the source
         # of truth on every push.
-        run: python3 linter-scripts/check-placeholder-comments.py
+        # `--cache-dir` makes repeat runs (e.g. doc-only push series,
+        # rebases, retries) skip the scan when nothing relevant
+        # changed. Failed runs never write a sentinel, so a fix → break
+        # → re-fix loop can't restore a stale PASS.
+        run: python3 linter-scripts/check-placeholder-comments.py --cache-dir .cache/lint-placeholder
 
       - name: Guard release-install.* against /releases/latest calls
         # Static guard: release-install.sh and release-install.ps1 MUST NOT
