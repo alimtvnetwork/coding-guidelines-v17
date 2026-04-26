@@ -59,6 +59,7 @@ the end.
 | # | Title | Task summary | Status |
 |---|---|---|---|
 | [01](./01-ignored-deleted-reason-scope.md) | `ignored-deleted` reason enrichment scope | Diversify reason text per provenance vs. also emit rename OLD-side rows. Chose **Option A** (text only — preserves row contract). | Pending review |
+| [03](./03-similarity-legend-rolled-back-and-help-examples.md) | `--similarity-legend` rolled back; help-examples target absent | "Update help with examples" presupposes a flag that no longer exists in the working tree. Re-implemented the flag and added Examples to its `help=` string. | Pending review |
 
 ---
 
