@@ -122,6 +122,52 @@ bash linters-cicd/run-all.sh \
   --exclude-paths 'linters-cicd/checks/**/fixtures/**'
 ```
 
+### 1.6 Inline annotation grammar (locked by tests)
+
+The inline comments in §1.2 and §1.3 are **machine-checked** by
+`linters-cicd/tests/test_fixture_annotations.py`. Add your fixture
+to the `ANNOTATED_FIXTURES` tuple in that test once and the
+annotations become a contract the scanner cannot silently break —
+especially across changes to `strip_comments_and_strings()` and
+similar text-stripping helpers.
+
+Two grammars are recognised. Anything else containing the `←`
+arrow is treated as a malformed annotation and fails the test
+loudly.
+
+| Form | Meaning |
+|---|---|
+| `← <RULE-ID> (error\|warning\|note, line N)` | This line MUST be flagged with that rule and level. `N` MUST equal the line the annotation sits on. |
+| `← NO-FINDING` | This line MUST stay silent — used for negative controls (e.g. the forbidden call inside a comment or string). |
+
+The validator asserts:
+
+1. Every `← <RULE-ID>` line shows up in the scanner output with
+   the matching rule and level.
+2. No un-annotated lines are flagged (no surprise findings).
+3. Every `← NO-FINDING` line stays out of the findings list — this
+   directly catches regressions in the comment/string stripper.
+4. The literal `line N` in the annotation equals the actual line
+   number, so stale "line 6" comments after lines move are caught
+   immediately.
+
+Worked example (matches `checks/_template/fixtures/dirty.php`):
+
+```php
+<?php
+// This file is a fixture for TEMPLATE-001 tests.
+// It MUST trigger findings — do not "clean up" the violations.
+
+function debugMe(array $rows): void {
+    var_dump($rows);                 // ← TEMPLATE-001 (warning, line 6)
+    print_r($rows, true);            // ← TEMPLATE-001 (warning, line 7)
+    error_log("Got " . count($rows));// ← TEMPLATE-001 (warning, line 8)
+}
+
+// The next call is in a comment — must NOT be flagged.
+// var_dump('not a real call');  ← NO-FINDING
+```
+
 ---
 
 ## 2. The `Finding` contract
