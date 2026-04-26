@@ -1099,6 +1099,52 @@ class _DiffExcerpts:
             out.append(f"{marker} {ln:5d} {sigil} {text}")
         return out
 
+    def render_structured(self, line: int,
+                          context: int) -> list[dict[str, object]]:
+        """Return a JSON-friendly window around ``line``.
+
+        Each element is ``{"line": <int>, "kind": "+"|" ", "text":
+        <str>, "focus": <bool>}`` for one post-state line in the
+        ±``context`` window. Pure data — no Unicode markers, no
+        gutter padding, no truncation. The text payload is the raw
+        post-state line content (no leading ``+``/`` `` sigil); the
+        sigil is moved to the typed ``kind`` field so a JSON
+        consumer doesn't have to strip it.
+
+        Returns ``[]`` (not a sentinel string like the human
+        renderer) when:
+
+        * no hunks were captured for this file, OR
+        * the violation line falls outside every captured hunk
+          window (P-007 cross-file collision pointing at a pre-
+          existing block).
+
+        Returning ``[]`` rather than a "no data" object means the
+        caller can simply omit the ``excerpt`` key when the list is
+        empty — keeping the JSON schema strictly additive (legacy
+        consumers see no new keys on violations the linter has no
+        excerpt for).
+        """
+        if not self.lines:
+            return []
+        if line < self.min_line - context or line > self.max_line + context:
+            return []
+        lo = max(self.min_line, line - context)
+        hi = min(self.max_line, line + context)
+        out: list[dict[str, object]] = []
+        for ln in range(lo, hi + 1):
+            entry = self.lines.get(ln)
+            if entry is None:
+                continue
+            kind, text = entry
+            out.append({
+                "line": ln,
+                "kind": kind,             # "+" (added) or " " (context)
+                "text": text,
+                "focus": ln == line,      # exact violation line
+            })
+        return out
+
 
 def _parse_unified_diff_post(stdout: str) -> _DiffExcerpts:
     """Parse `git diff -UN` output and index post-state lines only.
