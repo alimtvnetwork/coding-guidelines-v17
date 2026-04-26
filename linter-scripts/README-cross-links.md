@@ -28,6 +28,7 @@ python3 linter-scripts/check-spec-cross-links.py --root spec --github
 - Path must resolve to an existing file (relative to source `.md`, or absolute from repo root).
 - If `#anchor` is present, it must match an existing H1–H6 heading slug in the target file.
 - Links inside fenced code blocks (```` ``` ```` or `~~~`) are ignored — they are examples, not real references.
+- Links inside HTML comments (`<!-- … -->`, including multi-line) are ignored — use this for placeholder cross-references in templates and scaffolds without editing the allowlist.
 - External URLs (`http://`, `https://`, `mailto:`, etc.) and project schemes (`mem://`, `user-uploads://`, `knowledge://`) are skipped.
 
 ## Allowlist (waivers)
@@ -43,6 +44,23 @@ spec/other.md:99:./file.md#missing-section
 
 Format: `<relpath-from-repo-root>:<line>:<exact-target-as-written>`.
 Remove a waiver as soon as the underlying link is fixed.
+
+## Placeholder links in templates
+
+For example/placeholder links that *should never* be validated (template
+files, scaffold snippets), prefer wrapping them in an HTML comment over
+adding allowlist entries:
+
+```markdown
+<!-- placeholder cross-references — auto-skipped
+- [Related module](../NN-related-module/00-overview.md)
+-->
+```
+
+Authors get a clean diff to fill in (just delete the comment markers),
+the checker stays quiet, and no `spec-cross-links.allowlist` churn is
+required when the template moves or is renamed. See `spec/_template.md`
+for a working example.
 
 ## CI
 

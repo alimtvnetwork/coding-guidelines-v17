@@ -75,6 +75,37 @@ def strip_code_fences(text: str) -> str:
     return "\n".join(out_lines)
 
 
+# HTML comments may span multiple lines:
+#
+#     <!-- example placeholder, ignore:
+#       - [Related module](../NN-related-module/00-overview.md)
+#     -->
+#
+# We blank out the comment body in-place (replacing each character with a
+# space, newlines preserved) so that:
+#   1. links inside the comment are no longer matched by MD_LINK_RE, and
+#   2. line numbers reported for *real* findings later in the file stay
+#      byte-for-byte accurate.
+#
+# This pairs with `strip_code_fences` and gives spec authors a second,
+# more natural way to mark placeholder links as scanner-exempt — no
+# allowlist edit, no fenced-code wrapper, no `language-text` hint.
+HTML_COMMENT_RE = re.compile(r"<!--.*?-->", re.DOTALL)
+
+
+def strip_html_comments(text: str) -> str:
+    """Blank out `<!-- ... -->` regions while preserving offsets.
+
+    Replaces every non-newline character inside a comment with a space.
+    Newlines are kept so downstream `text.count("\\n", 0, match.start())`
+    line-number arithmetic remains correct.
+    """
+    def _blank(match: re.Match[str]) -> str:
+        body = match.group(0)
+        return "".join(ch if ch == "\n" else " " for ch in body)
+    return HTML_COMMENT_RE.sub(_blank, text)
+
+
 def load_allowlist(repo_root: Path) -> set[str]:
     """Load waived broken links from linter-scripts/spec-cross-links.allowlist.
     Format: one `relpath:line:target` entry per line. Lines starting with `#`
@@ -155,6 +186,10 @@ def scan(root: Path, repo_root: Path) -> list[dict]:
             failures.append({"file": str(md), "kind": "read-error", "detail": str(exc)})
             continue
         scan_text = strip_code_fences(text)
+        # Apply HTML-comment stripping AFTER fence stripping so an
+        # `<!-- ... -->` that spans into a code fence (or vice versa)
+        # still has its visible-prose links neutralised.
+        scan_text = strip_html_comments(scan_text)
         for match in MD_LINK_RE.finditer(scan_text):
             target = match.group(2).strip()
             if is_external(target):

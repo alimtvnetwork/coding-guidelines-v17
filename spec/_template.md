@@ -68,12 +68,14 @@ Tables for rule comparisons:
 
 ## Cross-References
 
-Add file-relative links here. Always include `.md`. Examples (replace before committing):
+Add file-relative links here. Always include `.md`. The block below is
+wrapped in an HTML comment so the cross-link checker auto-skips its
+placeholder targets — replace it with real links before committing.
 
-```
+<!-- placeholder cross-references — auto-skipped by check-spec-cross-links.py
 - [Related module](../NN-related-module/00-overview.md)
 - [Strictly-avoid quick reference](../17-consolidated-guidelines/00-strictly-avoid-quickref.md)
-```
+-->
 
 ---
 
