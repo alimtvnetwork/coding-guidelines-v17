@@ -1353,6 +1353,95 @@ class _DiffExcerpts:
         return out
 
 
+    def suggest_patch(self, file: str, line: int,
+                      rule_code: str) -> str:
+        """Return a ``git apply``-ready unified-diff scaffold that
+        replaces the violation line with a TODO marker keyed off
+        ``rule_code``.
+
+        Returns ``""`` (empty string — *not* ``None``) when no
+        post-state line for ``line`` was captured (violation outside
+        every hunk, or pure-removal file). Callers treat ``""`` as
+        "no patch available" and simply omit the suggestion.
+
+        The emitted diff is intentionally minimal: at most one line
+        of pre-existing context above and below the violation line
+        (whatever the captured hunk has — the patch is shorter at
+        hunk boundaries). Headers use ``a/<path>`` / ``b/<path>``
+        and post-state line numbers on both sides; downstream users
+        run ``git apply -p0 --recount`` (documented in the human
+        renderer's fence) so any pre/post line drift is reconciled
+        automatically.
+
+        For a context line (``kind == " "``) the patch *swaps* the
+        bad line for the TODO. For an added line (``kind == "+"``)
+        the patch keeps the bad addition and inserts the TODO
+        immediately after — the linter cannot safely delete an
+        added line because the surrounding pre-state coordinates
+        would shift; the author then manually removes the bad
+        addition once they've written the real fix.
+        """
+        entry = self.lines.get(line)
+        if entry is None:
+            return ""
+        kind, text = entry
+        # Pre-existing context (one line above + below if available
+        # in the captured hunk; the parser only stores ``+`` and
+        # `` `` rows so anything we get back is safe to render).
+        above = self.lines.get(line - 1)
+        below = self.lines.get(line + 1)
+        replacement = _RULE_FIX_HINTS.get(rule_code, _RULE_FIX_FALLBACK)
+
+        body: list[str] = []
+        # Anchor lines must use a leading single space — git's
+        # tolerance for missing-space context lines is undefined
+        # across versions; we always emit the canonical form.
+        if above is not None:
+            body.append(f" {above[1]}")
+        if kind == "+":
+            # Pure insertion: keep the bad ``+`` line, then add the
+            # TODO immediately after it. The author removes the bad
+            # line manually once they write the real fix.
+            body.append(f" {text}")
+            body.append(f"+{replacement}")
+        else:
+            # Context line in the post-state ⇒ it exists in the
+            # pre-state too, so a swap (`-bad` / `+todo`) lands
+            # cleanly with ``git apply --recount``.
+            body.append(f"-{text}")
+            body.append(f"+{replacement}")
+        if below is not None:
+            body.append(f" {below[1]}")
+
+        # Hunk math: pre-state and post-state both span ``hunk_len``
+        # lines starting at ``hunk_start`` (the row above the
+        # violation, or the violation itself when it's the first
+        # line of the file). For a swap, pre and post counts match.
+        # For an insertion (`+` violation), post is one larger than
+        # pre — git accepts mismatched counts and ``--recount``
+        # would fix them anyway, but we emit the precise numbers so
+        # vanilla ``git apply -p0`` works without the flag.
+        hunk_start = line if above is None else line - 1
+        ctx_above = 0 if above is None else 1
+        ctx_below = 0 if below is None else 1
+        if kind == "+":
+            pre_len = ctx_above + 1 + ctx_below          # bad + ctx
+            post_len = ctx_above + 2 + ctx_below         # bad + TODO + ctx
+        else:
+            pre_len = ctx_above + 1 + ctx_below          # bad + ctx
+            post_len = ctx_above + 1 + ctx_below         # TODO + ctx
+
+        header = (f"@@ -{hunk_start},{pre_len} "
+                  f"+{hunk_start},{post_len} @@")
+        return (
+            f"--- a/{file}\n"
+            f"+++ b/{file}\n"
+            f"{header}\n"
+            + "\n".join(body)
+            + "\n"
+        )
+
+
 def _parse_unified_diff_post(stdout: str) -> _DiffExcerpts:
     """Parse `git diff -UN` output and index post-state lines only.
 
