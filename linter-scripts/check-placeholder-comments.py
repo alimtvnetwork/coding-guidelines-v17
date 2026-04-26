@@ -1094,7 +1094,9 @@ def _render_changed_files_audit(rows: list[_ChangedFileAudit],
                                 stream,  # type: ignore[no-untyped-def]
                                 *,
                                 as_json: bool,
-                                dedupe: bool = False) -> None:
+                                dedupe: bool = False,
+                                only_statuses: frozenset[str] | None = None,
+                                ) -> None:
     """Print the diff-mode changed-file audit table to ``stream``.
 
     Always writes to STDERR (the caller passes ``sys.stderr``) so
@@ -1118,10 +1120,24 @@ def _render_changed_files_audit(rows: list[_ChangedFileAudit],
     preserved verbatim. The text-mode header is annotated with the
     drop count so the collapse is auditable; JSON consumers can
     diff the array length against the upstream intake size.
+
+    When ``only_statuses`` is a non-None frozenset, only rows whose
+    ``status`` is in that set are printed (or serialised). Filtering
+    runs AFTER dedupe so first-seen semantics are evaluated against
+    the full intake — a ``matched`` row that lost the dedupe race to
+    an earlier ``ignored-extension`` for the same path stays hidden,
+    same as without the filter. The text-mode header reports both
+    the visible row count and the underlying total so a filter that
+    hides everything is obvious (``0 of 12 row(s) shown``); the
+    totals line still counts every status in the canonical order so
+    the operator can see exactly what was filtered out.
     """
     dropped = 0
     if dedupe:
         rows, dropped = _dedupe_audit_rows(rows)
+    full_rows = rows
+    if only_statuses is not None:
+        rows = [r for r in rows if r.status in only_statuses]
     if as_json:
         payload = [asdict(r) for r in rows]
         print(json.dumps(payload, indent=2, ensure_ascii=False),
@@ -1130,13 +1146,29 @@ def _render_changed_files_audit(rows: list[_ChangedFileAudit],
 
     suffix = (f"; deduped, {dropped} duplicate(s) dropped"
               if dedupe else "")
+    if only_statuses is not None:
+        # Surface the filter in the header so a hidden-everything
+        # filter doesn't look like a bug. The totals line below still
+        # reports the full breakdown.
+        suffix += (f"; filtered, {len(rows)} of {len(full_rows)} "
+                   f"row(s) shown ({'+'.join(sorted(only_statuses))})")
     print("── placeholder-comments: changed-file audit "
-          f"({len(rows)} row(s){suffix}) ──", file=stream)
+          f"({len(full_rows)} row(s){suffix}) ──", file=stream)
     if not rows:
-        print("  (no changed files considered)", file=stream)
-        return
-    path_w = max(len("path"), max(len(r.path) for r in rows))
-    status_w = max(len("status"), max(len(r.status) for r in rows))
+        if not full_rows:
+            print("  (no changed files considered)", file=stream)
+        else:
+            # The intake had rows but none matched the filter — make
+            # that explicit so the operator can adjust their query.
+            print("  (no rows matched --only-changed-status)",
+                  file=stream)
+        # Still print the totals footer so the filtered-out counts
+        # are visible. Falls through to the counting block below.
+        path_w = status_w = 0
+    else:
+        path_w = max(len("path"), max(len(r.path) for r in rows))
+        status_w = max(len("status"), max(len(r.status) for r in rows))
+    if rows:
     print(f"  {'status'.ljust(status_w)}  "
           f"{'path'.ljust(path_w)}  reason", file=stream)
     print("  " + "-" * (status_w + path_w + len("reason") + 4),
@@ -1145,9 +1177,12 @@ def _render_changed_files_audit(rows: list[_ChangedFileAudit],
         print(f"  {r.status.ljust(status_w)}  "
               f"{r.path.ljust(path_w)}  {r.reason}", file=stream)
     # Counts-by-status footer in the canonical status order so the
-    # eye lands on the same column positions run-to-run.
+    # eye lands on the same column positions run-to-run. Counts
+    # against ``full_rows`` (post-dedupe, pre-filter) so the totals
+    # line truthfully describes the underlying intake even when a
+    # filter is hiding most of it.
     counts = {s: 0 for s in _AUDIT_STATUSES}
-    for r in rows:
+    for r in full_rows:
         counts[r.status] = counts.get(r.status, 0) + 1
     summary = "  ".join(f"{s}={counts[s]}" for s in _AUDIT_STATUSES)
     print(f"  totals: {summary}", file=stream)
