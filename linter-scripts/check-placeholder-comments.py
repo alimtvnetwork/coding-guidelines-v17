@@ -923,6 +923,25 @@ def main(argv: list[str] | None = None) -> int:
         print(f"error: --root {args.root!r} is not a directory", file=sys.stderr)
         return 2
 
+    # Resolve the --similarity-csv-fields spec UP FRONT so any typo
+    # (`old-path` instead of `old_path`, an empty list, a duplicate
+    # name) fails the run with exit code 2 BEFORE we shell out to
+    # git or scan a single file. ``None`` here means "no projection"
+    # — the writer falls back to its default header (driven by
+    # --similarity-labels). Validation runs even when
+    # --similarity-csv itself isn't set so misconfigured CI scripts
+    # surface the typo on the very first run rather than silently
+    # the day they add the export flag.
+    similarity_csv_fields: tuple[str, ...] | None = None
+    if args.similarity_csv_fields is not None:
+        try:
+            similarity_csv_fields = _parse_similarity_csv_fields(
+                args.similarity_csv_fields,
+            )
+        except ValueError as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 2
+
     if args.diff_base and args.changed_files:
         print("error: --diff-base and --changed-files are mutually exclusive",
               file=sys.stderr)
