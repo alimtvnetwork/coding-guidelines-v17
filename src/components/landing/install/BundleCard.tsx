@@ -1,7 +1,6 @@
 import { Package } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { CopyButton } from "./CopyButton";
-import { HighlightedCommand } from "./HighlightedCommand";
+import { CommandRow } from "./CommandRow";
 
 export type BundleCommand = {
   bundle: string;
@@ -44,27 +43,23 @@ function BundleFoldersList({ folders }: { folders: string[] }) {
   );
 }
 
-function BundleCommandRow({ label, command }: { label: string; command: string }) {
-  return (
-    <div className="flex items-center gap-2 rounded-md border border-border bg-secondary/60 px-3 py-2 font-mono text-foreground/90">
-      <span className="select-none text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/80">
-        {label}
-      </span>
-      <code className="flex-1 break-all text-[11px] leading-relaxed sm:text-xs">
-        <HighlightedCommand command={command} />
-      </code>
-      <CopyButton command={command} />
-    </div>
-  );
-}
-
 export function BundleCard({ bundle }: { bundle: BundleCommand }) {
   return (
     <Card className="overflow-hidden border-border/60 bg-card/50 transition-colors hover:border-primary/40">
       <BundleCardHeader bundle={bundle} />
       <CardContent className="space-y-2">
-        <BundleCommandRow label="bash" command={bundle.bash} />
-        <BundleCommandRow label="pwsh" command={bundle.ps} />
+        <CommandRow
+          label="bash"
+          command={bundle.bash}
+          expandTitle={bundle.bundle}
+          expandShell="Bash"
+        />
+        <CommandRow
+          label="pwsh"
+          command={bundle.ps}
+          expandTitle={bundle.bundle}
+          expandShell="PowerShell"
+        />
         <BundleFoldersList folders={bundle.folders} />
       </CardContent>
     </Card>
