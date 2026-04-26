@@ -185,13 +185,11 @@ class CacheSegmentHelperUnit(unittest.TestCase):
     spinning up a subprocess for the corner cases."""
 
     def setUp(self) -> None:
-        # Lazy import so the module path is set up by the test runner.
-        sys.path.insert(0, str(LINTER.parent))
-        import importlib.util as _u
-        spec = _u.spec_from_file_location("chk", LINTER)
-        self.chk = _u.module_from_spec(spec)
-        assert spec.loader is not None
-        spec.loader.exec_module(self.chk)
+        # The linter script's filename is hyphenated; use the shared
+        # shim that handles the dataclass/sys.modules dance Python
+        # 3.13 requires when loading via ``importlib`` directly.
+        from conftest_shim import load_placeholder_linter
+        self.chk = load_placeholder_linter()
 
     def test_single_extension_readable_form(self) -> None:
         self.assertEqual(self.chk._cache_segment(("md",)), "ext-md")
