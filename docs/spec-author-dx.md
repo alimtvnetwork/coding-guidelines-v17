@@ -90,6 +90,11 @@ node scripts/spec-change-report.mjs --unstaged
 # Skip PDF rendering (HTML only — fastest, no headless browser needed)
 node scripts/spec-change-report.mjs --html-only        # alias: --no-pdf
 
+# Choose deep-link scheme for finding rows
+node scripts/spec-change-report.mjs --editor vscode    # default; works in VS Code + Cursor
+node scripts/spec-change-report.mjs --editor cursor    # native cursor:// scheme
+node scripts/spec-change-report.mjs --editor none      # plain text (e.g. for emailing the report)
+
 # Custom output dir
 node scripts/spec-change-report.mjs --out ./reports
 
@@ -98,6 +103,10 @@ node scripts/spec-change-report.mjs --help
 ```
 
 `--all`, `--staged`, and `--unstaged` are mutually exclusive — picking more than one exits with code `3` and prints the usage block.
+
+**Deep links.** When a finding is rendered, both the file header and each `L###` line cell become clickable: clicking opens your editor at the exact line (`vscode://file/<abs-path>:<line>` or `cursor://file/...`). Cross-link findings additionally render an `open target` link that jumps to the destination file the broken reference resolved to.
+
+The default scheme is auto-detected from `$TERM_PROGRAM` (Cursor → `cursor`, otherwise → `vscode`). Override with `--editor`. Use `--editor none` to produce a portable HTML/PDF that contains no editor URIs (useful when sending the report to someone who isn't on your machine).
 
 Output (default `/mnt/documents/`):
 

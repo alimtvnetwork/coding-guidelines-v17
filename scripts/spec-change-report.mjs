@@ -14,6 +14,7 @@
 //   node scripts/spec-change-report.mjs --unstaged     # only unstaged + untracked
 //   node scripts/spec-change-report.mjs --html-only    # skip PDF rendering
 //   node scripts/spec-change-report.mjs --no-pdf       # alias for --html-only
+//   node scripts/spec-change-report.mjs --editor <id>  # vscode|cursor|none
 //   node scripts/spec-change-report.mjs --out <dir>    # custom out dir
 //   node scripts/spec-change-report.mjs --help         # show usage
 //
@@ -47,6 +48,8 @@ Scoping (mutually exclusive — pick at most one):
 
 Output:
   --html-only    Skip PDF rendering (alias: --no-pdf)
+  --editor <id>  Deep-link scheme for finding rows.
+                 vscode (default), cursor, or none for plain text.
   --out <dir>    Output directory (default: /mnt/documents)
 
 Other:
@@ -60,6 +63,7 @@ function parseArgs(argv) {
     scopeStaged: false,
     scopeUnstaged: false,
     htmlOnly: false,
+    editor: detectDefaultEditor(),
     outDir: "/mnt/documents",
     help: false,
   };
@@ -71,6 +75,20 @@ function parseArgs(argv) {
       case "--unstaged": flags.scopeUnstaged = true; break;
       case "--html-only":
       case "--no-pdf":   flags.htmlOnly = true; break;
+      case "--editor": {
+        const next = argv[i + 1];
+        if (!next || next.startsWith("--")) {
+          console.error(`[spec-change-report] --editor requires one of: vscode, cursor, none`);
+          process.exit(3);
+        }
+        if (!["vscode", "cursor", "none"].includes(next)) {
+          console.error(`[spec-change-report] unknown --editor value: ${next} (expected vscode|cursor|none)`);
+          process.exit(3);
+        }
+        flags.editor = next;
+        i += 1;
+        break;
+      }
       case "--out": {
         const next = argv[i + 1];
         if (!next || next.startsWith("--")) {
@@ -96,6 +114,44 @@ function parseArgs(argv) {
     process.exit(3);
   }
   return flags;
+}
+
+// ---------------------------------------------------------------------
+// Editor / deep-link helpers
+// ---------------------------------------------------------------------
+function detectDefaultEditor() {
+  const term = (process.env.TERM_PROGRAM || "").toLowerCase();
+  const editor = (process.env.EDITOR || "").toLowerCase();
+  if (term.includes("cursor") || editor.includes("cursor")) return "cursor";
+  // vscode is the safe default — both VS Code and Cursor handle vscode://
+  return "vscode";
+}
+
+function buildDeepLink(file, line) {
+  if (FLAGS.editor === "none") return null;
+  // vscode:// works in VS Code, Cursor, and most VS Code forks.
+  // cursor:// is Cursor's native scheme.
+  const scheme = FLAGS.editor === "cursor" ? "cursor" : "vscode";
+  const abs = resolve(REPO_ROOT, file);
+  // Browsers leave `:` alone in path segments, which is what VS Code wants.
+  return `${scheme}://file${abs}:${Math.max(1, line || 1)}`;
+}
+
+// The cross-link checker's "detail" field looks like:
+//   "text: ... · target: ../foo.md · detail: /abs/path/to/foo.md"
+// or "/abs/path/to/foo.md#anchor". Pull the resolved local file out of
+// the `detail:` segment so we can deep-link to the broken target too.
+function buildTargetLink(detailString) {
+  if (FLAGS.editor === "none" || !detailString) return null;
+  const m = detailString.match(/detail:\s*([^\s·]+)/);
+  if (!m) return null;
+  let target = m[1];
+  // Drop a trailing "#anchor" — editors don't honor it for plain files.
+  const hashIdx = target.indexOf("#");
+  if (hashIdx !== -1) target = target.slice(0, hashIdx);
+  if (!target || !existsSync(target)) return null;
+  const scheme = FLAGS.editor === "cursor" ? "cursor" : "vscode";
+  return `${scheme}://file${target}:1`;
 }
 
 const FLAGS = parseArgs(process.argv.slice(2));
@@ -276,29 +332,49 @@ function buildHtml({ scope, scopeLabel, validator, crossLink, validatorRaw, cros
     .map((file) => {
       const v = validatorByFile.get(file) || [];
       const l = linkByFile.get(file) || [];
+      const fileLink = buildDeepLink(file, 1);
+      const fileHeading = fileLink
+        ? `<a class="file-link" href="${escapeHtml(fileLink)}">${escapeHtml(file)}</a>`
+        : escapeHtml(file);
       const rows = [
         ...v.map(
-          (f) => `
+          (f) => {
+            const link = buildDeepLink(f.file, f.line);
+            const lineCell = link
+              ? `<a class="line-link" href="${escapeHtml(link)}">L${f.line}</a>`
+              : `L${f.line}`;
+            return `
           <tr class="sev-${f.severity}">
-            <td class="num">L${f.line}</td>
+            <td class="num">${lineCell}</td>
             <td class="rule"><code>${escapeHtml(f.rule)}</code></td>
             <td class="kind">${f.severity === "code-red" ? "<span class='dot dot-red'></span> Code Red" : "<span class='dot dot-amber'></span> Style"}</td>
             <td class="msg">${escapeHtml(f.message)}</td>
-          </tr>`
+          </tr>`;
+          }
         ),
         ...l.map(
-          (f) => `
+          (f) => {
+            const sourceLink = buildDeepLink(f.file, f.line);
+            const lineCell = sourceLink
+              ? `<a class="line-link" href="${escapeHtml(sourceLink)}">L${f.line}</a>`
+              : `L${f.line}`;
+            const targetLink = buildTargetLink(f.detail);
+            const detailCell = targetLink
+              ? `${escapeHtml(f.detail)} · <a class="target-link" href="${escapeHtml(targetLink)}">open target</a>`
+              : escapeHtml(f.detail);
+            return `
           <tr class="sev-link">
-            <td class="num">L${f.line}</td>
+            <td class="num">${lineCell}</td>
             <td class="rule"><code>${escapeHtml(f.kind)}</code></td>
             <td class="kind"><span class='dot dot-blue'></span> Link</td>
-            <td class="msg">${escapeHtml(f.detail)}</td>
-          </tr>`
+            <td class="msg">${detailCell}</td>
+          </tr>`;
+          }
         ),
       ].join("");
       return `
         <section class="file-block">
-          <h3>${escapeHtml(file)} <span class="count">(${v.length + l.length})</span></h3>
+          <h3>${fileHeading} <span class="count">(${v.length + l.length})</span></h3>
           <table>
             <thead><tr><th>Line</th><th>Rule</th><th>Kind</th><th>Detail</th></tr></thead>
             <tbody>${rows}</tbody>
@@ -348,6 +424,14 @@ function buildHtml({ scope, scopeLabel, validator, crossLink, validatorRaw, cros
   tr.sev-code-red td.kind { color: #c53030; }
   tr.sev-style td.kind { color: #b7791f; }
   tr.sev-link td.kind { color: #2b6cb0; }
+  a.line-link, a.file-link, a.target-link {
+    color: #2b6cb0; text-decoration: none; border-bottom: 1px dotted #90cdf4;
+  }
+  a.line-link:hover, a.file-link:hover, a.target-link:hover {
+    color: #2c5282; border-bottom-color: #2b6cb0;
+  }
+  a.file-link { font-family: inherit; }
+  a.target-link { font-size: 0.82rem; }
   .dot { display: inline-block; width: 0.55rem; height: 0.55rem; border-radius: 50%;
          margin-right: 0.35rem; vertical-align: middle; }
   .dot-red { background: #e53e3e; }
@@ -359,6 +443,9 @@ function buildHtml({ scope, scopeLabel, validator, crossLink, validatorRaw, cros
         overflow-x: auto; font-size: 0.78rem; line-height: 1.45; }
   .empty { background: #f0fff4; border: 1px solid #9ae6b4; padding: 1.25rem;
            border-radius: 8px; color: #22543d; font-weight: 500; }
+  .editor-badge { font-size: 0.78rem; color: #2c5282; background: #ebf8ff;
+                  border: 1px solid #bee3f8; padding: 0.1rem 0.45rem;
+                  border-radius: 999px; }
   footer { margin-top: 2rem; color: #718096; font-size: 0.78rem; text-align: center; }
 </style>
 </head>
@@ -366,7 +453,11 @@ function buildHtml({ scope, scopeLabel, validator, crossLink, validatorRaw, cros
   <h1>Spec Change Report</h1>
   <p class="meta">
     Generated <strong>${escapeHtml(generatedAt)}</strong> · Scope: ${escapeHtml(scopeBadge)} ·
-    <span class="status ${statusClass}">${status}</span>
+    <span class="status ${statusClass}">${status}</span>${
+      FLAGS.editor === "none"
+        ? ""
+        : ` · <span class="editor-badge">deep links → ${escapeHtml(FLAGS.editor)}</span>`
+    }
   </p>
 
   <div class="summary">
