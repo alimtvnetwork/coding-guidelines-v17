@@ -610,6 +610,27 @@ def main(argv: list[str] | None = None) -> int:
              "objects so CI scripts can parse it directly. Useful "
              "for debugging \"why didn't the linter check this "
              "file?\" without running the full scan.")
+    ap.add_argument("--list-changed-files", action="store_true",
+        help="Diagnostic (diff mode only): print every post-state "
+             "path reported by `git diff --name-status` (or read "
+             "from --changed-files), classified by how the diff-mode "
+             "allowlist treated it, then exit 0 without linting. "
+             "Statuses: `linted` (matched extension + under --root "
+             "+ exists on disk), `ignored-extension` (not a `.md` "
+             "path — e.g. README.rst, src/foo.py touched by the same "
+             "PR), `ignored-out-of-root` (a `.md` outside --root, "
+             "e.g. CHANGELOG.md at the repo root when --root=spec/), "
+             "`ignored-missing` (matched the allowlist but the post-"
+             "state file isn't on disk — modified-then-reverted in a "
+             "later commit, or a stale --changed-files entry). Rows "
+             "are emitted in git's original order with duplicates "
+             "preserved so the listing is a faithful audit trail. "
+             "In --json mode the output is a JSON array of "
+             "`{\"path\": str, \"status\": str, \"reason\": str}` "
+             "objects. No-op (empty listing + exit 0) without "
+             "--diff-base / --changed-files: in full-tree mode "
+             "there's no `git diff` to classify against — use "
+             "--list-files for the discovered-file listing instead.")
     args = ap.parse_args(argv)
 
     root = Path(args.root).resolve()
