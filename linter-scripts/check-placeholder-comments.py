@@ -1430,7 +1430,8 @@ def _score_kind_for(sim: "_RenameSimilarity | None") -> str | None:
 def _write_similarity_csv(rows: list[_ChangedFileAudit],
                           target: str,
                           *,
-                          with_labels: bool = False) -> None:
+                          with_labels: bool = False,
+                          fields: tuple[str, ...] | None = None) -> None:
     """Export the audit rows as RFC 4180 CSV for spreadsheet review.
 
     ``target`` is either a filesystem path or the literal ``"-"`` to
@@ -1448,6 +1449,20 @@ def _write_similarity_csv(rows: list[_ChangedFileAudit],
     C rows) and empty for plain A/M/D rows, mirroring the JSON
     ``score_kind`` field exactly.
 
+    When ``fields`` is supplied (driven by
+    ``--similarity-csv-fields``) the export is *projected* to that
+    subset/re-ordering of the canonical column set
+    ``path,status,reason,kind,score,old_path,score_kind``. The
+    parser (``_parse_similarity_csv_fields``) validates the spec
+    BEFORE it reaches this writer, so any name that lands here is
+    guaranteed to be one of the seven canonical columns. Passing
+    ``fields`` overrides the default header AND the
+    ``with_labels`` -driven append: the user gets exactly the
+    columns they asked for, in the order they asked for, no more
+    and no less. Use this to drop noisy columns (e.g. exclude
+    ``old_path`` when sharing the audit externally) or to put the
+    score first for sort-by-magnitude spreadsheets.
+
     Empty `score` cells are *intentional* and meaningful: they mark
     *unscored* rename/copy rows (authored ``--changed-files`` payloads
     that omitted the percentage) and distinguish them from
@@ -1463,8 +1478,12 @@ def _write_similarity_csv(rows: list[_ChangedFileAudit],
     """
     def _emit(handle) -> None:  # type: ignore[no-untyped-def]
         writer = _csv.writer(handle)
-        header = (_SIMILARITY_CSV_HEADER_LABELED if with_labels
-                  else _SIMILARITY_CSV_HEADER)
+        if fields is not None:
+            header: tuple[str, ...] = fields
+        elif with_labels:
+            header = _SIMILARITY_CSV_HEADER_LABELED
+        else:
+            header = _SIMILARITY_CSV_HEADER
         writer.writerow(header)
         for r in rows:
             sim = r.similarity
@@ -1477,14 +1496,21 @@ def _write_similarity_csv(rows: list[_ChangedFileAudit],
                 # distinguishable in the spreadsheet.
                 score = "" if sim.score is None else str(sim.score)
                 old_path = sim.old_path
-            row = [r.path, r.status, r.reason, kind, score, old_path]
-            if with_labels:
-                # Empty cell for plain A/M/D rows — same convention as
-                # the other similarity columns — so the "no rename
-                # provenance" case is uniform across all four/five
-                # similarity-related fields.
-                row.append(_score_kind_for(sim) or "")
-            writer.writerow(row)
+            # Empty cell for plain A/M/D rows — same convention as
+            # the other similarity columns — so the "no rename
+            # provenance" case is uniform across all four/five
+            # similarity-related fields.
+            score_kind = _score_kind_for(sim) or ""
+            cells: dict[str, str] = {
+                "path": r.path,
+                "status": r.status,
+                "reason": r.reason,
+                "kind": kind,
+                "score": score,
+                "old_path": old_path,
+                "score_kind": score_kind,
+            }
+            writer.writerow([cells[name] for name in header])
 
     if target == "-":
         _emit(sys.stdout)
@@ -1493,6 +1519,60 @@ def _write_similarity_csv(rows: list[_ChangedFileAudit],
         # writer inserts the platform-correct line terminator itself.
         with open(target, "w", encoding="utf-8", newline="") as fh:
             _emit(fh)
+
+
+def _parse_similarity_csv_fields(spec: str) -> tuple[str, ...]:
+    """Validate & normalise a ``--similarity-csv-fields`` spec.
+
+    ``spec`` is a comma-separated list of column names drawn from
+    :data:`_SIMILARITY_CSV_FIELDS_ALL`. Whitespace around each name
+    is trimmed (so ``"path, status, score"`` is accepted), empty
+    tokens are silently dropped (so a trailing comma is tolerated),
+    and order is preserved exactly as the user wrote it — the spec
+    is a *projection*, not a set, so the user can re-order columns
+    if they want score first.
+
+    Validation is strict on three fronts so typos surface as clean
+    CLI errors instead of silently producing an empty / wrong CSV:
+
+    * **At least one column.** A spec of ``""`` or ``","`` raises —
+      a zero-column CSV is never useful and almost always a typo.
+    * **Every name must be canonical.** Unknown tokens raise with a
+      message that lists the legal vocabulary so the operator can
+      copy the right name.
+    * **No duplicates.** ``"path,path,status"`` raises rather than
+      emitting two ``path`` columns; duplicate columns confuse
+      pandas / Excel and almost always indicate a copy-paste slip.
+
+    Returns the ordered tuple of canonical names ready to feed into
+    :func:`_write_similarity_csv` as the ``fields=`` argument.
+    """
+    raw = [tok.strip() for tok in spec.split(",")]
+    fields = [tok for tok in raw if tok]
+    if not fields:
+        raise ValueError(
+            "--similarity-csv-fields requires at least one column "
+            f"name (allowed: {', '.join(_SIMILARITY_CSV_FIELDS_ALL)})"
+        )
+    seen: set[str] = set()
+    dupes: list[str] = []
+    for name in fields:
+        if name in seen:
+            dupes.append(name)
+        seen.add(name)
+    if dupes:
+        raise ValueError(
+            "--similarity-csv-fields contains duplicate column "
+            f"name(s): {', '.join(sorted(set(dupes)))}"
+        )
+    unknown = [n for n in fields if n not in _SIMILARITY_CSV_FIELDS_ALL]
+    if unknown:
+        raise ValueError(
+            "--similarity-csv-fields contains unknown column "
+            f"name(s): {', '.join(unknown)} "
+            f"(allowed: {', '.join(_SIMILARITY_CSV_FIELDS_ALL)})"
+        )
+    return tuple(fields)
 
 
 # Canonical legend modes for ``--similarity-legend``. Centralised so
