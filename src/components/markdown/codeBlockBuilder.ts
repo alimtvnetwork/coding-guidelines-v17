@@ -4,7 +4,7 @@
 import { escapeHtml, highlightCode, resolveDisplayLang } from "./highlighter";
 import {
   LANG_LABELS, LANG_COLORS, LANG_EXTENSIONS,
-  DEFAULT_ACCENT_COLOR, DEFAULT_EXTENSION,
+  DEFAULT_ACCENT_COLOR, DEFAULT_EXTENSION, EXPAND_LINE_THRESHOLD,
 } from "./constants";
 
 interface HeaderOpts {
@@ -52,7 +52,9 @@ function buildDownloadButton(opts: HeaderOpts): string {
 }
 
 function buildFullscreenButton(id: number): string {
-  return `<button class="code-tool-btn fullscreen-code-btn" data-block-id="${id}" title="Fullscreen">
+  // Maximize2-style icon — visually consistent with the landing CommandRow
+  // expand button (`lucide-react/Maximize2`).
+  return `<button class="code-tool-btn fullscreen-code-btn" data-block-id="${id}" title="Expand to fullscreen" aria-label="Expand code block">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
         </button>`;
 }
@@ -68,6 +70,8 @@ function buildHeaderLeft(opts: HeaderOpts): string {
 
 function buildHeaderRight(opts: HeaderOpts): string {
   const lineLabel = opts.lineCount !== 1 ? "s" : "";
+  const isExpandWorthwhile = opts.lineCount >= EXPAND_LINE_THRESHOLD;
+  const expandSlot = isExpandWorthwhile ? buildFullscreenButton(opts.id) : "";
 
   return `<div class="code-header-right">
         <span class="code-line-count">${opts.lineCount} line${lineLabel}</span>
@@ -75,7 +79,7 @@ function buildHeaderRight(opts: HeaderOpts): string {
         ${buildFontControls(opts.id)}
         ${buildCopyButton(opts.escaped)}
         ${buildDownloadButton(opts)}
-        ${buildFullscreenButton(opts.id)}
+        ${expandSlot}
       </div>`;
 }
 
