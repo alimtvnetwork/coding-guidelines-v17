@@ -1503,6 +1503,76 @@ def _write_similarity_csv(rows: list[_ChangedFileAudit],
             _emit(fh)
 
 
+# Canonical legend modes for ``--similarity-legend``. Centralised so
+# the argparse ``choices=`` list, the resolver, and the tests all
+# spell the vocabulary the same way. ``auto`` is the default and
+# means "emit only on an interactive TTY".
+_SIMILARITY_LEGEND_AUTO = "auto"
+_SIMILARITY_LEGEND_ON = "on"
+_SIMILARITY_LEGEND_OFF = "off"
+_SIMILARITY_LEGEND_MODES: tuple[str, ...] = (
+    _SIMILARITY_LEGEND_AUTO,
+    _SIMILARITY_LEGEND_ON,
+    _SIMILARITY_LEGEND_OFF,
+)
+
+
+def _should_emit_similarity_legend(
+    mode: str,
+    stream,  # type: ignore[no-untyped-def]
+) -> bool:
+    """Decide whether to print the similarity legend for ``stream``.
+
+    * ``mode == "on"``  → always True.
+    * ``mode == "off"`` → always False.
+    * ``mode == "auto"`` (default) → True iff ``stream`` is attached
+      to an interactive terminal. We probe via :func:`os.isatty` on
+      the stream's underlying file descriptor; any failure (a
+      ``StringIO`` test double, a wrapper without ``fileno``, an
+      ``OSError`` because the fd was closed) is treated as
+      "not a TTY" so non-interactive contexts default to silent.
+    """
+    if mode == _SIMILARITY_LEGEND_ON:
+        return True
+    if mode == _SIMILARITY_LEGEND_OFF:
+        return False
+    fileno = getattr(stream, "fileno", None)
+    if not callable(fileno):
+        return False
+    try:
+        return os.isatty(fileno())
+    except (OSError, ValueError):
+        return False
+
+
+def _render_similarity_legend(stream,  # type: ignore[no-untyped-def]
+                              *,
+                              with_labels: bool) -> None:
+    """Print a compact legend for the similarity columns to ``stream``.
+
+    Always printed AFTER the totals footer so consumers parsing the
+    column-aligned audit rows + totals see the same byte sequence
+    they always have up to that point. The legend itself is
+    indentation-prefixed (``  ``) so it visually nests under the
+    table header banner — same indent convention as the existing
+    ``totals: …`` footer.
+
+    When ``with_labels`` is True an extra line documents the
+    ``meaning`` column added by ``--similarity-labels``.
+    """
+    print("  legend:", file=stream)
+    print("    kind   R = rename, C = copy, - = plain A/M/D row",
+          file=stream)
+    print("    score  git's 0–100 similarity %, - if absent "
+          "(authored payload without %, or plain row)",
+          file=stream)
+    print("    old    OLD-side path on R/C rows, - otherwise",
+          file=stream)
+    if with_labels:
+        print("    meaning  rename-similarity / copy-similarity / "
+              "unscored, - on plain rows", file=stream)
+
+
 def _fmt_similarity(
     sim: "_RenameSimilarity | None",
 ) -> tuple[str, str, str]:
