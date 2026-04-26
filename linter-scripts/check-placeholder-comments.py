@@ -1366,6 +1366,24 @@ _SIMILARITY_CSV_HEADER_LABELED: tuple[str, ...] = (
     *_SIMILARITY_CSV_HEADER, "score_kind",
 )
 
+# Full vocabulary recognised by ``--similarity-csv-fields``. Order
+# here is the *canonical* default order — the one used when no
+# ``--similarity-csv-fields`` filter is in play. The user-supplied
+# spec is free to project to a subset and to re-order the columns,
+# but every name they pass must come from this tuple.
+#
+# ``score_kind`` is included unconditionally so users can opt INTO
+# the discriminator column from the field spec alone (without also
+# turning on ``--similarity-labels``, which would also affect the
+# text-table and JSON surfaces). Conversely, when
+# ``--similarity-labels`` is on the user can drop ``score_kind``
+# from the CSV by listing only the other columns — the JSON and
+# text-table surfaces stay labelled, only the spreadsheet view is
+# trimmed. That keeps the per-surface knobs orthogonal.
+_SIMILARITY_CSV_FIELDS_ALL: tuple[str, ...] = (
+    *_SIMILARITY_CSV_HEADER_LABELED,
+)
+
 # Canonical labels for the ``score_kind`` discriminator. Centralised so
 # the JSON serializer, the text-table renderer, the CSV exporter, and
 # the tests all agree on the exact spelling. The vocabulary is
