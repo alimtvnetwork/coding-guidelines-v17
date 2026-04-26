@@ -382,7 +382,8 @@ def main(argv: list[str] | None = None) -> int:
             violations.append(Violation(rel, ln, "P-007",
                 f"Duplicate placeholder target `{target}` — also declared at "
                 f"`{first_rel}:L{first_ln}` as `{first_target}` "
-                "(anchor differences are ignored)."))
+                "(anchor differences are ignored).",
+                ln, ln))
 
     if args.json:
         print(json.dumps([asdict(v) for v in violations], indent=2))
