@@ -495,6 +495,15 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--no-github", dest="github", action="store_false",
         help="Disable GitHub Actions annotations even when the "
              "`GITHUB_ACTIONS` env var would auto-enable them.")
+    ap.add_argument("--diff-context", type=int, default=3, metavar="N",
+        help="When --diff-base is set, fetch N lines of unified-diff "
+             "context around each violation (via `git diff -UN <base> "
+             "-- <file>`) and print the post-state excerpt under the "
+             "human-readable summary so authors can patch without "
+             "switching to git. Default 3; 0 disables. Ignored in "
+             "--changed-files mode (no diff-base to query) and in "
+             "--json mode (excerpts would corrupt structured output; "
+             "JSON consumers can render their own from the file/line).")
     args = ap.parse_args(argv)
 
     root = Path(args.root).resolve()
@@ -505,6 +514,11 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.diff_base and args.changed_files:
         print("error: --diff-base and --changed-files are mutually exclusive",
+              file=sys.stderr)
+        return 2
+
+    if args.diff_context < 0:
+        print(f"error: --diff-context must be >= 0 (got {args.diff_context})",
               file=sys.stderr)
         return 2
 
@@ -628,8 +642,35 @@ def main(argv: list[str] | None = None) -> int:
             print(f"✅ placeholder-comments: no malformed blocks under {args.root}/")
         else:
             print(f"❌ placeholder-comments: {len(violations)} violation(s):\n")
+            # Pre-fetch one diff per touched file (only in --diff-base
+            # mode with non-zero context). Fetching once per file
+            # rather than once per violation keeps git invocations
+            # bounded by the changed-file count, not the violation
+            # count — important when a single bad block trips P-001
+            # + P-002 + P-004 simultaneously.
+            diff_excerpts: dict[str, _DiffExcerpts] = {}
+            if (args.diff_base and args.diff_context > 0
+                    and changed_md is not None):
+                affected = sorted({v.file for v in violations
+                                   if (repo_root / v.file).resolve() in changed_md})
+                for rel in affected:
+                    excerpt = _fetch_diff_excerpts(
+                        repo_root, args.diff_base, rel, args.diff_context,
+                    )
+                    if excerpt is not None:
+                        diff_excerpts[rel] = excerpt
             for v in violations:
                 print(f"  {v.file}:{v.line}  [{v.code}] {v.message}")
+                excerpt = diff_excerpts.get(v.file)
+                if excerpt is not None:
+                    snippet = excerpt.render(v.line, args.diff_context)
+                    if snippet:
+                        # Two-space indent under the violation line
+                        # so the excerpt is visually attached to it
+                        # in the log without breaking grep on the
+                        # leading `<file>:<line>` shape.
+                        for sline in snippet:
+                            print(f"    {sline}")
             print("\n  See linter-scripts/check-placeholder-comments.py for rule docs.")
 
     # ---- GitHub Actions annotations (always after the human summary)
