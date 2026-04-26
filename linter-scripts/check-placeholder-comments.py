@@ -298,6 +298,24 @@ def _consume_block(lines: list[str], start: int, close_marker: str
     return body, i, False
 
 
+def _canonical_target(source_rel: str, target: str, repo_root: Path) -> str:
+    """Resolve a placeholder bullet's link to a canonical repo-relative
+    path string. Anchor is stripped so different anchors on the same
+    target file collapse to the same key. Path resolution is purely
+    syntactic (no I/O) — the target file may not exist yet, which is
+    the whole point of placeholders.
+    """
+    path_part = target.split("#", 1)[0]
+    source_dir = (repo_root / source_rel).parent
+    try:
+        resolved = (source_dir / path_part).resolve()
+        return str(resolved.relative_to(repo_root.resolve()))
+    except (ValueError, OSError):
+        # Fall back to the literal path if it escapes the repo root —
+        # still gives consistent grouping for duplicate detection.
+        return path_part
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--root", default="spec",
@@ -315,8 +333,33 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     violations: list[Violation] = []
+    cross_file_bullets: list[tuple[str, int, str]] = []
     for md in iter_markdown_files(root):
-        violations.extend(lint_file(md, repo_root))
+        violations.extend(lint_file(md, repo_root, cross_file_bullets))
+
+    # ---- P-007 cross-file duplicates -------------------------------
+    # Group every valid bullet across the scan by canonical target.
+    # Within-file duplicates are already reported above, so we only
+    # surface groups whose entries span ≥2 distinct files. The
+    # *second* and later occurrences are flagged, pointing back at
+    # the first declaration site for fast triage.
+    by_target: dict[str, list[tuple[str, int, str]]] = {}
+    for rel, ln, target in cross_file_bullets:
+        by_target.setdefault(_canonical_target(rel, target, repo_root), []).append(
+            (rel, ln, target)
+        )
+    for key, entries in by_target.items():
+        files_seen = {e[0] for e in entries}
+        if len(files_seen) < 2:
+            continue
+        first_rel, first_ln, first_target = entries[0]
+        for rel, ln, target in entries[1:]:
+            if rel == first_rel:
+                continue  # already reported by the within-file pass
+            violations.append(Violation(rel, ln, "P-007",
+                f"Duplicate placeholder target `{target}` — also declared at "
+                f"`{first_rel}:L{first_ln}` as `{first_target}` "
+                "(anchor differences are ignored)."))
 
     if args.json:
         print(json.dumps([asdict(v) for v in violations], indent=2))
