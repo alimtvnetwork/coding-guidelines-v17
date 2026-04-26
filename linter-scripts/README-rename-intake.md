@@ -205,7 +205,7 @@ NEW-side row only.
 #### Text table (default `--list-changed-files`, `--with-similarity`)
 
 ```text
-── placeholder-comments: changed-file audit (6 row(s); +similarity columns) ──
+── placeholder-comments: changed-file audit (7 row(s); +similarity columns) ──
   status               path             kind  score  old          reason
   ----------------------------------------------------------------------
   matched              spec/keep.md     -     -      -            under --root, extension allowed, file present on disk
