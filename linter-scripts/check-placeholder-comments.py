@@ -1121,6 +1121,13 @@ class _DiffIntakeRow:
       * ``score`` — git's similarity score (0–100) when present,
         ``None`` when the source row didn't carry one (e.g. an
         unscored ``R\\told\\tnew`` from hand-edited input).
+        The text renderer surfaces the scored / unscored distinction
+        as ``092`` (zero-padded percent) vs. ``n/a`` (explicit
+        "not available", never confused with the literal score
+        ``0``); the JSON renderer pairs ``"score": <int|null>``
+        with an explicit ``"score_status": "scored"`` /
+        ``"unscored"`` field so machine consumers don't have to
+        special-case ``null`` interpretation.
       * ``old`` — pre-rename path. May be empty string in
         pathological inputs where git emits ``R<score>\\t\\tnew``;
         we render it as ``"(unknown)"`` rather than dropping the
@@ -1133,6 +1140,85 @@ class _DiffIntakeRow:
     score: int | None
     old: str
     new: str
+
+
+# Score-display sentinels (single source of truth so text + JSON
+# renderers, tests, and operator docs stay in sync):
+#
+# * ``_SCORE_UNSCORED_TEXT`` — what the text table prints when
+#   ``_DiffIntakeRow.score is None``. ``"n/a"`` is deliberately
+#   chosen over the previous ``"---"`` placeholder: ``---`` reads
+#   as "missing data / unknown", which is ambiguous with "score
+#   was 0" for a reader skimming the column. ``n/a`` is the
+#   conventional "not applicable / not available" marker and
+#   removes any chance of conflation with a real similarity score.
+#   Width is 3 chars so it slots into the same 5-wide ``score``
+#   column without disturbing alignment with zero-padded
+#   percents (``000``..``100``).
+# * ``_SCORE_STATUS_SCORED`` / ``_SCORE_STATUS_UNSCORED`` — the
+#   string values for the JSON ``score_status`` field. Lowercase,
+#   stable (do NOT change without a schema bump) so downstream
+#   parsers can match on a fixed vocabulary.
+_SCORE_UNSCORED_TEXT = "n/a"
+_SCORE_STATUS_SCORED = "scored"
+_SCORE_STATUS_UNSCORED = "unscored"
+
+
+def _intake_row_to_json(row: "_DiffIntakeRow") -> dict:
+    """Serialise a :class:`_DiffIntakeRow` to a JSON-safe dict.
+
+    Shape::
+
+        {"kind": "R" | "C",
+         "score": <int 0..100> | null,
+         "score_status": "scored" | "unscored",
+         "old": "<path>" | "",
+         "new": "<path>"}
+
+    The redundancy between ``score`` and ``score_status`` is
+    intentional: it lets a strict consumer key off the labelled
+    enum (``score_status``) without having to interpret ``null``
+    as "unscored" by convention. The numeric ``score`` field
+    stays ``null`` (not ``0``, not ``-1``) for unscored rows so
+    downstream type checkers can model it as ``Optional[int]``.
+    """
+    return {
+        "kind": row.kind,
+        "score": row.score,
+        "score_status": (_SCORE_STATUS_SCORED if row.score is not None
+                         else _SCORE_STATUS_UNSCORED),
+        "old": row.old,
+        "new": row.new,
+    }
+
+
+def _render_rename_intake_json(rows: list["_DiffIntakeRow"],
+                                stream) -> None:
+    """Emit the rename/copy intake as a JSON object to ``stream``
+    (always STDERR — the STDOUT verdict JSON stays a single
+    parseable document, see :func:`_render_rename_intake_table`'s
+    contract).
+
+    Shape::
+
+        {"rename_intake": {
+            "row_count": <int>,
+            "rows": [<row>, ...]
+         }}
+
+    Wrapping the array under a named key (rather than emitting a
+    bare array) leaves room to add sibling fields later
+    (e.g. ``"truncated": true`` for very-large PRs) without a
+    schema bump.
+    """
+    payload = {
+        "rename_intake": {
+            "row_count": len(rows),
+            "rows": [_intake_row_to_json(r) for r in rows],
+        }
+    }
+    json.dump(payload, stream, separators=(",", ":"))
+    stream.write("\n")
 
 
 # Git emits paths in C-quoted form (``"path\twith\ttab"``) when
