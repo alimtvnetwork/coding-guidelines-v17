@@ -170,7 +170,9 @@ entirely (legacy schema).
 - [`check-placeholder-comments.py --help`](./check-placeholder-comments.py)
   — full flag reference for `--list-changed-files`,
   `--with-similarity`, `--dedupe-changed-files`,
-  `--only-changed-status`, `--similarity-csv`.
+  `--only-changed-status`, `--similarity-csv`,
+  `--similarity-legend` (see
+  [Score-column legend](#score-column-legend---similarity-legendautoonoff) below).
 - `linter-scripts/tests/test_with_similarity_flag.py` — executable
   examples of every shape documented above.
 - `linter-scripts/tests/test_similarity_csv_export.py` — schema
