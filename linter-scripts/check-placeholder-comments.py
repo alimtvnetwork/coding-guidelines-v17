@@ -182,11 +182,20 @@ def _validate_body(rel: str, open_line: int, body: list[tuple[int, str]],
     return bullet_count
 
 
-def lint_file(path: Path, repo_root: Path) -> list[Violation]:
+def lint_file(path: Path, repo_root: Path,
+              valid_bullets: list[tuple[str, int, str]] | None = None,
+              ) -> list[Violation]:
+    """Lint one markdown file.
+
+    When ``valid_bullets`` is provided, every successfully-validated
+    bullet is appended as ``(rel_file, line, target)`` so the caller
+    can run cross-file duplicate detection (P-007).
+    """
     rel = str(path.relative_to(repo_root))
     text = path.read_text(encoding="utf-8")
     lines = strip_inline_code(strip_code_fences(text)).splitlines()
     out: list[Violation] = []
+    file_bullets: list[tuple[int, str]] = []
 
     i = 0
     n = len(lines)
