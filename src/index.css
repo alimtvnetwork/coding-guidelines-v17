@@ -1424,3 +1424,16 @@
     .stagger-children > * { opacity: 1; }
   }
 }
+
+@layer utilities {
+  /* Hide native scrollbars while preserving scroll behavior. */
+  .scrollbar-none {
+    scrollbar-width: none;          /* Firefox */
+    -ms-overflow-style: none;       /* IE/Edge legacy */
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;                  /* Chromium / WebKit */
+    width: 0;
+    height: 0;
+  }
+}
