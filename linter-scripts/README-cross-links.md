@@ -28,7 +28,8 @@ python3 linter-scripts/check-spec-cross-links.py --root spec --github
 - Path must resolve to an existing file (relative to source `.md`, or absolute from repo root).
 - If `#anchor` is present, it must match an existing H1–H6 heading slug in the target file.
 - Links inside fenced code blocks (```` ``` ```` or `~~~`) are ignored — they are examples, not real references.
-- Links inside HTML comments (`<!-- … -->`) are ignored — they are placeholder cross-references that authors activate later. See `spec/_template.md` §Cross-References for the copy-paste snippet.
+- Links inside `<spec-placeholder>...</spec-placeholder>` blocks are ignored — this is the preferred placeholder format for cross-references that authors will activate later. See `spec/_template.md` §"Placeholder cross-references" for the copy-paste snippet.
+- Regular HTML comments (`<!-- ... -->`) are **not** stripped: a broken link inside an ordinary comment is still flagged so license headers / TODOs that drift can't hide bugs. To opt a block out of validation, wrap it in `<spec-placeholder>` instead.
 - External URLs (`http://`, `https://`, `mailto:`, etc.) and project schemes (`mem://`, `user-uploads://`, `knowledge://`) are skipped.
 
 ## Companion check: placeholder block formatting
