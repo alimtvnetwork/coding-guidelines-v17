@@ -1281,14 +1281,38 @@ def _parse_unified_diff_post(stdout: str) -> _DiffExcerpts:
     which file we asked about. Hunk headers (``@@ -a,b +c,d @@``)
     reset the post-state line counter; ``+`` and `` `` rows advance
     it; ``-`` rows are skipped (no post-state coordinate).
+
+    In addition to the flat ``lines`` index, we record each hunk
+    as a discrete ``_Hunk(start, end)`` range so a multi-hunk file
+    can route a violation to the *nearest* hunk's window rather
+    than blindly slicing the global min/max range. A hunk that
+    covers no post-state lines (e.g. pure removals — ``+`` count
+    of 0 in the header) is dropped from the list because it has no
+    coordinate a violation could land on.
     """
     lines: dict[int, tuple[str, str]] = {}
     cur_post = 0
     in_hunk = False
     min_line = 10**9
     max_line = 0
+    hunks: list[_Hunk] = []
+    cur_hunk_start: int | None = None
+    cur_hunk_last: int | None = None
+
+    def _flush_hunk() -> None:
+        # Capture the in-progress hunk's [start, end] range. We
+        # use the ``last`` post-line we actually wrote to (rather
+        # than ``cur_post``, which has already been incremented
+        # past it) so single-line hunks get start == end.
+        nonlocal cur_hunk_start, cur_hunk_last
+        if cur_hunk_start is not None and cur_hunk_last is not None:
+            hunks.append(_Hunk(start=cur_hunk_start, end=cur_hunk_last))
+        cur_hunk_start = None
+        cur_hunk_last = None
+
     for raw in stdout.splitlines():
         if raw.startswith("@@"):
+            _flush_hunk()
             m = _HUNK_HEADER_RE.match(raw)
             if not m:
                 in_hunk = False
@@ -1305,6 +1329,9 @@ def _parse_unified_diff_post(stdout: str) -> _DiffExcerpts:
             lines[cur_post] = (" ", "")
             min_line = min(min_line, cur_post)
             max_line = max(max_line, cur_post)
+            if cur_hunk_start is None:
+                cur_hunk_start = cur_post
+            cur_hunk_last = cur_post
             cur_post += 1
             continue
         kind = raw[0]
@@ -1313,11 +1340,17 @@ def _parse_unified_diff_post(stdout: str) -> _DiffExcerpts:
             lines[cur_post] = ("+", body)
             min_line = min(min_line, cur_post)
             max_line = max(max_line, cur_post)
+            if cur_hunk_start is None:
+                cur_hunk_start = cur_post
+            cur_hunk_last = cur_post
             cur_post += 1
         elif kind == " ":
             lines[cur_post] = (" ", body)
             min_line = min(min_line, cur_post)
             max_line = max(max_line, cur_post)
+            if cur_hunk_start is None:
+                cur_hunk_start = cur_post
+            cur_hunk_last = cur_post
             cur_post += 1
         elif kind == "-":
             # Removed line — no post-state coordinate. Skip silently.
@@ -1329,10 +1362,16 @@ def _parse_unified_diff_post(stdout: str) -> _DiffExcerpts:
             # Unknown row inside a hunk (extra header from combined
             # diff, etc.). Be defensive: bail out of this hunk so we
             # don't desync the line counter.
+            _flush_hunk()
             in_hunk = False
+    # Capture the final hunk (the last ``@@`` block has no
+    # successor header to trigger a flush).
+    _flush_hunk()
+
     if max_line == 0:
-        return _DiffExcerpts(lines={}, min_line=0, max_line=0)
-    return _DiffExcerpts(lines=lines, min_line=min_line, max_line=max_line)
+        return _DiffExcerpts(lines={}, min_line=0, max_line=0, hunks=())
+    return _DiffExcerpts(lines=lines, min_line=min_line,
+                         max_line=max_line, hunks=tuple(hunks))
 
 
 def _fetch_diff_excerpts(repo_root: Path, diff_base: str, rel_path: str,
