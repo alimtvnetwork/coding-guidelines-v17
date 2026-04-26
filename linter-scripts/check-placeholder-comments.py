@@ -819,6 +819,56 @@ def main(argv: list[str] | None = None) -> int:
              "hard-code indices 0–5 keep working unchanged. Opt-in "
              "to preserve the legacy schema byte-for-byte for "
              "downstream consumers; no-op without --with-similarity.")
+    ap.add_argument("--similarity-legend",
+        choices=("auto", "on", "off"), default="auto",
+        help="Control whether the audit table is followed by a short "
+             "human-readable legend explaining the similarity columns "
+             "(`kind`, `score`, `old`, and — when --similarity-labels "
+             "is on — `meaning`). Three modes: `auto` (default) emits "
+             "the legend only when the audit stream (STDERR) is "
+             "attached to an interactive terminal, so a human reading "
+             "the run live gets the cheat-sheet but a CI log capture / "
+             "pipe / file redirect stays byte-for-byte identical to "
+             "the legacy output (no surprise prose for log scrapers); "
+             "`on` forces the legend regardless of TTY (useful when "
+             "rendering to a paged-pretty wrapper that strips TTY "
+             "detection but a human is still reading); `off` "
+             "suppresses the legend even on a live terminal (useful "
+             "when streaming straight into clipboard / paste-into-"
+             "ticket flows where the prose is noise). The legend is "
+             "always printed AFTER the totals footer so consumers "
+             "parsing column-aligned rows see the same byte sequence "
+             "they always have up to the totals line. No-op without "
+             "--with-similarity (the columns being explained simply "
+             "aren't there) and no-op in --json mode (machine "
+             "consumers don't need prose). "
+             "Examples: "
+             "(1) ENABLE during a rename/copy intake reviewed live in "
+             "a terminal — `python3 check-placeholder-comments.py "
+             "--root spec --diff-base origin/main "
+             "--list-changed-files --with-similarity "
+             "--similarity-legend on` prints the legend after the "
+             "totals footer regardless of where STDERR points (force "
+             "this when piping into `less -R`, `bat`, or a CI step "
+             "wrapper that strips the TTY but a human still reads "
+             "the output). "
+             "(2) ENABLE with the per-kind discriminator so the "
+             "`meaning` column is documented too — `… "
+             "--list-changed-files --with-similarity "
+             "--similarity-labels --similarity-legend on`. "
+             "(3) DISABLE on a live terminal you'd otherwise paste "
+             "into a Jira / GitHub comment — `… --list-changed-files "
+             "--with-similarity --similarity-legend off` keeps the "
+             "table+totals only, no trailing prose. "
+             "(4) DISABLE explicitly in CI even though `auto` already "
+             "resolves to off over a pipe — `… --list-changed-files "
+             "--with-similarity --similarity-legend off` is the "
+             "belt-and-braces form when you want the choice obvious "
+             "from the workflow file rather than implicit in the "
+             "TTY probe. "
+             "(5) DEFAULT (`auto`) — omit the flag entirely; you'll "
+             "see the legend at a local shell prompt and silence in "
+             "CI logs, no further configuration needed.")
     ap.add_argument("--github", dest="github", action="store_true",
         default=None,
         help="Emit one GitHub Actions `::error file=…,line=…,title=…::` "
@@ -1007,6 +1057,7 @@ def main(argv: list[str] | None = None) -> int:
                                if args.only_changed_status else None),
                 with_similarity=args.with_similarity,
                 with_labels=args.similarity_labels,
+                legend_mode=args.similarity_legend,
             )
             # CSV export mirrors the same dedupe + filter pipeline so
             # the spreadsheet always matches what the operator just
@@ -1453,6 +1504,76 @@ def _write_similarity_csv(rows: list[_ChangedFileAudit],
             _emit(fh)
 
 
+# Canonical legend modes for ``--similarity-legend``. Centralised so
+# the argparse ``choices=`` list, the resolver, and the tests all
+# spell the vocabulary the same way. ``auto`` is the default and
+# means "emit only on an interactive TTY".
+_SIMILARITY_LEGEND_AUTO = "auto"
+_SIMILARITY_LEGEND_ON = "on"
+_SIMILARITY_LEGEND_OFF = "off"
+_SIMILARITY_LEGEND_MODES: tuple[str, ...] = (
+    _SIMILARITY_LEGEND_AUTO,
+    _SIMILARITY_LEGEND_ON,
+    _SIMILARITY_LEGEND_OFF,
+)
+
+
+def _should_emit_similarity_legend(
+    mode: str,
+    stream,  # type: ignore[no-untyped-def]
+) -> bool:
+    """Decide whether to print the similarity legend for ``stream``.
+
+    * ``mode == "on"``  → always True.
+    * ``mode == "off"`` → always False.
+    * ``mode == "auto"`` (default) → True iff ``stream`` is attached
+      to an interactive terminal. We probe via :func:`os.isatty` on
+      the stream's underlying file descriptor; any failure (a
+      ``StringIO`` test double, a wrapper without ``fileno``, an
+      ``OSError`` because the fd was closed) is treated as
+      "not a TTY" so non-interactive contexts default to silent.
+    """
+    if mode == _SIMILARITY_LEGEND_ON:
+        return True
+    if mode == _SIMILARITY_LEGEND_OFF:
+        return False
+    fileno = getattr(stream, "fileno", None)
+    if not callable(fileno):
+        return False
+    try:
+        return os.isatty(fileno())
+    except (OSError, ValueError):
+        return False
+
+
+def _render_similarity_legend(stream,  # type: ignore[no-untyped-def]
+                              *,
+                              with_labels: bool) -> None:
+    """Print a compact legend for the similarity columns to ``stream``.
+
+    Always printed AFTER the totals footer so consumers parsing the
+    column-aligned audit rows + totals see the same byte sequence
+    they always have up to that point. The legend itself is
+    indentation-prefixed (``  ``) so it visually nests under the
+    table header banner — same indent convention as the existing
+    ``totals: …`` footer.
+
+    When ``with_labels`` is True an extra line documents the
+    ``meaning`` column added by ``--similarity-labels``.
+    """
+    print("  legend:", file=stream)
+    print("    kind   R = rename, C = copy, - = plain A/M/D row",
+          file=stream)
+    print("    score  git's 0–100 similarity %, - if absent "
+          "(authored payload without %, or plain row)",
+          file=stream)
+    print("    old    OLD-side path on R/C rows, - otherwise",
+          file=stream)
+    if with_labels:
+        print("    meaning  rename-similarity / copy-similarity / "
+              "unscored, - on plain rows", file=stream)
+
+
 def _fmt_similarity(
     sim: "_RenameSimilarity | None",
 ) -> tuple[str, str, str]:
@@ -1487,6 +1608,7 @@ def _render_changed_files_audit(rows: list[_ChangedFileAudit],
                                 only_statuses: frozenset[str] | None = None,
                                 with_similarity: bool = False,
                                 with_labels: bool = False,
+                                legend_mode: str = _SIMILARITY_LEGEND_AUTO,
                                 ) -> None:
     """Print the diff-mode changed-file audit table to ``stream``.
 
@@ -1686,6 +1808,14 @@ def _render_changed_files_audit(rows: list[_ChangedFileAudit],
         counts[r.status] = counts.get(r.status, 0) + 1
     summary = "  ".join(f"{s}={counts[s]}" for s in _AUDIT_STATUSES)
     print(f"  totals: {summary}", file=stream)
+    # Optional legend — only meaningful when the similarity columns
+    # are actually in the table. Resolver decides on/off given the
+    # operator's ``--similarity-legend`` choice and the stream's TTY
+    # status; suppressed in JSON mode (handled by the early return
+    # above, which never reaches this footer block).
+    if with_similarity and _should_emit_similarity_legend(
+            legend_mode, stream):
+        _render_similarity_legend(stream, with_labels=with_labels)
 
 
 def _normalize_diff_base(ref: str) -> str:
