@@ -170,7 +170,9 @@ entirely (legacy schema).
 - [`check-placeholder-comments.py --help`](./check-placeholder-comments.py)
   — full flag reference for `--list-changed-files`,
   `--with-similarity`, `--dedupe-changed-files`,
-  `--only-changed-status`, `--similarity-csv`.
+  `--only-changed-status`, `--similarity-csv`,
+  `--similarity-legend` (see
+  [Score-column legend](#score-column-legend---similarity-legendautoonoff) below).
 - `linter-scripts/tests/test_with_similarity_flag.py` — executable
   examples of every shape documented above.
 - `linter-scripts/tests/test_similarity_csv_export.py` — schema
@@ -234,3 +236,92 @@ Score-of-`0` is classified by kind, **not** as `unscored` —
 percentage). A `C` row with `score=0` is `copy-similarity` (git
 observed the pair and rated them entirely dissimilar), not
 `unscored`.
+## Score-column legend (`--similarity-legend={auto,on,off}`)
+
+When `--with-similarity` is on, the text-mode audit table grows the
+`kind` / `score` / `old` triple (and `meaning` when
+`--similarity-labels` is also set). To help a human reading the run
+remember what those columns mean, the linter can append a short
+cheat-sheet to the audit — controlled by `--similarity-legend`:
+
+| Mode | When the legend prints |
+|---|---|
+| `auto` *(default)* | Only when STDERR is attached to an interactive terminal. Pipes, file redirects, and CI log captures stay byte-for-byte identical to the legacy output. |
+| `on` | Always — even over a pipe. Use this when rendering through `less -R`, `bat`, or any wrapper that strips TTY detection but a human is still reading. |
+| `off` | Never — even on a live terminal. Use this when the audit is being copy-pasted into a Jira / GitHub comment and the trailing prose is noise. |
+
+### Where the legend lives
+
+The legend is **always emitted on STDERR, after the totals footer**.
+Anything parsing column-aligned audit rows + the `totals: …` line
+sees the same byte sequence it always has up to that point — the
+legend is purely additive at the end.
+
+### When `--similarity-legend` is a no-op
+
+Two cases where the flag has no effect regardless of mode:
+
+- **Without `--with-similarity`** — the columns being explained
+  aren't in the table; emitting prose about them would be misleading.
+- **With `--json`** — the audit on STDERR is a JSON array (and STDOUT
+  is the violations document). Machine consumers don't need prose;
+  the JSON schema in [Record schema](#record-schema) is the contract.
+
+### Why `auto` defaults to off in CI
+
+CI runners pipe STDERR into a log capture, which is never a TTY. The
+`auto` resolver probes `os.isatty(stream.fileno())` on STDERR and
+treats every "can't positively confirm a TTY" outcome (no `fileno`,
+`OSError`, closed fd, ordinary pipe) as **not interactive** — so the
+default keeps log scrapers' byte stream stable. Operators who want the
+legend in CI anyway pass `--similarity-legend on` explicitly; the
+choice then shows up in the workflow file rather than depending on a
+runtime probe.
+
+### What the legend looks like
+
+With `--with-similarity --similarity-legend on`:
+
+```text
+  totals: matched=2  ignored-extension=0  ignored-out-of-root=0  ignored-missing=0  ignored-deleted=1
+  legend:
+    kind   R = rename, C = copy, - = plain A/M/D row
+    score  git's 0–100 similarity %, - if absent (authored payload without %, or plain row)
+    old    OLD-side path on R/C rows, - otherwise
+```
+
+Add `--similarity-labels` and the legend grows one more line:
+
+```text
+    meaning  rename-similarity / copy-similarity / unscored, - on plain rows
+```
+
+### Examples
+
+```bash
+# Live terminal — auto resolves to on, legend appears.
+python3 linter-scripts/check-placeholder-comments.py \
+    --root spec --diff-base origin/main \
+    --list-changed-files --with-similarity
+
+# CI log capture — auto resolves to off, legacy byte stream preserved.
+python3 linter-scripts/check-placeholder-comments.py \
+    --root spec --diff-base origin/main \
+    --list-changed-files --with-similarity 2>audit.log
+
+# Force the legend in CI when a human will read the artifact.
+python3 linter-scripts/check-placeholder-comments.py \
+    --root spec --diff-base origin/main \
+    --list-changed-files --with-similarity \
+    --similarity-legend on 2>audit.log
+
+# Suppress the legend on a live terminal you'll paste into a ticket.
+python3 linter-scripts/check-placeholder-comments.py \
+    --root spec --diff-base origin/main \
+    --list-changed-files --with-similarity \
+    --similarity-legend off
+```
+
+The flag's own `--help` block carries the same examples verbatim;
+`--help` is the source of truth, this section is the narrative
+companion.
