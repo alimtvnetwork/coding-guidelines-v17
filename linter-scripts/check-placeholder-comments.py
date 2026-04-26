@@ -1766,7 +1766,12 @@ def _resolve_changed_md(repo_root: Path, root: Path, *,
     # with a leading ``\x00D\x00`` sentinel so the audit pass can
     # mark them ``ignored-deleted`` without re-parsing the diff.
     raw: list[str] = []
-    deleted_paths: list[str] = []
+    # Each entry is ``(path, source)`` where ``source`` is one of
+    # ``_DELETED_REASON``'s keys. The audit emitter below maps
+    # ``source`` → human-readable ``reason`` so each
+    # ``ignored-deleted`` row in BOTH the text table AND the JSON
+    # payload explains *why* it was classified.
+    deleted_paths: list[tuple[str, str]] = []
     # When the caller asked for an audit trail, also collect rename/
     # copy provenance per new-path so the audit constructor below can
     # attach a ``_RenameSimilarity`` to every row whose path came from
@@ -1861,11 +1866,11 @@ def _resolve_changed_md(repo_root: Path, root: Path, *,
                 similarity=sim,
             ))
     if audit is not None:
-        for d in deleted_paths:
+        for d, src in deleted_paths:
             audit.append(_ChangedFileAudit(
                 path=d, status="ignored-deleted",
-                reason="git reported D (deleted): no post-state "
-                       "file to lint",
+                reason=_DELETED_REASON.get(
+                    src, _DELETED_REASON_FALLBACK),
             ))
     return out
 
