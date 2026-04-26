@@ -593,6 +593,23 @@ def main(argv: list[str] | None = None) -> int:
              "(e.g. line not in any captured hunk) simply omit the "
              "key, so legacy parsers keying off `file`/`line`/`code`/"
              "`message` keep working unchanged.")
+    ap.add_argument("--list-files", action="store_true",
+        help="Diagnostic: print exactly which `.md` files were "
+             "discovered under --root and how each one will be "
+             "treated for the current allowlist settings, then exit "
+             "0 without linting. Each file is classified as "
+             "`linted` (per-file violations will be reported) or "
+             "`cross-file-only` (file is scanned only for bullet "
+             "collection so cross-file P-007 collisions still "
+             "surface, but its own per-file violations are "
+             "suppressed — only happens in diff mode for unchanged "
+             "files). Honours --diff-base / --changed-files: in "
+             "full-tree mode every discovered file is `linted`. In "
+             "--json mode the output is a JSON array of "
+             "`{\"path\": str, \"status\": str, \"reason\": str}` "
+             "objects so CI scripts can parse it directly. Useful "
+             "for debugging \"why didn't the linter check this "
+             "file?\" without running the full scan.")
     args = ap.parse_args(argv)
 
     root = Path(args.root).resolve()
@@ -671,18 +688,86 @@ def main(argv: list[str] | None = None) -> int:
         except RuntimeError as e:
             print(f"error: {e}", file=sys.stderr)
             return 2
-        if not args.json:
+        # Suppress the "diff-mode active" banner when --list-files is
+        # set in --json mode: the listing's job is to emit a single
+        # parseable JSON array on stdout, and a leading human-readable
+        # banner would break json.loads(). Plain-text --list-files
+        # still benefits from the banner.
+        if not args.json and not (args.list_files and args.json):
             print(f"ℹ️  placeholder-comments: diff-mode active — "
                   f"{len(changed_md)} changed `.md` file(s) under {args.root}/")
         if not changed_md:
             # Nothing under --root changed → fast PASS. Cross-file P-007
             # has nothing new to report by definition (no new bullets).
+            # --list-files takes priority: emit an empty listing so
+            # the operator sees that "no files matched" is the actual
+            # answer, not "linter crashed silently".
+            if args.list_files:
+                if args.json:
+                    print("[]")
+                else:
+                    print(f"ℹ️  placeholder-comments: no `.md` files "
+                          f"under {args.root}/ matched the allowlist.")
+                return 0
             if args.json:
                 print("[]")
             else:
                 print(f"✅ placeholder-comments: no spec changes vs. diff base, "
                       "skipping scan.")
             return 0
+
+    # ---- --list-files diagnostic short-circuit -------------------
+    # Walk the same iterator the linter would walk and classify each
+    # discovered file the same way the main scan loop classifies it
+    # (see ``for md in iter_markdown_files(root)`` below). This is a
+    # READ-ONLY introspection: no file is parsed, no cache is read
+    # or written, no violations are emitted. The listing reflects
+    # exactly what the upcoming scan WOULD process — so a confused
+    # operator can compare expectations against reality without
+    # running the full lint.
+    if args.list_files:
+        rows: list[dict[str, str]] = []
+        for md in iter_markdown_files(root):
+            rel = str(md.relative_to(repo_root))
+            if changed_md is None:
+                # Full-tree mode: every discovered file is linted.
+                rows.append({"path": rel, "status": "linted",
+                             "reason": "full-tree mode (no diff base)"})
+            elif md.resolve() in changed_md:
+                rows.append({"path": rel, "status": "linted",
+                             "reason": "in changed-file set"})
+            else:
+                # Diff mode + unchanged file: scanned for bullets only
+                # so cross-file P-007 still works, but per-file
+                # violations are suppressed. Mirrors the
+                # ``_collect_bullets_only`` branch in the main loop.
+                rows.append({"path": rel, "status": "cross-file-only",
+                             "reason": "unchanged in diff; bullets "
+                                       "collected for P-007 only"})
+        # Stable ordering for diffable output: ``iter_markdown_files``
+        # already sorts via ``rglob``+``sorted``, but sort again here
+        # by path so a future iterator change can't silently shuffle
+        # the listing.
+        rows.sort(key=lambda r: r["path"])
+        if args.json:
+            # Single JSON document on stdout — no surrounding banner,
+            # no trailing summary, so ``json.loads(stdout)`` works.
+            print(json.dumps(rows, indent=2, ensure_ascii=False))
+        else:
+            n_linted = sum(1 for r in rows if r["status"] == "linted")
+            n_cross = sum(1 for r in rows
+                          if r["status"] == "cross-file-only")
+            mode = "diff" if changed_md is not None else "full-tree"
+            print(f"ℹ️  placeholder-comments: {len(rows)} `.md` "
+                  f"file(s) discovered under {args.root}/ "
+                  f"({mode} mode) — {n_linted} linted, "
+                  f"{n_cross} cross-file-only")
+            for r in rows:
+                # ``status:18`` keeps the path column aligned for
+                # ``cross-file-only`` (the longest status string).
+                print(f"  {r['status']:18s}  {r['path']}")
+            print(f"\n  Run without --list-files to actually lint.")
+        return 0
 
     # ---- Cache fast-path ------------------------------------------
     # The cache key fingerprints every input that can change the
