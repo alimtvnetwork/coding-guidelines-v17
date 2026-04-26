@@ -33,7 +33,14 @@ Eliminates step 2 friction. Authors `cp` and edit. Already in repo.
 30-second read; eliminates the most common review-time rejections (boolean negatives, magic strings, swallowed errors, version drift).
 
 ### 3. VS Code task — one-button validate
-Add `.vscode/tasks.json` entry that runs the validator + cross-link checker and surfaces output in the Problems panel:
+✅ **Shipped** in `.vscode/tasks.json`. Open the Command Palette → *Tasks: Run Task* → pick one of:
+
+- **Spec: Validate** (default test task) — `validate-guidelines.py` + `check-spec-cross-links.py`
+- **Spec: Sync derived artifacts** — `sync-spec-tree.mjs` + `sync-version.mjs`
+- **Spec: Validate + Sync (full pre-commit)** — runs all four in order
+- **Spec: Run all check-* guards** — full `scripts/hooks/pre-commit` mirror; use when CI fails and you can't tell which guard tripped
+
+Reference shape:
 
 ```jsonc
 {
@@ -46,16 +53,22 @@ Add `.vscode/tasks.json` entry that runs the validator + cross-link checker and 
 }
 ```
 
-Pair with a custom `problemMatcher` once the validator emits `file:line: message` lines, so violations show inline.
+Next iteration: pair with a custom `problemMatcher` once the validator emits `file:line: message` lines so violations land in the Problems panel inline.
 
 ### 4. Pre-commit hook expansion
-`scripts/hooks/pre-commit` already exists. Extend it to:
+✅ **Shipped** in `scripts/hooks/pre-commit`. The hook now runs three phases in addition to the original `linter-scripts/check-*` guards:
 
-1. Detect changes under `spec/` → run validator
-2. Detect any change → run sync scripts in order
-3. Detect `version.json` / `specTree.json` diff post-sync → re-stage
+1. **Spec guards** — when staged paths touch `spec/` or `.lovable/`, the hook runs `validate-guidelines.py` and `check-spec-cross-links.py`.
+2. **Sync** — `sync-spec-tree.mjs` and `sync-version.mjs` always run.
+3. **Auto re-stage** — if the sync phase changes `src/data/specTree.json` or `version.json`, the hook `git add`s them so the commit stays consistent.
 
-This collapses step 5 of the current flow into a no-op: the author can't commit without the synced state.
+Net effect: an author cannot commit a spec change that would later trip the CI drift checker. Step 5 of the current flow becomes a no-op.
+
+Install once per clone:
+
+```bash
+bash scripts/hooks/install-hooks.sh
+```
 
 ### 5. Live preview wired into the docs viewer
 The viewer already reads `src/data/specTree.json`. Add a dev-mode watch (or `bun run sync:watch`) that re-runs `sync-spec-tree.mjs` on `spec/**/*.md` save. Authors see their doc render in the live preview within ~1 s.
@@ -104,7 +117,7 @@ Authors of *code* (not specs) keep tripping on bare `true` / `false` positional 
 | Wave | Items | Cost | Payoff |
 |------|-------|------|--------|
 | **Now (this PR)** | 1, 2 | shipped | Authors can write a valid spec without reading the long-form guide |
-| **Next sprint** | 3, 4 | ~1 day | One-button validate + commit hook covers most CI failures locally |
+| **Wave 2 (this PR)** | 3, 4 | shipped | One-button validate + commit hook covers most CI failures locally |
 | **Following sprint** | 5, 6 | ~2 days | Real-time preview + frontmatter linter |
 | **Backlog** | 7, 8, 9, 10 | varies | Polish — every item independently shippable |
 
