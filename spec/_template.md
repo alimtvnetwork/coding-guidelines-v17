@@ -86,7 +86,7 @@ greppable, and the only block format the cross-link checker actively
 ignores:
 
 ```markdown
-<spec-placeholder reason="activate when target is created">
+<spec-placeholder reason="Activate when target is created.">
 - [Target Title](../NN-module-name/00-overview.md)
 - [Target Title](../NN-module-name/01-file-name.md#section-anchor)
 </spec-placeholder>
@@ -99,7 +99,7 @@ inside a fenced code block. New placeholders should use the tag form
 above.
 
 ```markdown
-<!-- TODO: activate when target is created
+<!-- TODO: Activate when target is created.
 - [Target Title](../NN-module-name/00-overview.md)
 - [Target Title](../NN-module-name/01-file-name.md#section-anchor)
 -->
@@ -112,6 +112,7 @@ Guidelines for placeholders (both formats):
 - If the anchor (`#section-anchor`) is unknown, omit it and add it later.
 - Prefer `<spec-placeholder>` for new authoring — only it is recognised by the cross-link checker's selective ignore.
 - Don't reserve the same target file in more than one placeholder — the linter's P-007 rule flags duplicates within a file *and* across files (anchor differences are collapsed). If two specs really need to link to the same future doc, activate the placeholder once it lands and let the live link be referenced from both places.
+- The wording after `TODO:` (or inside `reason="…"`) must start with an imperative verb from the P-001 allowlist (`activate`, `add`, `link`, `replace`, `wire`, `update`, `write`, `create`, `document`, `cross-reference`) and end with a period. Extend the list with `--allow-verb <verb>` when invoking the linter if you need a different verb.
 
 ### How to activate placeholders
 
@@ -129,7 +130,7 @@ starts validating them. Three steps, in order:
 **Before** (placeholder, ignored by the checker):
 
 ```markdown
-<!-- TODO: activate when target is created
+<!-- TODO: Activate when target is created.
 - [Database conventions](../04-database-conventions/00-overview.md)
 -->
 ```
@@ -149,7 +150,7 @@ one wrapped. Do **not** leave a half-commented block — the linter
 **Before:**
 
 ```markdown
-<!-- TODO: activate when targets are created
+<!-- TODO: Activate when targets are created.
 - [Naming conventions](../04-database-conventions/01-naming-conventions.md)
 - [Schema design](../04-database-conventions/02-schema-design.md)
 -->
@@ -160,7 +161,7 @@ one wrapped. Do **not** leave a half-commented block — the linter
 ```markdown
 - [Naming conventions](../04-database-conventions/01-naming-conventions.md)
 
-<!-- TODO: activate when target is created
+<!-- TODO: Activate when target is created.
 - [Schema design](../04-database-conventions/02-schema-design.md)
 -->
 ```
@@ -173,7 +174,7 @@ activation rather than leaving a stale link to the file root.
 **Before:**
 
 ```markdown
-<!-- TODO: activate when target is created
+<!-- TODO: Activate when target is created.
 - [Free-text columns](../04-database-conventions/02-schema-design.md)
 -->
 ```
