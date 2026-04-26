@@ -106,10 +106,21 @@ def strip_code_fences(text: str) -> str:
     return "\n".join(out)
 
 
+# Inline code spans (`...`) on a single line. We blank the contents but
+# preserve the line so subsequent line numbers stay accurate. Multi-line
+# spans are not standard CommonMark, so per-line handling is enough.
+INLINE_CODE_RE = re.compile(r"`+[^`\n]*?`+")
+
+
+def strip_inline_code(text: str) -> str:
+    return "\n".join(INLINE_CODE_RE.sub(lambda m: " " * len(m.group(0)), line)
+                     for line in text.splitlines())
+
+
 def lint_file(path: Path, repo_root: Path) -> list[Violation]:
     rel = str(path.relative_to(repo_root))
     text = path.read_text(encoding="utf-8")
-    lines = strip_code_fences(text).splitlines()
+    lines = strip_inline_code(strip_code_fences(text)).splitlines()
     out: list[Violation] = []
 
     i = 0
