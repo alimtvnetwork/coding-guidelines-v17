@@ -33,6 +33,65 @@ The audit array is a single JSON document — it is emitted in one write
 after all rows are collected, so partial / streaming readers see either
 the complete array or nothing.
 
+### Stream behaviour under failure / exception paths
+
+The "no interleaving" rule above describes the **happy path**. CI gates
+ingesting the audit need to know what to expect when the run **fails**
+too — otherwise a parser will surface a misleading "empty intake"
+result instead of "the linter never got far enough to build one."
+The contract under failure is deliberately conservative:
+
+| Failure source | Exit code | STDOUT | STDERR | Interleaved with audit? |
+|---|---|---|---|---|
+| CLI usage error (e.g. `--root` doesn't exist, `--diff-base` + `--changed-files` both set, bad `--diff-context`) | `2` | **empty** (0 bytes) | one-line `error: …` message | No — the failure returns **before** any audit is built. |
+| `git diff` fails (unknown ref, dirty index, repo not under git) | `2` | **empty** (0 bytes) | one-line `error: git diff vs. <ref> failed (exit N): <git stderr>` | No — `_resolve_changed_md` raises `RuntimeError` *before* `_render_changed_files_audit` is reached. |
+| `git` binary missing on PATH | `2` | **empty** (0 bytes) | one-line `error: git not found on PATH: …` | No — same early-raise pathway as above. |
+| Malformed `--changed-files` row (e.g. extension not on allowlist, post-state path missing) | `0` | normal violation summary or `[]` | normal audit (the bad row appears with `status=ignored-extension` / `ignored-missing` and a `reason` explaining why) | This is **not** a failure — the intake recovers and audits the row. |
+| Per-violation `git diff -U<N>` excerpt fetch fails (only matters with `--diff-context > 0`) | `0` | normal violation summary (the excerpt is silently omitted from that one violation) | normal audit | No — the failure is swallowed in `_changed_excerpt_or_none` and degrades gracefully; the audit array is unaffected. |
+| Uncaught Python exception (a bug, not a documented failure mode) | non-zero (Python-default 1) | **empty or partial** — depends on whether STDOUT was flushed before the exception | Python traceback to STDERR (after any partial audit text) | **Possibly.** A traceback can land on STDERR *after* a partially-emitted audit, so a strict `json.loads(stderr)` will fail. Treat any non-`0`/`2` exit as "do not parse STDERR as JSON." |
+
+Two practical consequences for CI consumers:
+
+1. **Always check exit code before parsing.** When the linter exits
+   `2`, STDOUT is **guaranteed empty** and STDERR is **guaranteed not
+   to be a JSON array** — it is a single-line `error: …` message.
+   Parsing STDERR as JSON in that case yields a `JSONDecodeError`,
+   not a misleading "zero records" reading. The bundled
+   [`validate-rename-intake.py`](./validate-rename-intake.py) returns
+   exit code `2` itself in this case, so the pipeline naturally
+   surfaces "the upstream linter never produced JSON" rather than
+   "the JSON was empty."
+2. **Never read STDOUT as a fallback for STDERR.** Even on failure
+   the streams stay disjoint: error text never lands on STDOUT, and
+   audit rows / `rename_intake` JSON never land on STDERR-on-success
+   *and* STDOUT in the same run. The only failure that can break this
+   is an uncaught exception (last row above), which is a bug worth
+   reporting upstream — not a contract.
+
+The recommended pipeline shape therefore is:
+
+```bash
+set -euo pipefail
+python3 linter-scripts/check-placeholder-comments.py \
+  --diff-base origin/main --list-changed-files \
+  --with-similarity --json \
+  > violations.json 2> rename-intake.json
+
+# At this point: if the linter exited 0 or 1 (lint-clean / has
+# violations) STDOUT is one JSON document and STDERR is one JSON
+# array. If it exited 2, STDOUT is empty and STDERR is a single
+# "error: …" line — `set -e` will already have aborted the script.
+
+python3 linter-scripts/validate-rename-intake.py \
+  rename-intake.json --with-similarity
+```
+
+The pre-flight `set -e` is the simplest way to make the
+failure-vs-empty distinction unambiguous: exit code `2` aborts the
+script before the validator ever runs, so "the validator received
+`[]`" can only mean "the linter actually produced an empty array,"
+never "the linter crashed and we're parsing an error message."
+
 ## CLI flags that gate `rename_intake` JSON emission
 
 `rename_intake` is the doc-name for the JSON array described in this
