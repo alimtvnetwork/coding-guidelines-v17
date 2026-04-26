@@ -315,6 +315,13 @@ class HelpTextDocumentsEnableAndDisableExamples(unittest.TestCase):
             capture_output=True, text=True, check=True,
         )
         cls.help_text = proc.stdout
+        # argparse word-wraps the help block to terminal width, so a
+        # phrase like ``--similarity-legend off`` may end up split
+        # across two lines as ``--similarity-legend\n  off``. The
+        # collapsed view normalises every whitespace run to a single
+        # space so substring assertions match the *intent* of the
+        # text rather than the wrap accidents of a given column count.
+        cls.help_collapsed = " ".join(cls.help_text.split())
 
     def test_help_block_present_for_similarity_legend(self) -> None:
         # Sanity: the flag still shows up in --help with its
@@ -331,14 +338,15 @@ class HelpTextDocumentsEnableAndDisableExamples(unittest.TestCase):
                 "`Examples:` section per the user's request")
 
     def test_enable_example_present(self) -> None:
-        # Concrete enable invocation must appear verbatim in the
-        # help text so an operator can copy-paste it.
-        self.assertIn("--similarity-legend on", self.help_text,
+        # Concrete enable invocation must appear in the help text so
+        # an operator can copy-paste it (search the collapsed view
+        # so an argparse line-wrap doesn't break the assertion).
+        self.assertIn("--similarity-legend on", self.help_collapsed,
             msg="help must show how to ENABLE the legend with "
                 "`--similarity-legend on`")
 
     def test_disable_example_present(self) -> None:
-        self.assertIn("--similarity-legend off", self.help_text,
+        self.assertIn("--similarity-legend off", self.help_collapsed,
             msg="help must show how to DISABLE the legend with "
                 "`--similarity-legend off`")
 
