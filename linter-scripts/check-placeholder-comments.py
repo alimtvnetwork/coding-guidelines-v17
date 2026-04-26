@@ -392,7 +392,8 @@ def lint_file(path: Path, repo_root: Path,
                     "`<spec-placeholder>` opened but never closed "
                     "(missing `</spec-placeholder>`)."))
                 continue
-            bullet_count = _validate_body(rel, open_line, body, out, file_bullets)
+            bullet_count = _validate_body(rel, open_line, body, out,
+                                          file_bullets, exts)
             if bullet_count == 0:
                 out.append(Violation(rel, open_line, "P-004",
                     "`<spec-placeholder>` block contains no valid bullet rows."))
@@ -425,7 +426,8 @@ def lint_file(path: Path, repo_root: Path,
             out.append(Violation(rel, open_line, "P-006",
                 "Placeholder comment opened but never closed (missing `-->`)."))
             continue
-        bullet_count = _validate_body(rel, open_line, body, out, file_bullets)
+        bullet_count = _validate_body(rel, open_line, body, out,
+                                      file_bullets, exts)
         if bullet_count == 0:
             out.append(Violation(rel, open_line, "P-004",
                 "Placeholder block contains no valid bullet rows."))
