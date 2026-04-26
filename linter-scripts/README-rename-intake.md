@@ -178,3 +178,42 @@ stay empty when no `_RenameSimilarity` is attached.
 `ISBLANK(E2)` and `E2=0` are **not** the same condition — keep them
 distinct when filtering. Dedupe and `--only-changed-status` run
 BEFORE the export, so the CSV mirrors what you saw on STDERR.
+
+## Per-kind score labels (`--similarity-labels`)
+
+`score` is an integer, but its *meaning* depends on the row's kind:
+for an `R` row it's how alike the two paths are (100 = byte-identical
+move); for a `C` row it's how much of the source survived in the
+copy (100 = verbatim duplicate). The two are not directly comparable
+— a 90 % rename and a 90 % copy describe different observations.
+
+`--similarity-labels` (opt-in, requires `--with-similarity`) makes
+that distinction explicit by attaching a canonical `score_kind`
+discriminator to every R/C row. The vocabulary is closed:
+
+| `score_kind` | Applies to | Score semantics |
+|---|---|---|
+| `rename-similarity` | `kind=R`, integer score | How alike the two paths are. |
+| `copy-similarity` | `kind=C`, integer score | How much of the source survived. |
+| `unscored` | `kind=R` or `kind=C`, `score=null` | Kind is meaningful, magnitude isn't. |
+| *(absent / empty)* | plain A/M/D rows | No rename/copy provenance to label. |
+
+Surfaces touched:
+
+- **JSON audit** — adds `score_kind` to the nested `similarity`
+  object. Plain rows whose `similarity` is `null` get no label
+  (absence already means "no provenance"). The legacy schema is
+  preserved byte-for-byte when the flag is off.
+- **Text table** — appends a `meaning` column after `old`. Plain
+  rows render `-` for visual consistency with the other similarity
+  cells.
+- **CSV export** — appends a 7th `score_kind` column. The first six
+  columns are unchanged so positional readers that hard-code indices
+  0–5 keep working without modification; opt into index 6 only when
+  you care about the discriminator.
+
+Score-of-`0` is classified by kind, **not** as `unscored` —
+`unscored` is reserved for `score=null` (authored payloads without a
+percentage). A `C` row with `score=0` is `copy-similarity` (git
+observed the pair and rated them entirely dissimilar), not
+`unscored`.
