@@ -799,6 +799,25 @@ def main(argv: list[str] | None = None) -> int:
              "BEFORE the export, so the CSV contains exactly the rows "
              "you'd see in the text/JSON audit. No-op without "
              "--list-changed-files.")
+    ap.add_argument("--similarity-csv-fields", default=None, metavar="LIST",
+        help="Comma-separated allow-list of columns to include in the "
+             "--similarity-csv export. The vocabulary is "
+             "`path,status,reason,kind,score,old_path,score_kind` — any "
+             "name not in that set raises a clean CLI error rather than "
+             "silently producing a wrong file. Order is preserved as "
+             "written, so `--similarity-csv-fields "
+             "score,kind,path,status` yields a CSV whose first column "
+             "is `score` (handy for sort-by-magnitude spreadsheets). "
+             "Common use: drop the OLD-side path when sharing the "
+             "audit externally — `--similarity-csv-fields "
+             "path,status,reason,kind,score`. The `score_kind` column "
+             "can be requested independently of --similarity-labels: "
+             "listing it here adds it to the CSV without affecting the "
+             "text-table or JSON surfaces; conversely, omitting it "
+             "while --similarity-labels is on trims the spreadsheet "
+             "view without touching the other surfaces. Duplicate "
+             "names raise. Whitespace around each token is stripped "
+             "(`path, status` works). No-op without --similarity-csv.")
     ap.add_argument("--similarity-labels", action="store_true",
         help="With --with-similarity, attach a per-kind discriminator "
              "to every rename/copy row so the score's *meaning* is "
