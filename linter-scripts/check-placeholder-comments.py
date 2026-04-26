@@ -1022,6 +1022,75 @@ def _resolve_changed_md(repo_root: Path, root: Path, *,
       * actually present on disk (a Modified path that was reverted
         in a later commit of the same push won't exist)
     """
+    kept, _ = _resolve_changed_md_with_classification(
+        repo_root, root,
+        diff_base=diff_base,
+        changed_files=changed_files,
+    )
+    return kept
+
+
+# Status strings used by --list-changed-files. Keep them stable: CI
+# scripts may parse the JSON form and key off these literals.
+#
+#   linted              → kept; will be scanned for per-file violations
+#   ignored-extension   → dropped because the path doesn't end in `.md`
+#                         (e.g. README.rst, src/foo.py touched by the
+#                         same PR — diff-mode only lints the spec
+#                         allowlist)
+#   ignored-out-of-root → kept the `.md` extension but lives outside
+#                         the resolved --root (e.g. a CHANGELOG.md at
+#                         the repo root when --root=spec/)
+#   ignored-missing     → matched extension + root but the post-state
+#                         file doesn't exist on disk (modified-then-
+#                         reverted in a later commit of the same push,
+#                         or a stale --changed-files entry)
+_CHANGED_FILE_STATUSES = (
+    "linted",
+    "ignored-extension",
+    "ignored-out-of-root",
+    "ignored-missing",
+)
+
+
+def _resolve_changed_md_with_classification(
+    repo_root: Path, root: Path, *,
+    diff_base: str | None,
+    changed_files: str | None,
+) -> tuple[set[Path], list[dict[str, str]]]:
+    """Like :func:`_resolve_changed_md` but also returns a per-path
+    classification of every raw post-state path that came out of git
+    (or ``--changed-files``).
+
+    The second tuple element is a list of
+    ``{"path": str, "status": str, "reason": str}`` rows where
+    ``status`` is one of :data:`_CHANGED_FILE_STATUSES`. ``path`` is
+    always the *repo-relative* post-state path, exactly as git
+    reported it (or as the user wrote it in ``--changed-files``), so
+    operators can copy-paste the row back into their tooling.
+
+    Rows are emitted in the same order git produced them, with
+    duplicates preserved — the listing is a faithful audit trail of
+    the diff-mode allowlist decision, not a deduplicated set.
+    """
+    raw = _collect_raw_changed_paths(
+        repo_root, diff_base=diff_base, changed_files=changed_files,
+    )
+    return _classify_changed_paths(raw, repo_root, root)
+
+
+def _collect_raw_changed_paths(
+    repo_root: Path, *,
+    diff_base: str | None,
+    changed_files: str | None,
+) -> list[str]:
+    """Return the raw post-state path list from git or --changed-files,
+    *before* extension/root/existence filtering. Factored out so
+    :func:`_resolve_changed_md` and the ``--list-changed-files``
+    diagnostic share a single source of truth — drift between the
+    "what got linted" and "what got reported as ignored" lists would
+    defeat the entire purpose of the diagnostic.
+    """
     # Each entry is the post-state repo-relative path. Rename/copy
     # rows contribute only their NEW side; deletes contribute nothing
     # (the diff-filter / parser drops them upstream).
@@ -1054,22 +1123,60 @@ def _resolve_changed_md(repo_root: Path, root: Path, *,
                     f"--changed-files {changed_files!r} unreadable: {e}"
                 ) from e
         raw = _normalise_changed_lines(lines)
-    out: set[Path] = set()
+    return raw
+
+
+def _classify_changed_paths(
+    raw: list[str], repo_root: Path, root: Path,
+) -> tuple[set[Path], list[dict[str, str]]]:
+    """Apply the diff-mode allowlist (extension → under-root → exists)
+    to ``raw`` post-state paths and emit both the kept set and a
+    per-path classification trail.
+
+    Mirrors the filter chain previously inlined in
+    :func:`_resolve_changed_md` exactly — the kept set this returns
+    is byte-for-byte identical to the legacy implementation. Blank
+    and ``#``-comment lines from ``--changed-files`` are silently
+    dropped (they aren't real paths and would clutter the listing
+    with phantom "ignored" rows).
+    """
+    kept: set[Path] = set()
+    rows: list[dict[str, str]] = []
     for line in raw:
         s = line.strip()
         if not s or s.startswith("#"):
             continue
+        # Filter step 1 — extension allowlist. We compare on the raw
+        # string so the operator sees the exact spelling git emitted
+        # (case-sensitive, matches git's behaviour on case-sensitive
+        # filesystems).
         if not s.endswith(".md"):
+            rows.append({"path": s, "status": "ignored-extension",
+                         "reason": "extension not in allowlist (.md)"})
             continue
         p = (repo_root / s).resolve()
+        # Filter step 2 — under --root. ``Path.relative_to`` raises
+        # ValueError when ``p`` isn't a descendant; that's the cheapest
+        # cross-platform "is under" check available without pulling in
+        # ``os.path.commonpath`` quirks on case-insensitive volumes.
         try:
             p.relative_to(root)
         except ValueError:
+            rows.append({"path": s, "status": "ignored-out-of-root",
+                         "reason": f"outside --root ({root})"})
             continue
+        # Filter step 3 — exists on disk. A modified-then-reverted
+        # file in the same push, or a stale --changed-files entry,
+        # both land here. We don't want to lint a path that isn't
+        # present in the post-state working tree.
         if not p.is_file():
+            rows.append({"path": s, "status": "ignored-missing",
+                         "reason": "post-state file not present on disk"})
             continue
-        out.add(p)
-    return out
+        kept.add(p)
+        rows.append({"path": s, "status": "linted",
+                     "reason": "matched extension + under root + exists"})
+    return kept, rows
 
 
 # `git diff --name-status -M` emits one of:
