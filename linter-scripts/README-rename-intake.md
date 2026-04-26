@@ -65,6 +65,30 @@ are stable and safe to grep in CI logs. New provenance tags will be
 added alongside their parser changes; an unknown tag falls back to
 a clearly labelled "provenance unknown" reason rather than crashing.
 
+### Verbose mode (`--list-changed-files-verbose`)
+
+Pass `--list-changed-files-verbose` (alongside `--list-changed-files`)
+to expose the raw provenance tag for every `ignored-deleted` row.
+Two surfaces, two contracts:
+
+- **JSON** — adds a `"source": str|null` key to **every** row
+  (`str` on `ignored-deleted` rows, `null` everywhere else) so the
+  schema stays regular for downstream consumers. Off (the default),
+  the key is **omitted entirely** — legacy 3-key schema preserved
+  byte-for-byte.
+- **Text** — appends a `source` column at the end of the fixed-
+  width cells (just before the variable-width `reason`). Non-
+  deleted rows render `-` to match the surrounding blank-cell
+  convention.
+
+Verbose mode also promises the `reason` wording is **machine-stable**
+for `ignored-deleted` rows — no future re-wording — so CI scripts
+can match on the full string instead of the substring guarantee
+above. Composes cleanly with `--with-similarity` (similarity
+columns first, then `source` last), `--dedupe-changed-files`
+(first-seen `source` wins), and `--only-changed-status` (filter
+runs after source attachment).
+
 ### `similarity` sub-object
 
 When `--with-similarity` is on, every record carries a `similarity`
