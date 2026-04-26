@@ -282,6 +282,34 @@ def _consume_block(lines: list[str], start: int, close_marker: str
     return body, i, False
 
 
+def _check_hint(rel: str, open_line: int, opener_text: str,
+                out: list[Violation], form: str) -> None:
+    """Enforce P-008: opener must contain an ``@path:line`` hint.
+
+    ``opener_text`` is the raw substring of the opening line starting
+    at the placeholder marker (``<!-- TODO ...`` or
+    ``<spec-placeholder ...>``). We only scan the opener line so the
+    rule is local: misplacing the hint in the body still fails, which
+    is intentional — it keeps the back-pointer adjacent to the marker
+    where reviewers grep.
+    """
+    if HINT_RE.search(opener_text):
+        return
+    if form == "tag":
+        fix = (
+            "add a back-pointer attribute, e.g. "
+            "`<spec-placeholder reason=\"... @spec/04-database/01-schema.md:42\">`"
+        )
+    else:
+        fix = (
+            "add a back-pointer to the marker line, e.g. "
+            "`<!-- TODO: activate when target lands @spec/04-database/01-schema.md:42`"
+        )
+    out.append(Violation(rel, open_line, "P-008",
+        "Placeholder opener is missing a `@path/to/file.ext:LINE` "
+        f"back-pointer hint; {fix}."))
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--root", default="spec",
