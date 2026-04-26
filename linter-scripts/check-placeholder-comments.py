@@ -93,6 +93,20 @@ TAG_CLOSE = "</spec-placeholder>"
 
 BULLET_LINK_RE = re.compile(r"^-\s+\[[^\]]+\]\(([^)\s]+)\)\s*$")
 
+# --- Back-pointer hint (P-008) ----------------------------------------
+# Required shape: ``@<path>:<line>`` where:
+#   * ``<path>`` is a relative-looking file path. We require at least
+#     one ``/`` so trivial words like ``@foo:1`` aren't accepted, and
+#     a final ``.<ext>`` so the hint clearly refers to a source file
+#     (``.md``, ``.py``, ``.ts``, ``.go``, ``.sh``, ``.toml``, …).
+#   * ``<line>`` is a positive integer.
+# Permissive on the path charset (anything that isn't whitespace, a
+# quote, or a closing-tag char) so deep paths with hyphens, digits,
+# and underscores pass without escaping. Verified syntactically only —
+# the hinted file/line is not opened (placeholders are forward-looking
+# and the hinted source may be mid-rename).
+HINT_RE = re.compile(r"@([^\s\"'>]+/[^\s\"'>]+\.[A-Za-z0-9]+):([1-9]\d*)\b")
+
 
 @dataclass(frozen=True)
 class Violation:
