@@ -40,6 +40,17 @@ from types import ModuleType
 _HERE = Path(__file__).resolve().parent
 _SCRIPTS = _HERE.parent
 
+# Make sibling snake-cased helper modules under ``linter-scripts/``
+# importable by tests via plain ``import audit_reason_vocab``. We
+# also need this on ``sys.path`` *before* the placeholder linter is
+# loaded so its own ``import audit_reason_vocab`` resolves to the
+# same module instance the test suite is asserting against — that
+# shared identity is what guarantees a tag-spelling drift between
+# production code and tests is caught at import time.
+_SCRIPTS_STR = str(_SCRIPTS)
+if _SCRIPTS_STR not in sys.path:
+    sys.path.insert(0, _SCRIPTS_STR)
+
 _CACHE: dict[str, ModuleType] = {}
 
 
@@ -68,3 +79,15 @@ def load_placeholder_linter() -> ModuleType:
     """Return the loaded ``check-placeholder-comments.py`` module."""
     return _load("check-placeholder-comments.py",
                  "check_placeholder_comments")
+
+
+def load_audit_reason_vocab() -> ModuleType:
+    """Return the shared ``audit_reason_vocab`` module — the single
+    source of truth for the ``ignored-deleted`` provenance tags and
+    per-source reason templates. Use this in tests when you want to
+    assert directly against the canonical vocabulary instead of
+    going through the linter's underscored re-exports.
+    """
+    import audit_reason_vocab  # imported lazily so the sys.path
+    # tweak above has already taken effect when tests call this.
+    return audit_reason_vocab

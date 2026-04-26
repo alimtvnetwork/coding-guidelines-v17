@@ -90,6 +90,26 @@ from dataclasses import dataclass, asdict
 from pathlib import Path
 from typing import Iterable
 
+# --- Shared reason vocabulary import ---------------------------------
+# The closed ``ignored-deleted`` source vocabulary and the per-source
+# reason templates live in a sibling, snake-cased module
+# (``audit_reason_vocab.py``) so the test suite can import the exact
+# same constants the audit emitter uses — guaranteeing tag spellings
+# never drift between production code and assertions.
+#
+# When this file is invoked directly (``python check-placeholder-
+# comments.py``), Python prepends the script's directory to
+# ``sys.path[0]`` and ``import audit_reason_vocab`` resolves
+# naturally. When the file is loaded through ``importlib.util.
+# spec_from_file_location`` (the test ``conftest_shim``), ``sys.path``
+# is NOT auto-augmented, so we defensively prepend the script's
+# directory if and only if it isn't already on the path. This is a
+# no-op in the common direct-invocation case.
+_SCRIPT_DIR = str(Path(__file__).resolve().parent)
+if _SCRIPT_DIR not in sys.path:
+    sys.path.insert(0, _SCRIPT_DIR)
+import audit_reason_vocab as _vocab  # noqa: E402
+
 
 # --- HTML-comment placeholder (legacy form) ---------------------------
 # Opening marker must be on the same line as ``<!--`` so we can detect
@@ -1472,75 +1492,18 @@ _SIMILARITY_BLANK = "-"
 # *which* rename. :func:`_resolve_deleted_reason` performs the
 # substitution; tags without a placeholder are returned verbatim,
 # so adding a new flat tag in the future stays a one-line change.
-_DELETED_REASON: dict[str, str] = {
-    "diff-D": ("git diff reported D (deleted): file removed in the "
-               "diff range, no post-state to lint"),
-    "changed-files-D": ("--changed-files payload row shaped `D\\tpath`: "
-                        "explicit delete marker, no post-state to lint"),
-    "diff-R-old": ("OLD side of a git rename (`R` row): file moved "
-                   "to `{new_path}` in the diff range, no post-state "
-                   "at this path to lint"),
-    "diff-C-old": ("OLD (source) side of a git copy (`C` row): "
-                   "duplicated to `{new_path}` in the diff range, "
-                   "no modification at this path to lint"),
-    "changed-files-R-old": ("OLD side of a `--changed-files` rename "
-                            "row: file moved to `{new_path}`, no "
-                            "post-state at this path to lint"),
-    "changed-files-C-old": ("OLD (source) side of a `--changed-files` "
-                            "copy row: duplicated to `{new_path}`, no "
-                            "modification at this path to lint"),
-}
-_DELETED_REASON_FALLBACK = ("path captured as a delete by the diff "
-                            "intake but provenance is unknown — "
-                            "treated as `ignored-deleted` for safety")
-
-
-# Closed source vocabulary surfaced by ``--list-changed-files-verbose``
-# and accepted by ``--only-deleted-source``. Frozen at module scope so
-# the CLI's argparse ``choices`` list, the renderer's footer-breakdown
-# code, and the README's documented contract all reference one source
-# of truth — adding a new tag is a one-line dict update above plus
-# (optionally) a deliberate vocabulary bump here. The order is the
-# canonical render order: ``D``-style tags first, then R/C-old tags
-# grouped by intake (``diff-`` then ``changed-files-``) so a per-tag
-# breakdown footer prints consistently across runs.
 #
-# The fallback message (returned by :func:`_resolve_deleted_reason`
-# for unknown tags) is intentionally NOT in this tuple — it's a
-# safety net for parser changes that haven't propagated, not a value
-# the operator can target with ``--only-deleted-source``.
-_DELETED_SOURCES: tuple[str, ...] = (
-    "diff-D",
-    "changed-files-D",
-    "diff-R-old",
-    "changed-files-R-old",
-    "diff-C-old",
-    "changed-files-C-old",
-)
-
-
-def _resolve_deleted_reason(source: str,
-                            new_path: "str | None" = None) -> str:
-    """Look up the human-readable ``reason`` for an ``ignored-deleted``
-    row given its provenance ``source`` tag.
-
-    Tags whose template embeds ``{new_path}`` (today: ``diff-R-old``,
-    ``diff-C-old``, ``changed-files-R-old``, ``changed-files-C-old``)
-    are formatted with the supplied destination path so the reviewer
-    sees where the file went. If ``new_path`` is missing on such a
-    tag (defensive — parsers always supply it today), the literal
-    ``"<unknown>"`` is substituted so the row stays scannable
-    instead of raising a ``KeyError`` mid-render.
-
-    Tags without a placeholder (``diff-D``, ``changed-files-D``)
-    return their template verbatim. Unknown tags fall back to
-    :data:`_DELETED_REASON_FALLBACK` so a future parser change
-    can't crash the audit emitter.
-    """
-    template = _DELETED_REASON.get(source, _DELETED_REASON_FALLBACK)
-    if "{new_path}" in template:
-        return template.format(new_path=new_path or "<unknown>")
-    return template
+# The actual constants live in the sibling ``audit_reason_vocab``
+# module so the test suite can import the *same* objects the audit
+# emitter uses (identity, not equality) — that guarantee is what
+# makes a tag-spelling drift between production code and tests
+# impossible. The underscored aliases below are kept as the
+# in-module public surface so every existing call site (renderers,
+# parsers, footer builder) stays unchanged.
+_DELETED_REASON = _vocab.DELETED_REASON
+_DELETED_REASON_FALLBACK = _vocab.DELETED_REASON_FALLBACK
+_DELETED_SOURCES = _vocab.DELETED_SOURCES
+_resolve_deleted_reason = _vocab.resolve_deleted_reason
 
 
 # Stable header for the ``--similarity-csv`` export. Frozen at module
