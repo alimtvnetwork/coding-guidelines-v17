@@ -786,8 +786,14 @@ def main(argv: list[str] | None = None) -> int:
 
 def _resolve_changed_md(repo_root: Path, root: Path, *,
                         diff_base: str | None,
-                        changed_files: str | None) -> set[Path]:
-    """Resolve the set of `.md` files under ``root`` that are changed.
+                        changed_files: str | None,
+                        exts: frozenset[str] | set[str] = DEFAULT_SOURCE_EXTS,
+                        ) -> set[Path]:
+    """Resolve the set of source files under ``root`` that are changed.
+
+    ``exts`` is the source-file extension allowlist (default
+    ``{".md"}``). Anything else in the diff (config, code, images)
+    is dropped — the linter only cares about its own source format.
 
     Two input modes:
       * ``diff_base`` → invoke
@@ -817,7 +823,7 @@ def _resolve_changed_md(repo_root: Path, root: Path, *,
         linted as a normal change.
 
     Returned paths are absolute + resolved and filtered to:
-      * extension ``.md``
+      * suffix in ``exts`` (compared lowercase)
       * residing under ``root`` (so a README change doesn't trigger a
         spec scan)
       * actually present on disk (a Modified path that was reverted
@@ -860,7 +866,8 @@ def _resolve_changed_md(repo_root: Path, root: Path, *,
         s = line.strip()
         if not s or s.startswith("#"):
             continue
-        if not s.endswith(".md"):
+        s_lower = s.lower()
+        if not any(s_lower.endswith(e) for e in exts):
             continue
         p = (repo_root / s).resolve()
         try:
