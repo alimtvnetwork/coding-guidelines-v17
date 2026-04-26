@@ -1586,6 +1586,7 @@ def _render_changed_files_audit(rows: list[_ChangedFileAudit],
                                 only_statuses: frozenset[str] | None = None,
                                 with_similarity: bool = False,
                                 with_labels: bool = False,
+                                legend_mode: str = _SIMILARITY_LEGEND_AUTO,
                                 ) -> None:
     """Print the diff-mode changed-file audit table to ``stream``.
 
@@ -1785,6 +1786,14 @@ def _render_changed_files_audit(rows: list[_ChangedFileAudit],
         counts[r.status] = counts.get(r.status, 0) + 1
     summary = "  ".join(f"{s}={counts[s]}" for s in _AUDIT_STATUSES)
     print(f"  totals: {summary}", file=stream)
+    # Optional legend — only meaningful when the similarity columns
+    # are actually in the table. Resolver decides on/off given the
+    # operator's ``--similarity-legend`` choice and the stream's TTY
+    # status; suppressed in JSON mode (handled by the early return
+    # above, which never reaches this footer block).
+    if with_similarity and _should_emit_similarity_legend(
+            legend_mode, stream):
+        _render_similarity_legend(stream, with_labels=with_labels)
 
 
 def _normalize_diff_base(ref: str) -> str:
