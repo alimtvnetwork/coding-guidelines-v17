@@ -137,6 +137,23 @@ function buildDeepLink(file, line) {
   return `${scheme}://file${abs}:${Math.max(1, line || 1)}`;
 }
 
+// The cross-link checker's "detail" field looks like:
+//   "text: ... · target: ../foo.md · detail: /abs/path/to/foo.md"
+// or "/abs/path/to/foo.md#anchor". Pull the resolved local file out of
+// the `detail:` segment so we can deep-link to the broken target too.
+function buildTargetLink(detailString) {
+  if (FLAGS.editor === "none" || !detailString) return null;
+  const m = detailString.match(/detail:\s*([^\s·]+)/);
+  if (!m) return null;
+  let target = m[1];
+  // Drop a trailing "#anchor" — editors don't honor it for plain files.
+  const hashIdx = target.indexOf("#");
+  if (hashIdx !== -1) target = target.slice(0, hashIdx);
+  if (!target || !existsSync(target)) return null;
+  const scheme = FLAGS.editor === "cursor" ? "cursor" : "vscode";
+  return `${scheme}://file${target}:1`;
+}
+
 const FLAGS = parseArgs(process.argv.slice(2));
 if (FLAGS.help) {
   console.log(USAGE);
