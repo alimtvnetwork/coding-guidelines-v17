@@ -801,6 +801,32 @@ def main(argv: list[str] | None = None) -> int:
              "`--only-changed-status ignored-extension` to debug why a "
              "PR's docs aren't being checked. No-op without "
              "--list-changed-files.")
+    ap.add_argument("--only-deleted-source", action="append",
+        default=None, choices=list(_DELETED_SOURCES), metavar="SOURCE",
+        help="With --list-changed-files, restrict the printed audit's "
+             "`ignored-deleted` rows to those whose intake provenance "
+             "is in this set (repeatable). Valid values match the "
+             "closed deleted-source vocabulary: `diff-D`, "
+             "`changed-files-D`, `diff-R-old`, `changed-files-R-old`, "
+             "`diff-C-old`, `changed-files-C-old`. Non-deleted rows "
+             "(`matched`, `ignored-extension`, `ignored-out-of-root`, "
+             "`ignored-missing`) pass through unchanged — this filter "
+             "is a SCALPEL on the deleted-rows bucket only, NOT a "
+             "second copy of `--only-changed-status`. To see ONLY "
+             "rename-source deletes, combine: "
+             "`--only-changed-status ignored-deleted "
+             "--only-deleted-source diff-R-old "
+             "--only-deleted-source changed-files-R-old`. Filtering "
+             "runs AFTER `--dedupe-changed-files` and AFTER "
+             "`--only-changed-status` so first-seen + status filters "
+             "still apply. The text-mode footer adds a `deleted-by-"
+             "source:` breakdown line counting EVERY source in the "
+             "canonical order (against the post-dedupe / pre-filter "
+             "rows) so the operator can see what was filtered out. "
+             "JSON mode strips non-matching `ignored-deleted` rows "
+             "from the array; the CSV export mirrors the same "
+             "filtered set. No-op without --list-changed-files; "
+             "no-op when no `ignored-deleted` rows are present.")
     ap.add_argument("--with-similarity", action="store_true",
         help="With --list-changed-files, include the rename/copy "
              "similarity metadata in the printed audit. Three extra "
