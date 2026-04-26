@@ -18,19 +18,35 @@
 #   bash scripts/lint-ci.sh           # run everything
 #   bash scripts/lint-ci.sh --list    # print the ordered step list and exit
 #   bash scripts/lint-ci.sh --no-cache  # disable placeholder-linter cache
+#   bash scripts/lint-ci.sh --diff-base <ref>
+#                                     # diff-mode placeholder lint vs. <ref>
+#                                     # (e.g. origin/main, HEAD~1) — only
+#                                     # changed `.md` files emit per-file
+#                                     # violations; cross-file P-007 still
+#                                     # walks the full tree.
 set -euo pipefail
 
 CACHE_FLAG="--cache-dir .cache/lint-placeholder"
+DIFF_FLAG=""
 LIST_ONLY=0
-for arg in "$@"; do
-  case "$arg" in
+while [[ $# -gt 0 ]]; do
+  case "$1" in
     --list)     LIST_ONLY=1 ;;
     --no-cache) CACHE_FLAG="" ;;
+    --diff-base)
+      shift
+      [[ $# -gt 0 ]] || { echo "::error::--diff-base needs a ref" >&2; exit 2; }
+      DIFF_FLAG="--diff-base $1"
+      ;;
+    --diff-base=*)
+      DIFF_FLAG="--diff-base ${1#--diff-base=}"
+      ;;
     -h|--help)
       sed -n '2,20p' "$0"; exit 0 ;;
     *)
-      echo "::error::unknown flag: $arg" >&2; exit 2 ;;
+      echo "::error::unknown flag: $1" >&2; exit 2 ;;
   esac
+  shift
 done
 
 # Step registry: each entry is "label|command". Order MUST match
@@ -45,7 +61,7 @@ STEPS=(
   "Check forbidden spec paths (re-split + merge-proposal guard)|bash linter-scripts/check-forbidden-spec-paths.sh"
   "Check forbidden strings (TOML-driven rename guards)|python3 linter-scripts/check-forbidden-strings.py"
   "Check README install section (position + one-line fences)|python3 linter-scripts/check-readme-install-section.py"
-  "Check spec placeholder comments (P-001 … P-008)|python3 linter-scripts/check-placeholder-comments.py ${CACHE_FLAG}"
+  "Check spec placeholder comments (P-001 … P-008)|python3 linter-scripts/check-placeholder-comments.py ${DIFF_FLAG} ${CACHE_FLAG}"
   "Validate spec internal cross-references|python3 linter-scripts/check-spec-cross-links.py --root spec --repo-root ."
 )
 
