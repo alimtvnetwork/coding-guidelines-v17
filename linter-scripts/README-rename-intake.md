@@ -296,12 +296,152 @@ recorded. Treat `score: 0` as "git observed and rated 0% similar"
   attachment, so filtered-out rows are absent from the array but their
   totals still appear in the human footer on STDERR.
 
+## Validating `rename_intake` output in CI
+
+The repo ships a stdlib-only validator at
+[`linter-scripts/validate-rename-intake.py`](./validate-rename-intake.py)
+that enforces every rule documented above (key set, closed `status`
+vocabulary, scored/unscored/`null` similarity trichotomy, plus the
+cross-field invariant that `ignored-deleted` rows always carry
+`similarity: null`). It has **zero external dependencies** so CI
+doesn't need an extra `pip install` step — Python 3.10+ is
+enough.
+
+### Quick reference
+
+```text
+usage: validate-rename-intake.py [INPUT] [--with-similarity]
+                                 [--with-labels] [--allow-empty]
+                                 [--print-schema] [--quiet]
+```
+
+| Flag | When to use it |
+|---|---|
+| `--with-similarity` | The upstream linter was invoked with `--with-similarity`. Validates the enriched 4-key schema (per-record `similarity` object/null required). |
+| `--with-labels` | The upstream linter was invoked with `--similarity-labels`. Implies `--with-similarity`. Requires `score_kind` on every non-null `similarity` object. |
+| `--allow-empty` | Treat `[]` as valid. Off by default because an empty array almost always means a misconfigured invocation. |
+| `--print-schema` | Print the formal JSON Schema (Draft 2020-12) for the requested mode and exit. Pipe into `check-jsonschema` / `ajv` if you want a richer validator. |
+| `--quiet` | Suppress the success line; failures still print. |
+
+`INPUT` is a file path, or `-` (the default) to read from stdin.
+
+Exit codes: **`0`** on success, **`1`** on schema violations (details on STDERR), **`2`** on invalid JSON or a CLI usage error. CI gates can rely on these without parsing output.
+
+### Capturing the audit on STDERR
+
+`rename_intake` JSON is emitted on **STDERR** (see the
+[stream contract](#stream-contract--stderr-vs-stdout)), so a CI step
+typically redirects STDERR into a file and STDOUT into `/dev/null`
+(or a separate sink for the violation summary):
+
+```bash
+python3 linter-scripts/check-placeholder-comments.py \
+  --diff-base origin/main \
+  --list-changed-files --with-similarity --json \
+  > /dev/null 2> rename-intake.json
+
+python3 linter-scripts/validate-rename-intake.py \
+  rename-intake.json --with-similarity
+```
+
+If you don't want a temp file, pipe STDERR straight into stdin:
+
+```bash
+python3 linter-scripts/check-placeholder-comments.py \
+  --diff-base origin/main \
+  --list-changed-files --with-similarity --json \
+  2>&1 >/dev/null | \
+python3 linter-scripts/validate-rename-intake.py - --with-similarity
+```
+
+(The `2>&1 >/dev/null` order is deliberate: it sends STDERR to the
+pipe and discards STDOUT.)
+
+### Drop-in CI snippets
+
+**GitHub Actions:**
+
+```yaml
+- name: Validate rename_intake JSON
+  run: |
+    python3 linter-scripts/check-placeholder-comments.py \
+      --diff-base origin/${{ github.base_ref || 'main' }} \
+      --list-changed-files --with-similarity --json \
+      > /dev/null 2> rename-intake.json
+    python3 linter-scripts/validate-rename-intake.py \
+      rename-intake.json --with-similarity
+
+- name: Upload audit artifact
+  if: always()
+  uses: actions/upload-artifact@v4
+  with:
+    name: rename-intake-${{ github.run_id }}
+    path: rename-intake.json
+```
+
+**GitLab CI:**
+
+```yaml
+validate_rename_intake:
+  image: python:3.12-slim
+  script:
+    - python3 linter-scripts/check-placeholder-comments.py
+        --diff-base "$CI_MERGE_REQUEST_DIFF_BASE_SHA"
+        --list-changed-files --with-similarity --json
+        > /dev/null 2> rename-intake.json
+    - python3 linter-scripts/validate-rename-intake.py
+        rename-intake.json --with-similarity
+  artifacts:
+    when: always
+    paths: [rename-intake.json]
+```
+
+**Pre-commit hook (local sanity check):**
+
+```yaml
+- repo: local
+  hooks:
+    - id: validate-rename-intake
+      name: Validate rename_intake JSON
+      language: system
+      pass_filenames: false
+      entry: bash -c '
+        python3 linter-scripts/check-placeholder-comments.py
+          --diff-base HEAD --list-changed-files --with-similarity
+          --json > /dev/null 2> /tmp/rename-intake.json &&
+        python3 linter-scripts/validate-rename-intake.py
+          /tmp/rename-intake.json --with-similarity'
+```
+
+### Using the formal JSON Schema with external tooling
+
+If your CI already runs a richer JSON-Schema validator (for cross-
+language schema gating, registry-backed schemas, etc.) you can
+export the equivalent Draft 2020-12 schema and feed it in:
+
+```bash
+python3 linter-scripts/validate-rename-intake.py \
+  --print-schema --with-similarity > rename-intake.schema.json
+
+# Example: check-jsonschema (pipx install check-jsonschema)
+check-jsonschema --schemafile rename-intake.schema.json \
+  rename-intake.json
+```
+
+The bundled validator and the printed schema are kept in lock-step
+by the test suite (`test_validate_rename_intake.py`), so either gate
+can be used interchangeably.
+
 ## See also
 
 - [`check-placeholder-comments.py --help`](./check-placeholder-comments.py)
   — full flag reference for `--list-changed-files`,
   `--with-similarity`, `--dedupe-changed-files`,
   `--only-changed-status`, `--similarity-csv`.
+- [`validate-rename-intake.py --help`](./validate-rename-intake.py)
+  — stdlib-only schema validator for `rename_intake` JSON, suitable
+  for CI gating; see *"Validating `rename_intake` output in CI"*
+  above for ready-to-paste pipeline snippets.
 - `linter-scripts/tests/test_with_similarity_flag.py` — executable
   examples of every shape documented above.
 - `linter-scripts/tests/test_similarity_csv_export.py` — schema
