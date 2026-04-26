@@ -149,6 +149,137 @@ STDERR audit is:
 Drop `--with-similarity` and the four `similarity` keys disappear
 entirely (legacy schema).
 
+## Ready-to-copy example: every `status` × scored / unscored
+
+The worked example above shows the four most common cases. The
+payload below is the **full matrix**: every `status` value in the
+closed audit vocabulary paired with each shape `similarity` can
+take (`{kind, score: int, old_path}`, `{kind, score: null,
+old_path}`, and `null`). It's a verified `--with-similarity --json`
+output, ready to drop straight into a fixture, a doc snippet, or
+a downstream consumer's mock.
+
+The same payload is shipped as a checked-in artifact at
+[`linter-scripts/examples/rename-intake-audit.json`](examples/rename-intake-audit.json)
+so test code can `json.load()` it without copy-paste drift.
+
+| `status` | `similarity` shape | When it happens |
+|---|---|---|
+| `matched` | `{kind, score: int, old_path}` | Git's `R<nn>` / `C<nn>` row, post-state under `--root` with an allowed extension. |
+| `matched` | `{kind, score: null, old_path}` | Authored `--changed-files` payload using `R\told\tnew` or `old => new` (no leading score). |
+| `matched` | `null` | Plain `A` / `M` row — no rename/copy provenance to attach. |
+| `ignored-extension` | `{kind, score: int, old_path}` | Renamed to / from an allow-listed extension; rename signal preserved so callers can audit it. |
+| `ignored-extension` | `{kind, score: null, old_path}` | Same, but the source payload was unscored. |
+| `ignored-extension` | `null` | Plain row whose extension isn't allow-listed. |
+| `ignored-out-of-root` | `{kind, score: int, old_path}` | Rename whose post-state path falls outside `--root`. |
+| `ignored-out-of-root` | `{kind, score: null, old_path}` | Same, unscored intake. |
+| `ignored-out-of-root` | `null` | Plain row outside `--root`. |
+| `ignored-missing` | `{kind, score: int, old_path}` | Rename whose post-state file vanished from disk (revert-during-push, .gitignore on checkout). |
+| `ignored-missing` | `null` | Plain row whose post-state file is missing. |
+| `ignored-deleted` | `null` | `D` row, or the **pre-state** half of a rename — there is no post-state to score, so `similarity` is **always** `null` for this status. |
+
+> **Note** — `ignored-deleted` rows always carry `similarity: null`
+> because the row represents a path that no longer exists; the
+> rename's *new* side (with the score) is recorded as a separate
+> `matched` / `ignored-*` row in the same audit.
+
+```json
+[
+  {
+    "path": "docs/new-name.md",
+    "status": "matched",
+    "reason": "under --root, extension allowed, file present on disk",
+    "similarity": {"kind": "R", "score": 92, "old_path": "docs/old-name.md"}
+  },
+  {
+    "path": "spec/copy.md",
+    "status": "matched",
+    "reason": "under --root, extension allowed, file present on disk",
+    "similarity": {"kind": "C", "score": 75, "old_path": "spec/template.md"}
+  },
+  {
+    "path": "spec/renamed-no-score.md",
+    "status": "matched",
+    "reason": "under --root, extension allowed, file present on disk",
+    "similarity": {"kind": "R", "score": null, "old_path": "spec/old.md"}
+  },
+  {
+    "path": "spec/copy-no-score.md",
+    "status": "matched",
+    "reason": "under --root, extension allowed, file present on disk",
+    "similarity": {"kind": "C", "score": null, "old_path": "spec/src.md"}
+  },
+  {
+    "path": "readme.md",
+    "status": "matched",
+    "reason": "under --root, extension allowed, file present on disk",
+    "similarity": null
+  },
+  {
+    "path": "spec/notes.txt",
+    "status": "ignored-extension",
+    "reason": "extension '.txt' not in allowlist ['.md']",
+    "similarity": {"kind": "R", "score": 88, "old_path": "spec/legacy.txt"}
+  },
+  {
+    "path": "spec/draft.txt",
+    "status": "ignored-extension",
+    "reason": "extension '.txt' not in allowlist ['.md']",
+    "similarity": {"kind": "R", "score": null, "old_path": "spec/sketch.txt"}
+  },
+  {
+    "path": "spec/scratch.txt",
+    "status": "ignored-extension",
+    "reason": "extension '.txt' not in allowlist ['.md']",
+    "similarity": null
+  },
+  {
+    "path": "tools/moved-here.md",
+    "status": "ignored-out-of-root",
+    "reason": "path is outside --root spec",
+    "similarity": {"kind": "R", "score": 95, "old_path": "spec/moved-from-here.md"}
+  },
+  {
+    "path": "tools/cloned-here.md",
+    "status": "ignored-out-of-root",
+    "reason": "path is outside --root spec",
+    "similarity": {"kind": "C", "score": null, "old_path": "spec/cloned-from-here.md"}
+  },
+  {
+    "path": "docs/outside.md",
+    "status": "ignored-out-of-root",
+    "reason": "path is outside --root spec",
+    "similarity": null
+  },
+  {
+    "path": "spec/missing-rename.md",
+    "status": "ignored-missing",
+    "reason": "post-state path is not on disk (reverted later in the push, or filtered by .gitignore on checkout)",
+    "similarity": {"kind": "R", "score": 81, "old_path": "spec/old-missing-name.md"}
+  },
+  {
+    "path": "spec/missing.md",
+    "status": "ignored-missing",
+    "reason": "post-state path is not on disk (reverted later in the push, or filtered by .gitignore on checkout)",
+    "similarity": null
+  },
+  {
+    "path": "spec/deleted.md",
+    "status": "ignored-deleted",
+    "reason": "git diff reported D (deleted)",
+    "similarity": null
+  }
+]
+```
+
+Reading the payload: scan a row's `similarity`. `null` ⇒ no
+rename/copy info (a plain row, or any `ignored-deleted` row).
+An object whose `score` is an integer ⇒ git observed and rated
+the pair. An object whose `score` is `null` ⇒ the row IS a
+rename/copy (`kind` is meaningful) but no percentage was ever
+recorded. Treat `score: 0` as "git observed and rated 0% similar"
+— it is **not** the same as `score: null`.
+
 ## Compatibility notes
 
 - **Field order is not part of the contract.** Parse by key, not by
