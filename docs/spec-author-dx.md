@@ -115,6 +115,16 @@ Output (default `/mnt/documents/`):
 
 Exit codes: `0` clean · `1` findings · `2` validator crash · `3` invalid CLI flags.
 
+#### CI integration
+
+The `spec-change-report` job in `.github/workflows/ci.yml` runs after the `lint` and `cross-links` jobs and always builds the report (`--all --editor none`). When either upstream validator fails, the job uploads `spec-change-report.html` + `.pdf` as the **`spec-change-report`** workflow artifact (14-day retention) and writes a download hint to the run's summary. Green PRs skip the upload to keep the artifact list tidy.
+
+Local equivalent of what CI runs:
+
+```bash
+node scripts/spec-change-report.mjs --all --editor none --out ./ci-artifacts
+```
+
 
 ### 5. Live preview wired into the docs viewer
 The viewer already reads `src/data/specTree.json`. Add a dev-mode watch (or `bun run sync:watch`) that re-runs `sync-spec-tree.mjs` on `spec/**/*.md` save. Authors see their doc render in the live preview within ~1 s.

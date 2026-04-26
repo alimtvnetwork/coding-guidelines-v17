@@ -319,3 +319,86 @@ jobs:
         #   npm run sync:fix      # regenerate everything in place
         #   git add -A && git commit -m "chore: sync generated files"
         run: npm run sync:check
+
+  spec-change-report:
+    name: Spec Change Report (HTML + PDF artifacts)
+    runs-on: ubuntu-latest
+    # Run after the validators so failures there surface a downloadable
+    # report on the PR. `if: always()` ensures we still build the report
+    # when `lint` or `cross-links` red-X — that's exactly when authors
+    # need it most.
+    needs: [lint, cross-links]
+    if: always()
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          # Need full history so the report's git-diff scoping
+          # (staged/unstaged/untracked) works against the PR base.
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Chromium for PDF rendering
+        # The report generator probes for chromium / google-chrome and
+        # falls back to HTML-only when none is found. Installing it here
+        # gives CI artifact uploads both an HTML and a PDF copy.
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends chromium-browser \
+            || sudo apt-get install -y --no-install-recommends chromium \
+            || echo "::warning::Chromium install failed — report will be HTML-only"
+
+      - name: Generate spec change report (full repo)
+        # `--all` scopes to the whole repo so the report mirrors what
+        # the lint + cross-links jobs validated. `--out` writes to a
+        # workspace path so upload-artifact can pick it up.
+        # Always exit 0 here — the artifact upload is the deliverable;
+        # the upstream jobs already gate the merge.
+        id: report
+        run: |
+          mkdir -p ci-artifacts/spec-change-report
+          node scripts/spec-change-report.mjs \
+            --all \
+            --editor none \
+            --out ci-artifacts/spec-change-report \
+            || echo "report_has_findings=true" >> "$GITHUB_OUTPUT"
+          ls -la ci-artifacts/spec-change-report/
+
+      - name: Upload report artifacts (on validator failure)
+        # Only upload when one of the upstream validation jobs failed —
+        # green PRs don't need a download. Artifact retains both the
+        # .html and .pdf so reviewers can preview inline or share.
+        if: needs.lint.result == 'failure' || needs.cross-links.result == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: spec-change-report
+          path: ci-artifacts/spec-change-report/
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Annotate PR with download hint (on validator failure)
+        if: needs.lint.result == 'failure' || needs.cross-links.result == 'failure'
+        run: |
+          {
+            echo "### 📋 Spec Change Report available"
+            echo ""
+            echo "One or more spec validators failed. A consolidated HTML + PDF"
+            echo "report has been uploaded as the **\`spec-change-report\`**"
+            echo "artifact at the bottom of this run's summary page."
+            echo ""
+            echo "Local equivalent:"
+            echo '```bash'
+            echo "node scripts/spec-change-report.mjs --all"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
