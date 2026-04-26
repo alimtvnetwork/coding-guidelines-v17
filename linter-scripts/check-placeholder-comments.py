@@ -510,6 +510,18 @@ def main(argv: list[str] | None = None) -> int:
         metavar="VERB",
         help="Add an extra imperative verb to the P-001 allowlist "
              "(repeatable). Use lowercase, hyphens allowed.")
+    ap.add_argument("--extension", action="append", default=None,
+        metavar="EXT",
+        help="Restrict spec discovery to files with this extension "
+             "(repeatable, no leading dot, case-sensitive). Default "
+             "is `md`. Each unique sorted allowlist gets its own "
+             "physical cache subdirectory under --cache-dir (e.g. "
+             "`<cache-dir>/ext-md/`, `<cache-dir>/ext-md+mdx/`) so "
+             "switching the allowlist never reads a sentinel written "
+             "for a different file set — even if a future bug made "
+             "the content hash collide. Side benefit: `rm -rf "
+             "<cache-dir>/ext-mdx/` nukes one allowlist's sentinels "
+             "without touching the others.")
     ap.add_argument("--cache-dir", default=None, metavar="DIR",
         help="Enable a content-addressed PASS cache. On a hit (the linter "
              "script + every scanned `.md` hash to the same key as a "
@@ -517,7 +529,9 @@ def main(argv: list[str] | None = None) -> int:
              "returned immediately. Misses run normally and write a fresh "
              "sentinel only on success. Stale or poisoned sentinels are "
              "ignored because the key is recomputed from the working tree "
-             "every run.")
+             "every run. Sentinels are stored under an extension-derived "
+             "subdirectory (see --extension) so different allowlists "
+             "never share a sentinel pool.")
     ap.add_argument("--no-cache-write", action="store_true",
         help="With --cache-dir, read the sentinel but never write it. "
              "Useful for read-only / forked-repo CI runs.")
