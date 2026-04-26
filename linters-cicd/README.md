@@ -144,6 +144,15 @@ Future phases add PHP, Python, Rust, and any language you ask for —
 plugin model documented in
 [`02-plugin-model.md`](../spec/02-coding-guidelines/06-cicd-integration/02-plugin-model.md).
 
+### Adding your own rule
+
+There is a complete copy-paste starter kit at
+[`checks/_template/`](./checks/_template/README.md) — a working
+example rule (`TEMPLATE-001` — leftover `var_dump`/`print_r` debug
+calls), fixtures, unit tests, and a 7-step checklist written for
+an autonomous AI agent. It lands a new CI-blocking rule in one
+iteration without touching any shared library.
+
 ---
 
 ## Supported languages matrix
