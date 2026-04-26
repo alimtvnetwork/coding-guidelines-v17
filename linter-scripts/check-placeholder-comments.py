@@ -240,16 +240,37 @@ def iter_markdown_files(
     per-extension globs into a single sorted, deduplicated stream so
     a future ``--extension md --extension mdx`` run can't yield the
     same path twice (e.g. on a case-insensitive filesystem).
+
+    Extension matching is **case-insensitive** to keep behaviour
+    identical across platforms. On Linux CI ``rglob("*.md")`` only
+    finds the lowercase form, so a file checked in as ``README.MD``
+    (legitimate on Windows + macOS where the FS folds case) would be
+    silently invisible to the linter — but the diff-mode audit (which
+    lowercases the suffix at classification time) would still mark it
+    ``matched``. That asymmetry produced a "passes locally, fails on
+    Windows" class of bug. We now lowercase the suffix in the
+    iterator too, so the full-tree walk and the diff-mode
+    classification agree on every platform.
     """
+    # Pre-compute the lowercase, dot-prefixed allowlist once so the
+    # per-file check is a single set lookup. Matches the shape of
+    # ``allowed_exts`` inside :func:`_resolve_changed_md` so the two
+    # codepaths apply identical rules.
+    allowed = {("." + e.lstrip(".").lower()) for e in extensions}
     seen: set[Path] = set()
-    candidates: list[Path] = []
-    for ext in extensions:
-        for p in root.rglob(f"*.{ext}"):
-            if p in seen:
-                continue
-            seen.add(p)
-            candidates.append(p)
-    for p in sorted(candidates):
+    # ``rglob("*")`` walks every entry once and we filter by suffix
+    # ourselves. This is the same number of FS calls as the previous
+    # per-extension globs (which all walked the tree internally) and
+    # gives us case-insensitive matching for free.
+    for p in root.rglob("*"):
+        if not p.is_file():
+            continue
+        if p.suffix.lower() not in allowed:
+            continue
+        if p in seen:
+            continue
+        seen.add(p)
+    for p in sorted(seen):
         if any(part.startswith(".") for part in p.relative_to(root).parts):
             continue
         yield p
