@@ -1509,6 +1509,7 @@ def _unquote_git_path(field: str) -> str:
 def _parse_name_status(stdout: str,
                        *,
                        deleted: list[str] | None = None,
+                       similarities: "dict[str, _RenameSimilarity] | None" = None,
                        ) -> list[str]:
     """Extract the post-state path from each ``git diff --name-status``
     row, mapping renames + copies to their NEW side.
@@ -1520,6 +1521,15 @@ def _parse_name_status(stdout: str,
     appended to it (in input order, after :func:`_unquote_git_path`).
     The audit trail uses this to surface ``ignored-deleted`` rows
     without re-parsing the diff.
+
+    When ``similarities`` is provided, every ``R``/``C`` row contributes
+    one ``new_path → _RenameSimilarity`` entry. The mapping key is the
+    *unquoted* new path (so it matches what ``raw`` carries downstream)
+    and the value records ``kind`` (``R``/``C``), ``score`` (0–100, or
+    ``None`` when git emitted no digits — pathological but cheap to
+    tolerate), and the unquoted ``old_path``. Plain A/M/D/T rows are
+    not recorded — the renderer treats their absence as "no similarity
+    metadata" and prints the dash sentinel.
 
     Hardened against git's path-quoting and whitespace edge cases:
 
@@ -1559,7 +1569,16 @@ def _parse_name_status(stdout: str,
             # ``cols[2]`` is required; ``cols[1]`` (old) may be empty
             # in pathological inputs — we don't need it for linting.
             if len(cols) >= 3 and cols[2] != "":
-                out.append(_unquote_git_path(cols[2]))
+                new_path = _unquote_git_path(cols[2])
+                out.append(new_path)
+                if similarities is not None:
+                    score_raw = m.group(2)
+                    score = int(score_raw) if score_raw else None
+                    similarities[new_path] = _RenameSimilarity(
+                        kind=kind,
+                        score=score,
+                        old_path=_unquote_git_path(cols[1]) if cols[1] else "",
+                    )
         elif kind in ("A", "M"):
             # Add / modify: cols = [A|M, path]. Take path.
             if cols[1] != "":
