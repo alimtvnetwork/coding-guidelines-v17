@@ -176,7 +176,12 @@ class DeletedPathParserUnit(unittest.TestCase):
         self.mod = mod
 
     def test_parse_name_status_captures_d_rows(self) -> None:
-        deleted: list[str] = []
+        # ``deleted`` carries ``(path, source)`` tuples so the audit
+        # emitter can look up a per-provenance ``reason`` string
+        # (which surfaces in the JSON payload too).
+        # ``_parse_name_status`` is the diff-D path → source is
+        # always ``"diff-D"`` for every row it captures.
+        deleted: list[tuple[str, str]] = []
         out = self.mod._parse_name_status(
             "A\tspec/new.md\n"
             "D\tspec/old.md\n"
@@ -185,8 +190,10 @@ class DeletedPathParserUnit(unittest.TestCase):
             deleted=deleted,
         )
         self.assertEqual(out, ["spec/new.md", "spec/edit.md"])
-        self.assertEqual(deleted,
-            ["spec/old.md", "spec/another-old.md"])
+        self.assertEqual(deleted, [
+            ("spec/old.md", "diff-D"),
+            ("spec/another-old.md", "diff-D"),
+        ])
 
     def test_parse_name_status_no_deleted_arg_drops_d_rows(self) -> None:
         # Backwards-compat: omitting ``deleted=`` keeps the historical
@@ -196,13 +203,16 @@ class DeletedPathParserUnit(unittest.TestCase):
         self.assertEqual(out, ["spec/new.md"])
 
     def test_normalise_changed_lines_diverts_d_rows(self) -> None:
-        deleted: list[str] = []
+        # ``--changed-files`` payload's ``D\tpath`` rows are tagged
+        # ``changed-files-D`` so the audit emitter (and the JSON
+        # payload) can distinguish them from real ``git diff`` D rows.
+        deleted: list[tuple[str, str]] = []
         out = self.mod._normalise_changed_lines(
             ["spec/keep.md", "D\tspec/gone.md", "spec/also.md"],
             deleted=deleted,
         )
         self.assertEqual(out, ["spec/keep.md", "spec/also.md"])
-        self.assertEqual(deleted, ["spec/gone.md"])
+        self.assertEqual(deleted, [("spec/gone.md", "changed-files-D")])
 
 
 if __name__ == "__main__":
