@@ -534,6 +534,30 @@ def main(argv: list[str] | None = None) -> int:
              "Docusaurus site) and you want the linter to cover "
              "both with a single short flag instead of repeating "
              "`--extension md --extension mdx` in every CI invocation.")
+    ap.add_argument("--diff-rename-log",
+        dest="diff_rename_log", action="store_true", default=None,
+        help="Diff mode only: emit a compact rename/copy intake table "
+             "to STDERR listing every R/C row produced by `git diff "
+             "--name-status -M -C` (or by rename rows in "
+             "--changed-files). Columns: kind (R/C), similarity "
+             "score (0-100, blank for unscored input), old path, new "
+             "path. Useful for auditing PRs that move spec files "
+             "around — you can confirm the linter saw the rename and "
+             "is now scanning the post-rename location. Tri-state: "
+             "auto (default) prints the table only when at least one "
+             "R/C row is seen AND output isn't --json (so machine "
+             "consumers stay clean); --diff-rename-log forces it ON "
+             "even on empty intake (useful for CI logs that want a "
+             "consistent header); --no-diff-rename-log forces it "
+             "OFF. Always written to STDERR so --json STDOUT remains "
+             "a single parseable document regardless of mode. No-op "
+             "in full-tree mode (no diff to report on).")
+    ap.add_argument("--no-diff-rename-log",
+        dest="diff_rename_log", action="store_false",
+        help="Force the rename/copy intake table OFF, even when R/C "
+             "rows would otherwise trigger the auto-print. Use on "
+             "PRs with hundreds of renames where the table would "
+             "drown the violation summary.")
     ap.add_argument("--cache-dir", default=None, metavar="DIR",
         help="Enable a content-addressed PASS cache. On a hit (the linter "
              "script + every scanned `.md` hash to the same key as a "
@@ -689,15 +713,46 @@ def main(argv: list[str] | None = None) -> int:
     # unchanged target is reported.
     changed_md: set[Path] | None = None
     if args.diff_base or args.changed_files:
+        # Decide upfront whether to allocate the intake list. Force-
+        # OFF (``--no-diff-rename-log``) skips the allocation entirely
+        # so a PR with thousands of renames doesn't pay any memory
+        # cost. Auto (None) and force-ON (True) both collect, so the
+        # auto branch can decide-to-print based on row count.
+        rename_intake: list[_DiffIntakeRow] | None = (
+            None if args.diff_rename_log is False else []
+        )
         try:
             changed_md = _resolve_changed_md(
                 repo_root, root,
                 diff_base=args.diff_base,
                 changed_files=args.changed_files,
+                intake=rename_intake,
             )
         except RuntimeError as e:
             print(f"error: {e}", file=sys.stderr)
             return 2
+        # ---- Rename/copy intake table render ---------------------
+        # Resolution table for the tri-state ``--diff-rename-log``:
+        #
+        #   flag value | render?
+        #   -----------+--------------------------------------------
+        #   None       | only if ``rename_intake`` is non-empty AND
+        #              | --json is OFF (auto-quiet on empty / JSON)
+        #   True       | always (force ON; useful for CI banners)
+        #   False      | never (force OFF; intake list is None)
+        #
+        # Always rendered to STDERR so --json STDOUT stays a single
+        # parseable document under every override. The table itself
+        # is purely diagnostic — verdicts never depend on it.
+        if rename_intake is not None:
+            should_render = (
+                args.diff_rename_log is True
+                or (args.diff_rename_log is None
+                    and rename_intake
+                    and not args.json)
+            )
+            if should_render:
+                _render_rename_intake_table(rename_intake, sys.stderr)
         if not args.json:
             print(f"ℹ️  placeholder-comments: diff-mode active — "
                   f"{len(changed_md)} changed `.md` file(s) under {args.root}/")
@@ -936,9 +991,12 @@ def main(argv: list[str] | None = None) -> int:
     return 1 if violations else 0
 
 
-def _resolve_changed_md(repo_root: Path, root: Path, *,
-                        diff_base: str | None,
-                        changed_files: str | None) -> set[Path]:
+def _resolve_changed_md(
+    repo_root: Path, root: Path, *,
+    diff_base: str | None,
+    changed_files: str | None,
+    intake: list[_DiffIntakeRow] | None = None,
+) -> set[Path]:
     """Resolve the set of `.md` files under ``root`` that are changed.
 
     Two input modes:
@@ -974,6 +1032,14 @@ def _resolve_changed_md(repo_root: Path, root: Path, *,
         spec scan)
       * actually present on disk (a Modified path that was reverted
         in a later commit of the same push won't exist)
+
+    Optional ``intake`` out-param: when a list is provided, it's
+    threaded into the underlying parser (:func:`_parse_name_status`
+    or :func:`_normalise_changed_lines`) so the caller receives the
+    rename/copy intake table for the active diff source. Caller's
+    responsibility: an empty list ⇒ no R/C rows seen (NOT "diagnostic
+    disabled"), ``None`` ⇒ "I don't want the table at all". This
+    split keeps the disable-the-flag path zero-allocation.
     """
     # Each entry is the post-state repo-relative path. Rename/copy
     # rows contribute only their NEW side; deletes contribute nothing
@@ -994,7 +1060,7 @@ def _resolve_changed_md(repo_root: Path, root: Path, *,
                 f"git diff vs. {diff_base!r} failed (exit {e.returncode}): "
                 f"{e.stderr.strip() or '(no stderr)'}"
             ) from e
-        raw = _parse_name_status(proc.stdout)
+        raw = _parse_name_status(proc.stdout, intake=intake)
     else:
         assert changed_files is not None
         if changed_files == "-":
@@ -1006,7 +1072,7 @@ def _resolve_changed_md(repo_root: Path, root: Path, *,
                 raise RuntimeError(
                     f"--changed-files {changed_files!r} unreadable: {e}"
                 ) from e
-        raw = _normalise_changed_lines(lines)
+        raw = _normalise_changed_lines(lines, intake=intake)
     out: set[Path] = set()
     for line in raw:
         s = line.strip()
@@ -1035,6 +1101,38 @@ def _resolve_changed_md(repo_root: Path, root: Path, *,
 # Tabs are the field separator; we split on tab and key off the first
 # character of column 0 to decide which column carries the new path.
 _NAME_STATUS_RE = re.compile(r"^([AMDRCTUX])(\d{0,3})$")
+
+
+@dataclass(frozen=True)
+class _DiffIntakeRow:
+    """One row of the rename/copy intake table.
+
+    Captured from ``git diff --name-status -M -C`` (or, for the
+    ``--changed-files`` path, from rename rows in the user-supplied
+    payload). The table is purely diagnostic — :func:`_resolve_changed_md`
+    still drives off the post-state path list as before, so suppressing
+    the table never changes lint verdicts.
+
+    Fields:
+      * ``kind`` — single-char status: ``"R"`` (renamed) or ``"C"``
+        (copied). Plain A/M rows are NOT captured: they aren't
+        renames and would clutter the table that the operator
+        opted into specifically to audit rename/copy intake.
+      * ``score`` — git's similarity score (0–100) when present,
+        ``None`` when the source row didn't carry one (e.g. an
+        unscored ``R\\told\\tnew`` from hand-edited input).
+      * ``old`` — pre-rename path. May be empty string in
+        pathological inputs where git emits ``R<score>\\t\\tnew``;
+        we render it as ``"(unknown)"`` rather than dropping the
+        row, so the audit trail still reflects that a rename row
+        was seen.
+      * ``new`` — post-rename path. Always non-empty (we filter
+        empty-new rows upstream — they'd be useless for linting).
+    """
+    kind: str
+    score: int | None
+    old: str
+    new: str
 
 
 # Git emits paths in C-quoted form (``"path\twith\ttab"``) when
@@ -1116,7 +1214,10 @@ def _unquote_git_path(field: str) -> str:
     return "".join(out)
 
 
-def _parse_name_status(stdout: str) -> list[str]:
+def _parse_name_status(
+    stdout: str,
+    intake: list[_DiffIntakeRow] | None = None,
+) -> list[str]:
     """Extract the post-state path from each ``git diff --name-status``
     row, mapping renames + copies to their NEW side.
 
@@ -1138,6 +1239,12 @@ def _parse_name_status(stdout: str) -> list[str]:
     * Whitespace-only paths (``"   "``) are kept as-is — POSIX
       permits them, and ``Path.is_file()`` downstream will resolve
       whether the file actually exists.
+    Optional ``intake`` out-param: when a list is provided, every R/C
+    row (and ONLY R/C rows) is appended as a :class:`_DiffIntakeRow`
+    so the caller can render a rename/copy intake table later. A/M
+    rows are not captured — they aren't renames. Passing ``None``
+    (the default) preserves the legacy behaviour and the hot path
+    pays nothing for the diagnostic.
     """
     out: list[str] = []
     for line in stdout.splitlines():
@@ -1156,12 +1263,25 @@ def _parse_name_status(stdout: str) -> list[str]:
         if not m:
             continue
         kind = m.group(1)
+        score_raw = m.group(2)
         if kind in ("R", "C"):
             # Rename / copy: cols = [R<score>, old, new]. Take new.
             # ``cols[2]`` is required; ``cols[1]`` (old) may be empty
             # in pathological inputs — we don't need it for linting.
             if len(cols) >= 3 and cols[2] != "":
-                out.append(_unquote_git_path(cols[2]))
+                new_path = _unquote_git_path(cols[2])
+                out.append(new_path)
+                if intake is not None:
+                    # ``cols[1]`` may be empty in malformed input;
+                    # propagate as empty string and let the renderer
+                    # decide how to display it (``"(unknown)"``).
+                    old_path = (_unquote_git_path(cols[1])
+                                if len(cols) >= 2 else "")
+                    score = int(score_raw) if score_raw else None
+                    intake.append(_DiffIntakeRow(
+                        kind=kind, score=score,
+                        old=old_path, new=new_path,
+                    ))
         elif kind in ("A", "M"):
             # Add / modify: cols = [A|M, path]. Take path.
             if cols[1] != "":
@@ -1189,7 +1309,10 @@ def _parse_name_status(stdout: str) -> list[str]:
 _RENAME_ARROW_RE = re.compile(r"^\s*(?P<old>.+?)\s*=>\s*(?P<new>.+?)\s*$")
 
 
-def _normalise_changed_lines(lines: list[str]) -> list[str]:
+def _normalise_changed_lines(
+    lines: list[str],
+    intake: list[_DiffIntakeRow] | None = None,
+) -> list[str]:
     """Collapse rename-bearing rows in a ``--changed-files`` payload
     down to their post-rename path.
 
@@ -1216,6 +1339,13 @@ def _normalise_changed_lines(lines: list[str]) -> list[str]:
       Windows input) is passed through verbatim so the caller's
       blank/comment filter can still discard it on the same line
       number.
+
+    Optional ``intake`` out-param: when a list is provided, every
+    rename-shaped row (tab-separated triple OR arrow form) is
+    appended as a :class:`_DiffIntakeRow`. Plain paths (no tab, no
+    arrow) are NOT captured — we have no way to know whether they
+    were originally R/C rows that the upstream CI already collapsed.
+    The hot path stays free when ``intake is None``.
     """
     out: list[str] = []
     for line in lines:
@@ -1240,7 +1370,37 @@ def _normalise_changed_lines(lines: list[str]) -> list[str]:
                     new_col = c
                     break
             if new_col:
-                out.append(_unquote_git_path(new_col))
+                new_path = _unquote_git_path(new_col)
+                out.append(new_path)
+                if intake is not None:
+                    # Recover OLD + R/C score from the leading status
+                    # token when present. Mirrors the logic in
+                    # ``_parse_name_status`` so both intake sources
+                    # produce identically-shaped rows.
+                    status_match = (_NAME_STATUS_RE.match(cols[0])
+                                    if cols and cols[0] else None)
+                    if (status_match
+                            and status_match.group(1) in ("R", "C")
+                            and len(cols) >= 3):
+                        score_raw = status_match.group(2)
+                        intake.append(_DiffIntakeRow(
+                            kind=status_match.group(1),
+                            score=int(score_raw) if score_raw else None,
+                            old=_unquote_git_path(cols[1]),
+                            new=new_path,
+                        ))
+                    elif (len(cols) >= 2 and cols[0]
+                          and cols[0] != new_col):
+                        # Tabbed but no R/C status token (e.g. a
+                        # hand-written ``OLD\tNEW`` shorthand). The
+                        # most useful interpretation for an audit
+                        # table is "rename, unknown score" — A/M
+                        # paths from git never carry a tab.
+                        intake.append(_DiffIntakeRow(
+                            kind="R", score=None,
+                            old=_unquote_git_path(cols[0]),
+                            new=new_path,
+                        ))
             continue
         # Arrow form: `OLD => NEW`.
         m = _RENAME_ARROW_RE.match(line)
@@ -1249,10 +1409,95 @@ def _normalise_changed_lines(lines: list[str]) -> list[str]:
             # Trim at boundaries (regex already did greedy-min) but
             # don't touch interior whitespace. Then unquote in case
             # the user pasted a C-quoted form from ``git status``.
-            out.append(_unquote_git_path(new_path.strip()))
+            new_unq = _unquote_git_path(new_path.strip())
+            out.append(new_unq)
+            if intake is not None:
+                # ``git status -s`` arrow form has no similarity
+                # score — record as ``None`` so the renderer omits
+                # the score column for these rows.
+                intake.append(_DiffIntakeRow(
+                    kind="R", score=None,
+                    old=_unquote_git_path(m.group("old").strip()),
+                    new=new_unq,
+                ))
             continue
         out.append(line)
     return out
+
+
+def _render_rename_intake_table(rows: list[_DiffIntakeRow],
+                                stream) -> None:
+    """Render the rename/copy intake table to ``stream`` (typically
+    ``sys.stderr``).
+
+    Output shape::
+
+        ── rename/copy intake (3 row(s)) ──
+        kind  score  old                            →  new
+        R     092    spec/old-name.md               →  spec/new-name.md
+        R     ---    spec/legacy/intro.md           →  spec/intro.md
+        C     057    spec/template.md               →  spec/feature/intro.md
+
+    * ``kind`` is one column wide (R or C).
+    * ``score`` is right-padded to 5 chars; rows without a similarity
+      score render ``---`` so the column stays vertically aligned.
+    * ``old`` is left-padded to the longest old-path width (capped
+      at a sensible max so a single 200-char path doesn't push the
+      arrow off-screen). Paths longer than the cap are truncated
+      with a leading ``…`` so the *tail* (the meaningful part) is
+      preserved — same convention git uses for long pathspecs in
+      ``status`` output.
+    * ``new`` is unpadded (it's the last column, no alignment
+      needed downstream).
+
+    The header row count uses singular/plural (``1 row`` vs.
+    ``N rows``) so a forced-ON empty table reads naturally as
+    ``0 row(s)`` — the parenthetical form is intentional, it's the
+    cheapest way to support every count without a special case.
+    Always followed by a single blank line so subsequent stderr
+    output (the diff-mode banner, violation summary, etc.) doesn't
+    glue onto the table.
+    """
+    # Cap on the OLD-column width. Beyond this, paths are truncated
+    # with a leading ``…``. 60 chars is wide enough for typical
+    # ``spec/<module>/<file>.md`` layouts but narrow enough that the
+    # arrow + new path still fit in an 80-wide CI log without wrap.
+    _MAX_OLD_WIDTH = 60
+
+    def _truncate_left(s: str, width: int) -> str:
+        if len(s) <= width:
+            return s
+        # Preserve the tail (the leaf filename, the bit operators
+        # actually scan for). ``width - 1`` to leave room for ``…``.
+        return "…" + s[-(width - 1):]
+
+    print(f"── rename/copy intake ({len(rows)} row(s)) ──", file=stream)
+    if not rows:
+        # Forced-ON empty table: emit the header, then a hint that
+        # explains why the body is empty. Saves the operator a
+        # round-trip to the docs when they expected to see rows.
+        print("  (no rename or copy rows in this diff)", file=stream)
+        print("", file=stream)
+        return
+    # Compute the OLD column width as the longest truncated OLD path
+    # across the table, then pad every row to that width. Doing this
+    # in two passes keeps alignment correct even when truncation
+    # shortens some entries below the natural max.
+    old_display = [_truncate_left(r.old or "(unknown)", _MAX_OLD_WIDTH)
+                   for r in rows]
+    old_width = max((len(s) for s in old_display), default=0)
+    # Header row. ``kind`` is fixed-4-wide ("kind"), ``score`` is
+    # fixed-5-wide so unscored ``---`` rows align under "score".
+    print(f"  kind  score  {'old':<{old_width}}  →  new", file=stream)
+    for r, old_disp in zip(rows, old_display):
+        score_disp = f"{r.score:03d}" if r.score is not None else "---"
+        # Pad ``score_disp`` to 5 chars so a 3-digit score (e.g.
+        # ``100``) and the 3-char ``---`` both end at the same
+        # column boundary as the 5-wide "score" header.
+        print(f"  {r.kind:<4s}  {score_disp:<5s}  "
+              f"{old_disp:<{old_width}}  →  {r.new}",
+              file=stream)
+    print("", file=stream)
 
 
 # ---- Diff-excerpt rendering (used by the human summary in diff mode)
