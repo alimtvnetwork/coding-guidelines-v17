@@ -123,6 +123,45 @@ The second form is the recommended machine-pairing path because
 it doesn't depend on `reason` wording (which is allowed to drift
 across minor releases).
 
+#### Filtering by deleted-source provenance (`--only-deleted-source`)
+
+`--only-deleted-source SOURCE` (repeatable) restricts the audit's
+`ignored-deleted` rows to those whose intake provenance is in the
+allow-set. Choices match the closed vocabulary above: `diff-D`,
+`changed-files-D`, `diff-R-old`, `changed-files-R-old`,
+`diff-C-old`, `changed-files-C-old`.
+
+Semantics:
+
+- **Scalpel, not status filter** — non-`ignored-deleted` rows
+  (`matched`, `ignored-extension`, `ignored-out-of-root`,
+  `ignored-missing`) pass through untouched. To collapse the audit
+  to ONLY rename-source deletes, combine with
+  `--only-changed-status ignored-deleted`.
+- **Pipeline order** — `--dedupe-changed-files` first,
+  `--only-changed-status` second, `--only-deleted-source` last.
+  Text, JSON, and CSV all see the same filtered set.
+- **Footer accounting** — the text-mode footer grows a
+  `deleted-by-source: diff-D=N  changed-files-D=N  diff-R-old=N …`
+  breakdown line counting **every** source against the
+  post-dedupe / pre-filter intake, so a filter that hides most
+  rows still surfaces what was suppressed. The line is also
+  emitted whenever any `ignored-deleted` row is present (filter or
+  not); legacy delete-free runs keep the original footer.
+
+Common recipes:
+
+```bash
+# Triage rename OLD-sides only (both intakes).
+--only-changed-status ignored-deleted \
+  --only-deleted-source diff-R-old \
+  --only-deleted-source changed-files-R-old
+
+# Audit which deletes came from authored payloads vs. real git diff.
+--only-deleted-source changed-files-D --similarity-csv authored.csv
+--only-deleted-source diff-D          --similarity-csv from-git.csv
+```
+
 ### Examples in every output surface
 
 The samples below come from one invocation against a fixture that

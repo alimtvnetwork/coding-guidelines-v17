@@ -801,6 +801,32 @@ def main(argv: list[str] | None = None) -> int:
              "`--only-changed-status ignored-extension` to debug why a "
              "PR's docs aren't being checked. No-op without "
              "--list-changed-files.")
+    ap.add_argument("--only-deleted-source", action="append",
+        default=None, choices=list(_DELETED_SOURCES), metavar="SOURCE",
+        help="With --list-changed-files, restrict the printed audit's "
+             "`ignored-deleted` rows to those whose intake provenance "
+             "is in this set (repeatable). Valid values match the "
+             "closed deleted-source vocabulary: `diff-D`, "
+             "`changed-files-D`, `diff-R-old`, `changed-files-R-old`, "
+             "`diff-C-old`, `changed-files-C-old`. Non-deleted rows "
+             "(`matched`, `ignored-extension`, `ignored-out-of-root`, "
+             "`ignored-missing`) pass through unchanged — this filter "
+             "is a SCALPEL on the deleted-rows bucket only, NOT a "
+             "second copy of `--only-changed-status`. To see ONLY "
+             "rename-source deletes, combine: "
+             "`--only-changed-status ignored-deleted "
+             "--only-deleted-source diff-R-old "
+             "--only-deleted-source changed-files-R-old`. Filtering "
+             "runs AFTER `--dedupe-changed-files` and AFTER "
+             "`--only-changed-status` so first-seen + status filters "
+             "still apply. The text-mode footer adds a `deleted-by-"
+             "source:` breakdown line counting EVERY source in the "
+             "canonical order (against the post-dedupe / pre-filter "
+             "rows) so the operator can see what was filtered out. "
+             "JSON mode strips non-matching `ignored-deleted` rows "
+             "from the array; the CSV export mirrors the same "
+             "filtered set. No-op without --list-changed-files; "
+             "no-op when no `ignored-deleted` rows are present.")
     ap.add_argument("--with-similarity", action="store_true",
         help="With --list-changed-files, include the rename/copy "
              "similarity metadata in the printed audit. Three extra "
@@ -1087,6 +1113,9 @@ def main(argv: list[str] | None = None) -> int:
                 dedupe=args.dedupe_changed_files,
                 only_statuses=(frozenset(args.only_changed_status)
                                if args.only_changed_status else None),
+                only_deleted_sources=(
+                    frozenset(args.only_deleted_source)
+                    if args.only_deleted_source else None),
                 with_similarity=args.with_similarity,
                 with_labels=args.similarity_labels,
                 legend_mode=args.similarity_legend,
@@ -1106,6 +1135,20 @@ def main(argv: list[str] | None = None) -> int:
                 if args.only_changed_status:
                     only = frozenset(args.only_changed_status)
                     csv_rows = [r for r in csv_rows if r.status in only]
+                if args.only_deleted_source:
+                    # Mirror the renderer's scalpel semantics:
+                    # non-``ignored-deleted`` rows pass through, and
+                    # only ``ignored-deleted`` rows whose ``source``
+                    # is in the allowed set survive. Keeps the CSV
+                    # export aligned byte-for-byte with what STDERR
+                    # just printed (modulo column dialect).
+                    only_src = frozenset(args.only_deleted_source)
+                    csv_rows = [
+                        r for r in csv_rows
+                        if r.status != "ignored-deleted"
+                        or (r.source is not None
+                            and r.source in only_src)
+                    ]
                 _write_similarity_csv(
                     csv_rows, args.similarity_csv,
                     with_labels=args.similarity_labels,
@@ -1452,6 +1495,30 @@ _DELETED_REASON_FALLBACK = ("path captured as a delete by the diff "
                             "treated as `ignored-deleted` for safety")
 
 
+# Closed source vocabulary surfaced by ``--list-changed-files-verbose``
+# and accepted by ``--only-deleted-source``. Frozen at module scope so
+# the CLI's argparse ``choices`` list, the renderer's footer-breakdown
+# code, and the README's documented contract all reference one source
+# of truth — adding a new tag is a one-line dict update above plus
+# (optionally) a deliberate vocabulary bump here. The order is the
+# canonical render order: ``D``-style tags first, then R/C-old tags
+# grouped by intake (``diff-`` then ``changed-files-``) so a per-tag
+# breakdown footer prints consistently across runs.
+#
+# The fallback message (returned by :func:`_resolve_deleted_reason`
+# for unknown tags) is intentionally NOT in this tuple — it's a
+# safety net for parser changes that haven't propagated, not a value
+# the operator can target with ``--only-deleted-source``.
+_DELETED_SOURCES: tuple[str, ...] = (
+    "diff-D",
+    "changed-files-D",
+    "diff-R-old",
+    "changed-files-R-old",
+    "diff-C-old",
+    "changed-files-C-old",
+)
+
+
 def _resolve_deleted_reason(source: str,
                             new_path: "str | None" = None) -> str:
     """Look up the human-readable ``reason`` for an ``ignored-deleted``
@@ -1748,6 +1815,7 @@ def _render_changed_files_audit(rows: list[_ChangedFileAudit],
                                 as_json: bool,
                                 dedupe: bool = False,
                                 only_statuses: frozenset[str] | None = None,
+                                only_deleted_sources: frozenset[str] | None = None,
                                 with_similarity: bool = False,
                                 with_labels: bool = False,
                                 legend_mode: str = _SIMILARITY_LEGEND_AUTO,
@@ -1787,6 +1855,20 @@ def _render_changed_files_audit(rows: list[_ChangedFileAudit],
     hides everything is obvious (``0 of 12 row(s) shown``); the
     totals line still counts every status in the canonical order so
     the operator can see exactly what was filtered out.
+
+    When ``only_deleted_sources`` is a non-None frozenset, the filter
+    runs AFTER ``only_statuses`` and applies ONLY to
+    ``ignored-deleted`` rows: each such row whose ``source`` tag is
+    *not* in the set is dropped. Non-deleted rows pass through
+    unchanged — the source filter is a scalpel on the deleted bucket,
+    not a second copy of ``only_statuses``. The text-mode footer
+    grows a ``deleted-by-source:`` breakdown line counting every
+    source in :data:`_DELETED_SOURCES` against ``full_rows`` (post-
+    dedupe, pre-filter) so the breakdown describes the underlying
+    intake even when most of it was filtered out. The line is only
+    emitted when the source filter is active OR at least one
+    ``ignored-deleted`` row is present, so legacy invocations without
+    deletes don't gain a noisy zero line.
 
     When ``with_similarity`` is True the rendered table grows three
     extra columns — ``kind``, ``score``, ``old`` — populated from each
@@ -1835,6 +1917,20 @@ def _render_changed_files_audit(rows: list[_ChangedFileAudit],
     full_rows = rows
     if only_statuses is not None:
         rows = [r for r in rows if r.status in only_statuses]
+    if only_deleted_sources is not None:
+        # Scalpel filter: kept rows are either non-``ignored-deleted``
+        # (untouched) or ``ignored-deleted`` rows whose ``source`` is
+        # in the allowed set. Defensive on ``r.source`` being ``None``
+        # — that should never happen for an ``ignored-deleted`` row
+        # the parser produced today, but a hand-built audit list
+        # passed straight to this renderer would land here, and the
+        # ``in`` test would otherwise raise ``TypeError``.
+        rows = [
+            r for r in rows
+            if r.status != "ignored-deleted"
+            or (r.source is not None
+                and r.source in only_deleted_sources)
+        ]
     if as_json:
         # ``asdict`` recurses into nested dataclasses so the
         # ``similarity`` field becomes a sub-object automatically. When
@@ -1882,6 +1978,15 @@ def _render_changed_files_audit(rows: list[_ChangedFileAudit],
         # reports the full breakdown.
         suffix += (f"; filtered, {len(rows)} of {len(full_rows)} "
                    f"row(s) shown ({'+'.join(sorted(only_statuses))})")
+    if only_deleted_sources is not None:
+        # Surface the deleted-source filter alongside the status
+        # filter so the header line tells the whole story. The
+        # ``deleted-by-source:`` breakdown emitted below the totals
+        # line carries the per-source numbers.
+        suffix += (
+            f"; deleted-source filter "
+            f"({'+'.join(sorted(only_deleted_sources))})"
+        )
     if with_similarity:
         # Surface the extra columns in the header so a reviewer
         # scanning the log knows the wider table isn't a layout bug.
@@ -2023,6 +2128,34 @@ def _render_changed_files_audit(rows: list[_ChangedFileAudit],
         counts[r.status] = counts.get(r.status, 0) + 1
     summary = "  ".join(f"{s}={counts[s]}" for s in _AUDIT_STATUSES)
     print(f"  totals: {summary}", file=stream)
+    # Deleted-source breakdown — emitted only when the operator
+    # opted into the source filter OR there's at least one
+    # ``ignored-deleted`` row in the (post-dedupe, pre-filter)
+    # intake. Keeping the line conditional preserves the legacy
+    # footer for invocations that have no deletes at all.
+    has_any_deleted = counts.get("ignored-deleted", 0) > 0
+    if only_deleted_sources is not None or has_any_deleted:
+        src_counts = {s: 0 for s in _DELETED_SOURCES}
+        unknown_src = 0
+        for r in full_rows:
+            if r.status != "ignored-deleted":
+                continue
+            if r.source in src_counts:
+                src_counts[r.source] += 1
+            else:
+                # Captures both ``None`` (defensive) and any future
+                # tag the parsers added before ``_DELETED_SOURCES``
+                # caught up. Surfaces under a synthetic ``unknown``
+                # bucket so the breakdown still sums to the
+                # ``ignored-deleted`` total — visible accounting is
+                # the whole point of this line.
+                unknown_src += 1
+        breakdown = "  ".join(
+            f"{s}={src_counts[s]}" for s in _DELETED_SOURCES
+        )
+        if unknown_src:
+            breakdown += f"  unknown={unknown_src}"
+        print(f"  deleted-by-source: {breakdown}", file=stream)
     # Optional legend — only meaningful when the similarity columns
     # are actually in the table. Resolver decides on/off given the
     # operator's ``--similarity-legend`` choice and the stream's TTY
