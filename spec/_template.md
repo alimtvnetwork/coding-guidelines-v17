@@ -86,7 +86,7 @@ greppable, and the only block format the cross-link checker actively
 ignores:
 
 ```markdown
-<spec-placeholder reason="activate when target is created">
+<spec-placeholder reason="activate when target is created @spec/NN-module-name/01-file-name.md:42">
 - [Target Title](../NN-module-name/00-overview.md)
 - [Target Title](../NN-module-name/01-file-name.md#section-anchor)
 </spec-placeholder>
@@ -99,7 +99,7 @@ inside a fenced code block. New placeholders should use the tag form
 above.
 
 ```markdown
-<!-- TODO: activate when target is created
+<!-- TODO: activate when target is created @spec/NN-module-name/01-file-name.md:42
 - [Target Title](../NN-module-name/00-overview.md)
 - [Target Title](../NN-module-name/01-file-name.md#section-anchor)
 -->
@@ -111,6 +111,10 @@ Guidelines for placeholders (both formats):
 - Remove the `<spec-placeholder>` / `</spec-placeholder>` wrappers (or `<!--`/`-->` for the legacy form) once the target exists.
 - If the anchor (`#section-anchor`) is unknown, omit it and add it later.
 - Prefer `<spec-placeholder>` for new authoring — only it is recognised by the cross-link checker's selective ignore.
+- **Always include a `@path/to/spec-file.ext:LINE` back-pointer** in the
+  opener (the `reason` attribute or the `<!-- TODO:` line). The
+  placeholder linter (P-008) requires it so reviewers can `grep -n`
+  straight to the spec section blocked on the pending target.
 
 ### How to activate placeholders
 
