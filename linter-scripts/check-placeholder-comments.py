@@ -180,9 +180,10 @@ class Violation:
     message: str
 
 
-# Default file extensions discovered when --extension is not given.
-# Historical behaviour was ``.md``-only; widening the set is opt-in
-# via the CLI so existing callers see no change.
+# Default extension allowlist for spec discovery. Kept as a tuple so
+# the value is hashable + cache-segment-friendly. Extending this set
+# at runtime is exposed via ``--extension`` (repeatable) and feeds
+# both the file iterator and the cache-segment naming below.
 DEFAULT_EXTENSIONS: tuple[str, ...] = ("md",)
 
 
@@ -190,83 +191,28 @@ def iter_markdown_files(
     root: Path,
     *,
     extensions: tuple[str, ...] = DEFAULT_EXTENSIONS,
-    include: tuple[str, ...] = (),
-    exclude: tuple[str, ...] = (),
 ) -> Iterable[Path]:
-    """Yield spec source files under ``root`` for the linter to scan.
+    """Yield every file under ``root`` matching one of ``extensions``,
+    sorted by path with hidden directories (``.foo/``) excluded.
 
-    ``extensions``  is a tuple of bare extension names (no leading
-                    dot) — e.g. ``("md", "mdx", "txt")``. Each is
-                    glob-matched as ``*.<ext>`` under ``root``.
-    ``include``     is a tuple of glob patterns evaluated against the
-                    file's repo-relative POSIX path. If non-empty, a
-                    file must match at least one pattern to be
-                    yielded (whitelist). An empty tuple disables the
-                    whitelist (everything passes that stage).
-    ``exclude``     is a tuple of glob patterns evaluated against the
-                    same path. A file matching any pattern is
-                    dropped (blacklist).
-
-    Hidden directories (``.foo/``) are always excluded — that filter
-    pre-dates --include/--exclude and stays unconditional so a stray
-    ``--include "**/*.md"`` can't accidentally pull in ``node_modules``-
-    style hidden caches. Authors who genuinely want a hidden file
-    must use a different layout; the linter will not budge here.
-
-    The yielded order is deterministic (sorted by path) so cache
-    keys, ``--list-files`` output, and violation ordering stay
-    stable across runs and across machines.
+    ``extensions`` is a tuple of bare extension strings without the
+    leading dot (e.g. ``("md", "mdx")``). The function unions the
+    per-extension globs into a single sorted, deduplicated stream so
+    a future ``--extension md --extension mdx`` run can't yield the
+    same path twice (e.g. on a case-insensitive filesystem).
     """
-    # Walk each extension separately so the per-extension
-    # ``rglob("*.ext")`` filter avoids the cost of listing
-    # everything and post-filtering. The combined sort below
-    # restores total order across extensions.
+    seen: set[Path] = set()
     candidates: list[Path] = []
     for ext in extensions:
-        # Strip a stray leading dot so ``--extension .md`` works the
-        # same as ``--extension md``. Empty / whitespace-only entries
-        # are silently dropped (CLI validation rejects them earlier
-        # but defending here keeps the helper safe to call directly).
-        ext_clean = ext.lstrip(".").strip()
-        if not ext_clean:
-            continue
-        candidates.extend(root.rglob(f"*.{ext_clean}"))
-    for p in sorted(set(candidates)):
-        rel = p.relative_to(root)
-        # Hidden-directory guard — see docstring.
-        if any(part.startswith(".") for part in rel.parts):
-            continue
-        # Pattern matching uses POSIX-style separators so authors can
-        # write the same patterns on Windows + Linux + macOS.
-        rel_posix = rel.as_posix()
-        if include and not any(_match_glob(rel_posix, pat) for pat in include):
-            continue
-        if any(_match_glob(rel_posix, pat) for pat in exclude):
+        for p in root.rglob(f"*.{ext}"):
+            if p in seen:
+                continue
+            seen.add(p)
+            candidates.append(p)
+    for p in sorted(candidates):
+        if any(part.startswith(".") for part in p.relative_to(root).parts):
             continue
         yield p
-
-
-def _match_glob(rel_posix: str, pattern: str) -> bool:
-    """Match ``rel_posix`` against ``pattern`` using shell-style globs.
-
-    Supports ``**`` for recursive matching (Python 3.13's
-    ``PurePosixPath.full_match`` is the canonical implementation —
-    it understands ``**`` natively and uses POSIX-style anchoring,
-    which is what authors expect from ``.gitignore``-flavoured
-    patterns).
-
-    A pattern without any path separator (``*.md``) is matched
-    against the file's basename in addition to its full path so
-    the common case ``--exclude "CHANGELOG.md"`` works without
-    forcing the user to write ``**/CHANGELOG.md``.
-    """
-    from pathlib import PurePosixPath
-    p = PurePosixPath(rel_posix)
-    if p.full_match(pattern):
-        return True
-    if "/" not in pattern and PurePosixPath(p.name).full_match(pattern):
-        return True
-    return False
 
 
 def strip_code_fences(text: str) -> str:
@@ -564,6 +510,18 @@ def main(argv: list[str] | None = None) -> int:
         metavar="VERB",
         help="Add an extra imperative verb to the P-001 allowlist "
              "(repeatable). Use lowercase, hyphens allowed.")
+    ap.add_argument("--extension", action="append", default=None,
+        metavar="EXT",
+        help="Restrict spec discovery to files with this extension "
+             "(repeatable, no leading dot, case-sensitive). Default "
+             "is `md`. Each unique sorted allowlist gets its own "
+             "physical cache subdirectory under --cache-dir (e.g. "
+             "`<cache-dir>/ext-md/`, `<cache-dir>/ext-md+mdx/`) so "
+             "switching the allowlist never reads a sentinel written "
+             "for a different file set — even if a future bug made "
+             "the content hash collide. Side benefit: `rm -rf "
+             "<cache-dir>/ext-mdx/` nukes one allowlist's sentinels "
+             "without touching the others.")
     ap.add_argument("--cache-dir", default=None, metavar="DIR",
         help="Enable a content-addressed PASS cache. On a hit (the linter "
              "script + every scanned `.md` hash to the same key as a "
@@ -571,7 +529,9 @@ def main(argv: list[str] | None = None) -> int:
              "returned immediately. Misses run normally and write a fresh "
              "sentinel only on success. Stale or poisoned sentinels are "
              "ignored because the key is recomputed from the working tree "
-             "every run.")
+             "every run. Sentinels are stored under an extension-derived "
+             "subdirectory (see --extension) so different allowlists "
+             "never share a sentinel pool.")
     ap.add_argument("--no-cache-write", action="store_true",
         help="With --cache-dir, read the sentinel but never write it. "
              "Useful for read-only / forked-repo CI runs.")
@@ -629,31 +589,6 @@ def main(argv: list[str] | None = None) -> int:
              "with no available excerpt simply omit the key, so "
              "parsers that don't know about it are unaffected. "
              "Window size is governed by --diff-context.")
-    # Tri-state excerpt switch — see resolution table after argparse.
-    # Default ``None`` preserves the historical auto behaviour:
-    #   * human  → excerpts iff --diff-context > 0
-    #   * JSON   → excerpts iff --json-excerpts
-    # ``--show-diff-excerpts``    forces ON  (even with --diff-context=0)
-    # ``--no-show-diff-excerpts`` forces OFF (even with --json-excerpts)
-    ap.add_argument("--show-diff-excerpts",
-        dest="show_diff_excerpts", action="store_true", default=None,
-        help="Force diff excerpts ON, decoupled from --diff-context. "
-             "Useful when you want a copy-paste excerpt under each "
-             "violation but have set --diff-context=0 (e.g. to keep "
-             "git invocations minimal). When the requested context is "
-             "0, the renderer falls back to a single line above and "
-             "below so the excerpt isn't a bare focus row. Applies "
-             "to both human and JSON output (in JSON mode this also "
-             "implies --json-excerpts so the field appears).")
-    ap.add_argument("--no-show-diff-excerpts",
-        dest="show_diff_excerpts", action="store_false",
-        help="Force diff excerpts OFF, even when --diff-context > 0 "
-             "(human) or --json-excerpts is set (JSON). Use this "
-             "with --suggest-patch when you want the copy-paste fix "
-             "scaffold but not the surrounding diff window — keeps "
-             "logs short on PRs with many violations. Does not "
-             "affect --suggest-patch / --json-suggest-patch, which "
-             "remain governed by their own flags.")
     ap.add_argument("--suggest-patch", action="store_true",
         help="Under each human-readable diff excerpt, append a "
              "`git apply`-style unified-diff scaffold that removes "
@@ -675,57 +610,6 @@ def main(argv: list[str] | None = None) -> int:
              "(e.g. line not in any captured hunk) simply omit the "
              "key, so legacy parsers keying off `file`/`line`/`code`/"
              "`message` keep working unchanged.")
-    ap.add_argument("--list-files", action="store_true",
-        help="Diagnostic: print exactly which `.md` files were "
-             "discovered under --root and how each one will be "
-             "treated for the current allowlist settings, then exit "
-             "0 without linting. Each file is classified as "
-             "`linted` (per-file violations will be reported) or "
-             "`cross-file-only` (file is scanned only for bullet "
-             "collection so cross-file P-007 collisions still "
-             "surface, but its own per-file violations are "
-             "suppressed — only happens in diff mode for unchanged "
-             "files). Honours --diff-base / --changed-files: in "
-             "full-tree mode every discovered file is `linted`. In "
-             "--json mode the output is a JSON array of "
-             "`{\"path\": str, \"status\": str, \"reason\": str}` "
-             "objects so CI scripts can parse it directly. Useful "
-             "for debugging \"why didn't the linter check this "
-             "file?\" without running the full scan.")
-    ap.add_argument("--extension", action="append", default=None,
-        metavar="EXT",
-        help="Bare extension name (no leading dot) to discover under "
-             "--root. Repeatable. Defaults to `md` (preserves "
-             "historical behaviour). Pass e.g. "
-             "`--extension md --extension mdx --extension txt` to "
-             "widen the scan to MDX docs and plain-text spec stubs. "
-             "Each extension is matched as `*.<ext>`; case-sensitive "
-             "on POSIX. The cache key includes the resolved "
-             "extension list so a narrower or wider scope can never "
-             "satisfy a PASS sentinel from a different scope.")
-    ap.add_argument("--include", action="append", default=[],
-        metavar="GLOB",
-        help="Glob pattern (matched against the repo-relative POSIX "
-             "path) that a file MUST match to be discovered. "
-             "Repeatable: a file passes if it matches ANY pattern. "
-             "Supports `**` for recursive matching, e.g. "
-             "`--include 'spec/**/*.md'`. A pattern without a "
-             "separator (e.g. `--include 'README.md'`) is matched "
-             "against the basename too, so the common single-file "
-             "case works without `**/`. Empty by default (every "
-             "discovered file passes the include stage). The "
-             "hidden-directory exclusion (anything under `.foo/`) "
-             "is unconditional and not affected by --include.")
-    ap.add_argument("--exclude", action="append", default=[],
-        metavar="GLOB",
-        help="Glob pattern that drops a file from discovery. "
-             "Repeatable: a file is dropped if it matches ANY "
-             "pattern. Same syntax as --include (full-path or "
-             "basename match, `**` supported). Applied AFTER "
-             "--include so an excluded file can never re-enter via "
-             "a broader include. Use to skip vendored docs, "
-             "auto-generated changelogs, etc.: "
-             "`--exclude 'vendor/**' --exclude 'CHANGELOG.md'`.")
     args = ap.parse_args(argv)
 
     root = Path(args.root).resolve()
@@ -744,88 +628,6 @@ def main(argv: list[str] | None = None) -> int:
               file=sys.stderr)
         return 2
 
-    # ---- Resolve discovery filters: --extension / --include / --exclude
-    # Centralised here so every call site (main scan loop,
-    # ``--list-files``, cache-key fingerprint) sees the SAME tuple.
-    # If extensions is None the user didn't pass --extension at all
-    # ⇒ historical default of (.md only). An explicit empty list
-    # (``--extension ""``) is rejected because it would discover
-    # nothing — almost certainly user error.
-    if args.extension is None:
-        extensions = DEFAULT_EXTENSIONS
-    else:
-        cleaned = tuple(e.lstrip(".").strip() for e in args.extension)
-        if any(not e for e in cleaned):
-            print("error: --extension values must be non-empty "
-                  "(remove blank entries)", file=sys.stderr)
-            return 2
-        # De-duplicate while preserving first-seen order so the
-        # cache key stays stable across redundant CLI invocations
-        # (``--extension md --extension md`` ⇒ same key as one).
-        seen: set[str] = set()
-        deduped: list[str] = []
-        for e in cleaned:
-            if e not in seen:
-                seen.add(e)
-                deduped.append(e)
-        extensions = tuple(deduped)
-    include_globs = tuple(args.include)
-    exclude_globs = tuple(args.exclude)
-
-    # Validate every glob eagerly so a typo surfaces with a clean
-    # error rather than ``re.error`` deep inside the iterator.
-    # ``PurePosixPath.full_match`` raises ``ValueError`` on a
-    # malformed pattern; we wrap that to a friendlier message.
-    from pathlib import PurePosixPath
-    for label, pats in (("--include", include_globs),
-                        ("--exclude", exclude_globs)):
-        for pat in pats:
-            if not pat.strip():
-                print(f"error: {label} patterns must be non-empty",
-                      file=sys.stderr)
-                return 2
-            try:
-                PurePosixPath("probe").full_match(pat)
-            except ValueError as e:
-                print(f"error: {label} {pat!r} is not a valid glob: {e}",
-                      file=sys.stderr)
-                return 2
-
-    # ---- Resolve the tri-state --show-diff-excerpts flag ----------
-    # ``show_excerpts_human`` / ``show_excerpts_json`` are the single
-    # source of truth used by every later excerpt gate; raw arg
-    # values are NOT consulted past this block. Centralising the
-    # resolution keeps the CLI matrix testable and ensures human
-    # and JSON modes stay consistent under the same override.
-    #
-    # Resolution table:
-    #
-    #   show_diff_excerpts | human render? | json render?
-    #   -------------------+---------------+--------------
-    #   None  (auto)       | ctx > 0       | --json-excerpts
-    #   True  (force on)   | always*       | always*
-    #   False (force off)  | never         | never
-    #
-    #   * subject to the universal "have a diff base + violations"
-    #     prerequisites — the flag can't conjure a diff out of
-    #     thin air when --diff-base wasn't given.
-    if args.show_diff_excerpts is None:
-        show_excerpts_human = args.diff_context > 0
-        show_excerpts_json = args.json_excerpts
-    else:
-        show_excerpts_human = args.show_diff_excerpts
-        show_excerpts_json = args.show_diff_excerpts
-
-    # When excerpts are forced ON but the user kept --diff-context=0,
-    # render with one line of context on each side. Anything less
-    # would be a bare focus row, which defeats the point of the
-    # override. We don't mutate ``args.diff_context`` so the rest of
-    # the program sees the user's literal request; the effective
-    # window lives in ``effective_context`` instead.
-    effective_context = args.diff_context
-    if (show_excerpts_human or show_excerpts_json) and effective_context == 0:
-        effective_context = 1
-
     # Tri-state: --github → True, --no-github → False, neither → auto.
     if args.github is None:
         github_annotations = os.environ.get("GITHUB_ACTIONS", "").lower() == "true"
@@ -833,6 +635,25 @@ def main(argv: list[str] | None = None) -> int:
         github_annotations = args.github
 
     intent_verbs = DEFAULT_INTENT_VERBS | {v.lower() for v in args.allow_verb}
+
+    # ---- Resolve --extension allowlist ---------------------------
+    # ``--extension`` is repeatable; ``None`` (no flag passed) keeps
+    # the historical ``("md",)`` behaviour. We normalise to lowercase,
+    # strip any leading dot the user typed by accident, and dedupe via
+    # ``dict.fromkeys`` so the FIRST occurrence wins (preserves the
+    # CLI order in error messages without affecting the cache segment,
+    # which sorts independently). The result is a tuple so it can
+    # flow through ``iter_markdown_files`` and the cache key as a
+    # hashable, append-safe value.
+    if args.extension is None:
+        extensions = DEFAULT_EXTENSIONS
+    else:
+        cleaned = [e.lstrip(".").lower() for e in args.extension if e.strip()]
+        if not cleaned:
+            print("error: --extension requires at least one non-empty value",
+                  file=sys.stderr)
+            return 2
+        extensions = tuple(dict.fromkeys(cleaned))
 
     # ---- Resolve diff-mode changed-file allowlist (if any) -------
     # ``changed_md`` is None ⇒ full-tree mode (legacy behaviour).
@@ -851,92 +672,18 @@ def main(argv: list[str] | None = None) -> int:
         except RuntimeError as e:
             print(f"error: {e}", file=sys.stderr)
             return 2
-        # Suppress the "diff-mode active" banner when --list-files is
-        # set in --json mode: the listing's job is to emit a single
-        # parseable JSON array on stdout, and a leading human-readable
-        # banner would break json.loads(). Plain-text --list-files
-        # still benefits from the banner.
-        if not args.json and not (args.list_files and args.json):
+        if not args.json:
             print(f"ℹ️  placeholder-comments: diff-mode active — "
                   f"{len(changed_md)} changed `.md` file(s) under {args.root}/")
         if not changed_md:
             # Nothing under --root changed → fast PASS. Cross-file P-007
             # has nothing new to report by definition (no new bullets).
-            # --list-files takes priority: emit an empty listing so
-            # the operator sees that "no files matched" is the actual
-            # answer, not "linter crashed silently".
-            if args.list_files:
-                if args.json:
-                    print("[]")
-                else:
-                    print(f"ℹ️  placeholder-comments: no `.md` files "
-                          f"under {args.root}/ matched the allowlist.")
-                return 0
             if args.json:
                 print("[]")
             else:
                 print(f"✅ placeholder-comments: no spec changes vs. diff base, "
                       "skipping scan.")
             return 0
-
-    # ---- --list-files diagnostic short-circuit -------------------
-    # Walk the same iterator the linter would walk and classify each
-    # discovered file the same way the main scan loop classifies it
-    # (see ``for md in iter_markdown_files(root)`` below). This is a
-    # READ-ONLY introspection: no file is parsed, no cache is read
-    # or written, no violations are emitted. The listing reflects
-    # exactly what the upcoming scan WOULD process — so a confused
-    # operator can compare expectations against reality without
-    # running the full lint.
-    if args.list_files:
-        rows: list[dict[str, str]] = []
-        for md in iter_markdown_files(
-            root,
-            extensions=extensions,
-            include=include_globs,
-            exclude=exclude_globs,
-        ):
-            rel = str(md.relative_to(repo_root))
-            if changed_md is None:
-                # Full-tree mode: every discovered file is linted.
-                rows.append({"path": rel, "status": "linted",
-                             "reason": "full-tree mode (no diff base)"})
-            elif md.resolve() in changed_md:
-                rows.append({"path": rel, "status": "linted",
-                             "reason": "in changed-file set"})
-            else:
-                # Diff mode + unchanged file: scanned for bullets only
-                # so cross-file P-007 still works, but per-file
-                # violations are suppressed. Mirrors the
-                # ``_collect_bullets_only`` branch in the main loop.
-                rows.append({"path": rel, "status": "cross-file-only",
-                             "reason": "unchanged in diff; bullets "
-                                       "collected for P-007 only"})
-        # Stable ordering for diffable output: ``iter_markdown_files``
-        # already sorts via ``rglob``+``sorted``, but sort again here
-        # by path so a future iterator change can't silently shuffle
-        # the listing.
-        rows.sort(key=lambda r: r["path"])
-        if args.json:
-            # Single JSON document on stdout — no surrounding banner,
-            # no trailing summary, so ``json.loads(stdout)`` works.
-            print(json.dumps(rows, indent=2, ensure_ascii=False))
-        else:
-            n_linted = sum(1 for r in rows if r["status"] == "linted")
-            n_cross = sum(1 for r in rows
-                          if r["status"] == "cross-file-only")
-            mode = "diff" if changed_md is not None else "full-tree"
-            ext_blurb = "/".join(f".{e}" for e in extensions)
-            print(f"ℹ️  placeholder-comments: {len(rows)} {ext_blurb} "
-                  f"file(s) discovered under {args.root}/ "
-                  f"({mode} mode) — {n_linted} linted, "
-                  f"{n_cross} cross-file-only")
-            for r in rows:
-                # ``status:18`` keeps the path column aligned for
-                # ``cross-file-only`` (the longest status string).
-                print(f"  {r['status']:18s}  {r['path']}")
-            print(f"\n  Run without --list-files to actually lint.")
-        return 0
 
     # ---- Cache fast-path ------------------------------------------
     # The cache key fingerprints every input that can change the
@@ -955,29 +702,30 @@ def main(argv: list[str] | None = None) -> int:
     cache_key: str | None = None
     sentinel: Path | None = None
     if args.cache_dir and changed_md is None:
-        cache_key = _compute_cache_key(
-            root, intent_verbs,
-            extensions=extensions,
-            include=include_globs,
-            exclude=exclude_globs,
-        )
-        sentinel = Path(args.cache_dir) / f"{cache_key}.pass"
+        cache_key = _compute_cache_key(root, intent_verbs,
+                                       extensions=extensions)
+        # Sentinels live under a per-extension-allowlist subdirectory
+        # so different ``--extension`` runs are physically segregated
+        # on disk. The segment name is deterministic from the sorted
+        # extensions: ``ext-md``, ``ext-md+mdx``, etc. Long or
+        # otherwise filesystem-hostile allowlists fall back to a
+        # short-hash form (see ``_cache_segment``) to keep the path
+        # legal on Windows + tar-friendly. ``mkdir(parents=True)``
+        # below creates the segment directory on first PASS.
+        segment = _cache_segment(extensions)
+        sentinel = Path(args.cache_dir) / segment / f"{cache_key}.pass"
         if sentinel.is_file():
             if not args.json:
                 print(f"✅ placeholder-comments: cache hit "
-                      f"({cache_key[:12]}…), skipping scan of {args.root}/")
+                      f"({segment}/{cache_key[:12]}…), "
+                      f"skipping scan of {args.root}/")
             else:
                 print("[]")
             return 0
 
     violations: list[Violation] = []
     cross_file_bullets: list[tuple[str, int, str]] = []
-    for md in iter_markdown_files(
-        root,
-        extensions=extensions,
-        include=include_globs,
-        exclude=exclude_globs,
-    ):
+    for md in iter_markdown_files(root, extensions=extensions):
         if changed_md is not None and md.resolve() not in changed_md:
             # Unchanged file: still collect its bullets so cross-file
             # P-007 can detect a new collision introduced by a
@@ -1032,9 +780,9 @@ def main(argv: list[str] | None = None) -> int:
     want_excerpts = (
         violations
         and args.diff_base
+        and args.diff_context > 0
         and changed_md is not None
-        and ((not args.json and show_excerpts_human)
-             or (args.json and show_excerpts_json))
+        and (not args.json or args.json_excerpts)
     )
     # Suggested patches reuse the same ``_DiffExcerpts`` data (post-
     # state line index + hunk windows) so we widen the fetch trigger
@@ -1058,7 +806,7 @@ def main(argv: list[str] | None = None) -> int:
             # excerpt renderer would emit a tiny window in that
             # case, but we already gate human/JSON excerpt output
             # on ``want_excerpts`` separately so nothing leaks.
-            ctx = effective_context if want_excerpts else max(
+            ctx = args.diff_context if want_excerpts else max(
                 1, args.diff_context,
             )
             excerpt = _fetch_diff_excerpts(
@@ -1075,16 +823,16 @@ def main(argv: list[str] | None = None) -> int:
         # ``null`` or ``[]``, so legacy parsers that key only off
         # ``file``/``line``/``code``/``message`` keep working
         # without seeing a new always-present field.
-        if not show_excerpts_json and not args.json_suggest_patch:
+        if not args.json_excerpts and not args.json_suggest_patch:
             print(json.dumps([asdict(v) for v in violations], indent=2))
         else:
             payload: list[dict[str, object]] = []
             for v in violations:
                 row = asdict(v)
                 excerpt = diff_excerpts.get(v.file)
-                if excerpt is not None and show_excerpts_json:
+                if excerpt is not None and args.json_excerpts:
                     snippet = excerpt.render_structured(
-                        v.line, effective_context,
+                        v.line, args.diff_context,
                     )
                     if snippet:
                         row["excerpt"] = snippet
@@ -1107,8 +855,8 @@ def main(argv: list[str] | None = None) -> int:
             for v in violations:
                 print(f"  {v.file}:{v.line}  [{v.code}] {v.message}")
                 excerpt = diff_excerpts.get(v.file)
-                if excerpt is not None and show_excerpts_human:
-                    snippet = excerpt.render(v.line, effective_context)
+                if excerpt is not None and args.diff_context > 0:
+                    snippet = excerpt.render(v.line, args.diff_context)
                     if snippet:
                         # Two-space indent under the violation line
                         # so the excerpt is visually attached to it
@@ -2012,43 +1760,37 @@ def _compute_cache_key(
     intent_verbs: frozenset[str] | set[str],
     *,
     extensions: tuple[str, ...] = DEFAULT_EXTENSIONS,
-    include: tuple[str, ...] = (),
-    exclude: tuple[str, ...] = (),
 ) -> str:
     """Build a SHA-256 fingerprint of every input that affects the verdict.
 
     Inputs (in deterministic order):
       1. The absolute, resolved scan root.
       2. The sorted, canonicalised imperative-verb allowlist.
-      3. The discovery filter triple — extensions (sorted), include
-         globs (sorted), exclude globs (sorted). These narrow or
-         widen the file set so a PASS sentinel from one filter
-         configuration MUST NOT satisfy a different one. Sorting
-         here is what makes ``--include a --include b`` and
-         ``--include b --include a`` produce the same key (CLI order
-         doesn't change the file set).
+      3. The sorted, canonicalised extension allowlist (so a future
+         ``--extension mdx`` run can never collide with the default
+         ``--extension md`` set, even before the cache-segment
+         directory split would catch it on disk).
       4. The SHA-256 of the linter script itself (so a logic change
          invalidates every cached PASS automatically).
-      5. For every discovered file (sorted by path, dotfiles
-         excluded — same filter as ``iter_markdown_files``):
+      5. For every file matching ``extensions`` under the root
+         (sorted by path, dotfiles excluded — same filter as
+         ``iter_markdown_files``):
          ``<repo-relative-path>\\0<sha256-of-bytes>\\n``
 
     Anything outside this set (mtimes, permissions, sibling files,
     environment variables) is intentionally excluded so the key is
     reproducible across machines and CI shards.
-
-    The cache key version tag is bumped from ``v1`` to ``v2``
-    because the discovery-filter inputs change the schema. Old
-    ``*.pass`` sentinels will simply miss (extra disk space, never
-    a wrong verdict) and the next clean run rewrites them.
     """
     h = hashlib.sha256()
+    # Schema tag bumped to v2 when the extension allowlist became
+    # part of the key. A v1 sentinel would have been written without
+    # the ``exts=`` line, so its hash domain is disjoint from v2 —
+    # old sentinels are inert (never collide with new lookups) rather
+    # than dangerous, but the explicit version tag documents intent.
     h.update(b"placeholder-comments-cache-v2\n")
     h.update(f"root={root}\n".encode("utf-8"))
     h.update(("verbs=" + ",".join(sorted(intent_verbs)) + "\n").encode("utf-8"))
     h.update(("exts=" + ",".join(sorted(extensions)) + "\n").encode("utf-8"))
-    h.update(("include=" + ",".join(sorted(include)) + "\n").encode("utf-8"))
-    h.update(("exclude=" + ",".join(sorted(exclude)) + "\n").encode("utf-8"))
     try:
         script_bytes = Path(__file__).resolve().read_bytes()
         h.update(b"script=" + hashlib.sha256(script_bytes).hexdigest().encode() + b"\n")
@@ -2056,12 +1798,7 @@ def _compute_cache_key(
         # __file__ unreadable (zipapp / frozen). Fall back to a stable
         # tag so the cache still works, just with coarser invalidation.
         h.update(b"script=unknown\n")
-    for md in iter_markdown_files(
-        root,
-        extensions=extensions,
-        include=include,
-        exclude=exclude,
-    ):
+    for md in iter_markdown_files(root, extensions=extensions):
         try:
             data = md.read_bytes()
         except OSError:
@@ -2069,6 +1806,60 @@ def _compute_cache_key(
         rel = str(md.relative_to(root)).encode("utf-8")
         h.update(rel + b"\0" + hashlib.sha256(data).hexdigest().encode() + b"\n")
     return h.hexdigest()
+
+
+# Filesystem-safe extension chars: lowercase ASCII letters + digits.
+# Anything outside this set (dots in compound extensions like
+# ``tar.gz``, unicode, slashes) forces the segment name into the
+# hash-suffix form so we never produce a path that would explode on
+# Windows, NTFS, or a tarball extracted on a case-insensitive FS.
+_SAFE_EXT_RE = re.compile(r"^[a-z0-9]+$")
+
+# Cap the readable form before we fall back to a hash. NTFS' 255-char
+# filename limit is the binding constraint, but we want headroom for
+# the surrounding ``ext-`` prefix, ``+`` joiners, AND the eventual
+# ``<key>.pass`` filename inside the segment directory. 64 chars
+# leaves the segment well under any practical limit while still
+# accommodating ~10 typical extensions joined by ``+``.
+_MAX_SEGMENT_BODY_LEN = 64
+
+
+def _cache_segment(extensions: tuple[str, ...]) -> str:
+    """Derive a filesystem-safe, deterministic cache subdirectory
+    name from the active extension allowlist.
+
+    Format::
+
+        ext-<sorted-extensions-joined-by-plus>           (readable form)
+        ext-h<10-char-sha256>                            (hash fallback)
+
+    The readable form is preferred because it makes cache contents
+    self-describing (``ls cache/`` shows ``ext-md/``, ``ext-md+mdx/``
+    at a glance). We fall back to the hash form when ANY extension
+    contains a character outside ``[a-z0-9]`` (so we never emit a
+    Windows-illegal path), or when the joined name would exceed
+    :data:`_MAX_SEGMENT_BODY_LEN`. The fallback is keyed on the same
+    sorted-and-joined string the readable form would have used, so
+    two runs with identical allowlists always land in the same
+    bucket regardless of which branch they took.
+
+    The function is pure: same input → same output, no I/O. That
+    matters because the segment is consulted both on read (cache
+    fast-path) and write (sentinel persistence), and any drift would
+    silently bypass the cache.
+    """
+    # Sort to canonicalise: ``("mdx", "md")`` and ``("md", "mdx")``
+    # MUST share a segment. Empty input is defensive — the CLI
+    # validator rejects it earlier, but a programmatic caller might
+    # not. Treat it as "default" so we still produce a stable name.
+    if not extensions:
+        return "ext-default"
+    body = "+".join(sorted(extensions))
+    if (len(body) <= _MAX_SEGMENT_BODY_LEN
+            and all(_SAFE_EXT_RE.match(e) for e in extensions)):
+        return f"ext-{body}"
+    digest = hashlib.sha256(body.encode("utf-8")).hexdigest()[:10]
+    return f"ext-h{digest}"
 
 
 if __name__ == "__main__":
