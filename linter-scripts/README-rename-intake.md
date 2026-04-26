@@ -477,6 +477,59 @@ stay empty when no `_RenameSimilarity` is attached.
 distinct when filtering. Dedupe and `--only-changed-status` run
 BEFORE the export, so the CSV mirrors what you saw on STDERR.
 
+### Choosing columns — `--similarity-csv-fields`
+
+By default the CSV ships every canonical column
+(`path,status,reason,kind,score,old_path`, plus `score_kind` when
+`--similarity-labels` is on). When you want a narrower view — for
+example, sharing the audit externally without leaking the OLD-side
+path layout, or putting `score` first for sort-by-magnitude
+spreadsheets — pass `--similarity-csv-fields` with a
+comma-separated allow-list:
+
+```bash
+# Drop old_path from the export
+python3 linter-scripts/check-placeholder-comments.py \
+  --list-changed-files --similarity-csv audit.csv \
+  --similarity-csv-fields path,status,reason,kind,score
+
+# Score-first projection for sort-by-magnitude review
+python3 linter-scripts/check-placeholder-comments.py \
+  --list-changed-files --similarity-csv audit.csv \
+  --similarity-csv-fields score,kind,path,status
+```
+
+**Vocabulary** (any other name fails the run with exit code `2`
+BEFORE any scanning starts):
+
+| Name | Cell contents |
+|---|---|
+| `path` | NEW-side path (post-rename for R/C rows). |
+| `status` | Audit status (`matched`, `ignored-extension`, `ignored-deleted`, …). |
+| `reason` | Human-readable explanation of the status. |
+| `kind` | `R`, `C`, or empty for plain A/M/D rows. |
+| `score` | Integer percentage, `0` for "observed-but-dissimilar", or empty for **unscored**. |
+| `old_path` | OLD-side path on R/C rows; empty otherwise. |
+| `score_kind` | `rename-similarity` / `copy-similarity` / `unscored`; empty for plain rows. |
+
+**Rules**:
+
+- **Order is preserved** as written — the spec is a *projection*,
+  not a set, so the user controls column order in the output.
+- **Whitespace** around each token is stripped (`path, status`
+  works); empty tokens drop silently (a trailing comma is fine).
+- **Duplicates raise** — `path,path` is a copy-paste slip, never
+  a legitimate request for two `path` columns.
+- **Independent of `--similarity-labels`** — listing `score_kind`
+  in the field spec adds it to the CSV without touching the
+  text-table or JSON surfaces; conversely, omitting `score_kind`
+  while `--similarity-labels` is on trims the spreadsheet view
+  but keeps the discriminator in the JSON / text outputs. Per-
+  surface knobs stay orthogonal.
+- The spec is validated even when `--similarity-csv` itself isn't
+  set, so misconfigured CI scripts surface typos on the very
+  first run rather than silently the day they add the export.
+
 ## Per-kind score labels (`--similarity-labels`)
 
 `score` is an integer, but its *meaning* depends on the row's kind:
