@@ -551,6 +551,8 @@ npm run lint:readme:canonicals
 
 > **Markdown is intentionally not linted for code-style.** CI lints code in `spec/` and source files only — example snippets in `readme.md` and `docs/` are validated by hand against [`spec/02-coding-guidelines/01-cross-language/04-code-style/`](spec/02-coding-guidelines/01-cross-language/04-code-style/).
 
+> **Diff-mode audit & similarity legend.** `check-placeholder-comments.py` supports a `--list-changed-files` audit trail with optional `--with-similarity` rename/copy provenance. When the similarity columns are on, `--similarity-legend={auto,on,off}` controls whether a short cheat-sheet for the `kind` / `score` / `old` (and `meaning`) columns is appended after the totals footer on STDERR — `auto` (default) emits it only when STDERR is an interactive terminal, `on` forces it (e.g. for `less -R` or a paged CI artifact), `off` suppresses it (e.g. for clipboard / paste-into-ticket flows). It is always a no-op without `--with-similarity` and a no-op in `--json` mode. See [`linter-scripts/README-rename-intake.md` → Score-column legend](linter-scripts/README-rename-intake.md#score-column-legend---similarity-legendautoonoff) for the full table, examples, and the rationale behind the `auto` default.
+
 ### Repo migration (v15 → v16)
 
 ```bash
