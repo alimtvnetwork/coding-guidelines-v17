@@ -28,9 +28,23 @@ format, per the conventions in ``spec/_template.md``
 
 Rules enforced (lightweight, no AST):
 
-  P-001  HTML-comment placeholders must include a ``TODO:`` (or
-         ``FIXME:``) marker on the opening line so reviewers can grep
-         pending work. The ``<spec-placeholder>`` form is self-marking.
+  P-001  Placeholder *intent text* must be a complete imperative
+         sentence so reviewers see actionable language. Specifically:
+
+           * Wording follows the marker (``TODO:`` / ``FIXME:`` for
+             legacy comments, ``reason="…"`` for ``<spec-placeholder>``).
+           * It must be non-empty and start with a recognised
+             imperative verb (``activate``, ``add``, ``link``,
+             ``replace``, ``wire``, ``update``, ``write``, ``create``,
+             ``document``, ``cross-reference``). Extend the allowlist
+             via ``--allow-verb <verb>`` (repeatable).
+           * It must end with a period — half-sentences like
+             ``activate later`` are rejected; ``Activate when target is
+             created.`` passes.
+
+         The verb is matched case-insensitively. Articles/auxiliaries
+         like ``please`` are stripped before the check so
+         ``please add the link.`` passes.
   P-002  Every non-blank body line must be a markdown bullet
          (``- [text](link)``) — no stray prose, no orphan list markers.
   P-003  Bullet links must be relative paths ending in ``.md``
@@ -77,6 +91,10 @@ from typing import Iterable
 # Opening marker must be on the same line as ``<!--`` so we can detect
 # placeholder intent without scanning the whole comment first.
 PLACEHOLDER_OPEN_RE = re.compile(r"<!--\s*(TODO|FIXME)\b[^\n]*$")
+# Capture the wording that follows the marker so P-001 can lint it.
+PLACEHOLDER_INTENT_RE = re.compile(
+    r"<!--\s*(?P<marker>TODO|FIXME)\s*:?\s*(?P<text>[^\n]*?)\s*$"
+)
 COMMENT_CLOSE = "-->"
 
 # --- Custom-tag placeholder (preferred form) --------------------------
@@ -87,6 +105,35 @@ COMMENT_CLOSE = "-->"
 TAG_OPEN_RE = re.compile(r"<spec-placeholder\b[^>]*>")
 TAG_SELF_CLOSE_RE = re.compile(r"<spec-placeholder\b[^>]*/\s*>")
 TAG_CLOSE = "</spec-placeholder>"
+# Capture the ``reason="…"`` attribute on the opening tag (single or
+# double quotes). Absent reason → P-001 with a "missing reason" hint.
+TAG_REASON_RE = re.compile(
+    r"<spec-placeholder\b[^>]*?\breason\s*=\s*(?P<q>[\"'])(?P<text>.*?)(?P=q)",
+    re.IGNORECASE,
+)
+
+# Curated set of imperative verbs that signal actionable intent. Kept
+# deliberately small — authors who want a different verb can extend
+# the set via ``--allow-verb`` rather than the linter silently accepting
+# any leading word. All entries are lowercase; matching is
+# case-insensitive.
+DEFAULT_INTENT_VERBS: frozenset[str] = frozenset({
+    "activate",
+    "add",
+    "link",
+    "replace",
+    "wire",
+    "update",
+    "write",
+    "create",
+    "document",
+    "cross-reference",
+})
+
+# Soft prefixes that authors may stack before the imperative verb
+# without the wording becoming non-actionable. Stripped (case-
+# insensitively) before the verb-match check.
+INTENT_PREFIXES: tuple[str, ...] = ("please ",)
 
 BULLET_LINK_RE = re.compile(r"^-\s+\[[^\]]+\]\(([^)\s]+)\)\s*$")
 
