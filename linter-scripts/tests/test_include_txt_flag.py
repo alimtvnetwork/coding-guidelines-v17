@@ -163,13 +163,13 @@ class IncludeTxtUnionSemantics(unittest.TestCase):
             tdp = Path(td)
             spec, cache = _make_repo(tdp)
             (spec / "extra.mdx").write_text("# spec\nplain prose.\n")
-            code1, _, err1 = _run(
+            code1, out1, _ = _run(
                 "--root", str(spec),
                 "--repo-root", str(tdp),
                 "--include-mdx", "--include-txt",
                 "--cache-dir", str(cache),
                 cwd=tdp)
-            code2, _, err2 = _run(
+            code2, out2, _ = _run(
                 "--root", str(spec),
                 "--repo-root", str(tdp),
                 "--include-txt", "--include-mdx",
@@ -181,8 +181,13 @@ class IncludeTxtUnionSemantics(unittest.TestCase):
             # flag order didn't fork the cache.
             self.assertEqual(_segments(cache), {"ext-md+mdx+txt"})
             # Second run hit the cache (sentinel from run 1). The
-            # cache-hit log line is the documented black-box signal.
-            self.assertIn("cache hit", err2.lower())
+            # cache-hit log line goes to STDOUT (not STDERR) — it
+            # replaces the normal scan summary, so STDOUT is the
+            # right stream to grep. The first run wrote the sentinel
+            # AFTER its scan, so its STDOUT is the success summary;
+            # only run 2's STDOUT carries "cache hit".
+            self.assertIn("cache hit", out2.lower())
+            self.assertNotIn("cache hit", out1.lower())
 
 
 if __name__ == "__main__":  # pragma: no cover - manual runner
