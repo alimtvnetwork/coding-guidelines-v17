@@ -702,18 +702,31 @@ def main(argv: list[str] | None = None) -> int:
     # Audit trail of every raw post-state path the diff produced and
     # how the allowlist filter (extension → under-root → exists)
     # treated it. ``None`` in full-tree mode (no diff to classify);
-    # always a list (possibly empty) in diff mode. Consumed by the
-    # ``--list-changed-files`` diagnostic.
+    # populated lazily — only when ``--list-changed-files`` asks for
+    # it — so full lints don't pay for the audit-trail allocation.
+    # We deliberately keep the call to ``_resolve_changed_md`` on the
+    # hot path so existing test stubs that monkey-patch that single
+    # entry point continue to intercept the resolution.
     changed_classification: list[dict[str, str]] | None = None
     if args.diff_base or args.changed_files:
         try:
-            changed_md, changed_classification = (
-                _resolve_changed_md_with_classification(
-                repo_root, root,
-                diff_base=args.diff_base,
-                changed_files=args.changed_files,
+            if args.list_changed_files:
+                # Diagnostic path needs the per-row classification, so
+                # use the variant that returns both. Output set is
+                # byte-identical to ``_resolve_changed_md``.
+                changed_md, changed_classification = (
+                    _resolve_changed_md_with_classification(
+                        repo_root, root,
+                        diff_base=args.diff_base,
+                        changed_files=args.changed_files,
+                    )
                 )
-            )
+            else:
+                changed_md = _resolve_changed_md(
+                    repo_root, root,
+                    diff_base=args.diff_base,
+                    changed_files=args.changed_files,
+                )
         except RuntimeError as e:
             print(f"error: {e}", file=sys.stderr)
             return 2
