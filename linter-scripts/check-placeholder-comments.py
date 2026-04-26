@@ -43,6 +43,13 @@ Rules enforced (lightweight, no AST):
          contiguous per template guidance).
   P-006  Every opening marker must have a matching closer
          (``-->`` or ``</spec-placeholder>``).
+  P-008  Every placeholder block must include a back-pointer hint of
+         the form ``@path/to/file.ext:LINE`` in its opening
+         declaration (inside the ``<!-- TODO: ... -->`` opener line,
+         or inside any attribute of ``<spec-placeholder ...>``). The
+         hint records which spec line is blocked on the pending
+         target so reviewers can ``grep`` straight to the activation
+         site instead of scanning every spec file by hand.
 
 Only multi-line comment blocks that start with the ``TODO:``/``FIXME:``
 marker on the opening line are linted. Single-line comments and
