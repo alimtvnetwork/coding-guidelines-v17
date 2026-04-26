@@ -28,23 +28,9 @@ format, per the conventions in ``spec/_template.md``
 
 Rules enforced (lightweight, no AST):
 
-  P-001  Placeholder *intent text* must be a complete imperative
-         sentence so reviewers see actionable language. Specifically:
-
-           * Wording follows the marker (``TODO:`` / ``FIXME:`` for
-             legacy comments, ``reason="…"`` for ``<spec-placeholder>``).
-           * It must be non-empty and start with a recognised
-             imperative verb (``activate``, ``add``, ``link``,
-             ``replace``, ``wire``, ``update``, ``write``, ``create``,
-             ``document``, ``cross-reference``). Extend the allowlist
-             via ``--allow-verb <verb>`` (repeatable).
-           * It must end with a period — half-sentences like
-             ``activate later`` are rejected; ``Activate when target is
-             created.`` passes.
-
-         The verb is matched case-insensitively. Articles/auxiliaries
-         like ``please`` are stripped before the check so
-         ``please add the link.`` passes.
+  P-001  HTML-comment placeholders must include a ``TODO:`` (or
+         ``FIXME:``) marker on the opening line so reviewers can grep
+         pending work. The ``<spec-placeholder>`` form is self-marking.
   P-002  Every non-blank body line must be a markdown bullet
          (``- [text](link)``) — no stray prose, no orphan list markers.
   P-003  Bullet links must be relative paths ending in ``.md``
@@ -57,10 +43,13 @@ Rules enforced (lightweight, no AST):
          contiguous per template guidance).
   P-006  Every opening marker must have a matching closer
          (``-->`` or ``</spec-placeholder>``).
-  P-007  Two or more placeholder bullets must not point at the same
-         target ``.md`` file (anchor ignored — duplicates pointing at
-         different sections of the same file still collapse to one
-         pending activation). Detected within a file and across files.
+  P-008  Every placeholder block must include a back-pointer hint of
+         the form ``@path/to/file.ext:LINE`` in its opening
+         declaration (inside the ``<!-- TODO: ... -->`` opener line,
+         or inside any attribute of ``<spec-placeholder ...>``). The
+         hint records which spec line is blocked on the pending
+         target so reviewers can ``grep`` straight to the activation
+         site instead of scanning every spec file by hand.
 
 Only multi-line comment blocks that start with the ``TODO:``/``FIXME:``
 marker on the opening line are linted. Single-line comments and
@@ -91,10 +80,6 @@ from typing import Iterable
 # Opening marker must be on the same line as ``<!--`` so we can detect
 # placeholder intent without scanning the whole comment first.
 PLACEHOLDER_OPEN_RE = re.compile(r"<!--\s*(TODO|FIXME)\b[^\n]*$")
-# Capture the wording that follows the marker so P-001 can lint it.
-PLACEHOLDER_INTENT_RE = re.compile(
-    r"<!--\s*(?P<marker>TODO|FIXME)\s*:?\s*(?P<text>[^\n]*?)\s*$"
-)
 COMMENT_CLOSE = "-->"
 
 # --- Custom-tag placeholder (preferred form) --------------------------
@@ -105,37 +90,22 @@ COMMENT_CLOSE = "-->"
 TAG_OPEN_RE = re.compile(r"<spec-placeholder\b[^>]*>")
 TAG_SELF_CLOSE_RE = re.compile(r"<spec-placeholder\b[^>]*/\s*>")
 TAG_CLOSE = "</spec-placeholder>"
-# Capture the ``reason="…"`` attribute on the opening tag (single or
-# double quotes). Absent reason → P-001 with a "missing reason" hint.
-TAG_REASON_RE = re.compile(
-    r"<spec-placeholder\b[^>]*?\breason\s*=\s*(?P<q>[\"'])(?P<text>.*?)(?P=q)",
-    re.IGNORECASE,
-)
-
-# Curated set of imperative verbs that signal actionable intent. Kept
-# deliberately small — authors who want a different verb can extend
-# the set via ``--allow-verb`` rather than the linter silently accepting
-# any leading word. All entries are lowercase; matching is
-# case-insensitive.
-DEFAULT_INTENT_VERBS: frozenset[str] = frozenset({
-    "activate",
-    "add",
-    "link",
-    "replace",
-    "wire",
-    "update",
-    "write",
-    "create",
-    "document",
-    "cross-reference",
-})
-
-# Soft prefixes that authors may stack before the imperative verb
-# without the wording becoming non-actionable. Stripped (case-
-# insensitively) before the verb-match check.
-INTENT_PREFIXES: tuple[str, ...] = ("please ",)
 
 BULLET_LINK_RE = re.compile(r"^-\s+\[[^\]]+\]\(([^)\s]+)\)\s*$")
+
+# --- Back-pointer hint (P-008) ----------------------------------------
+# Required shape: ``@<path>:<line>`` where:
+#   * ``<path>`` is a relative-looking file path. We require at least
+#     one ``/`` so trivial words like ``@foo:1`` aren't accepted, and
+#     a final ``.<ext>`` so the hint clearly refers to a source file
+#     (``.md``, ``.py``, ``.ts``, ``.go``, ``.sh``, ``.toml``, …).
+#   * ``<line>`` is a positive integer.
+# Permissive on the path charset (anything that isn't whitespace, a
+# quote, or a closing-tag char) so deep paths with hyphens, digits,
+# and underscores pass without escaping. Verified syntactically only —
+# the hinted file/line is not opened (placeholders are forward-looking
+# and the hinted source may be mid-rename).
+HINT_RE = re.compile(r"@([^\s\"'>]+/[^\s\"'>]+\.[A-Za-z0-9]+):([1-9]\d*)\b")
 
 
 @dataclass(frozen=True)
@@ -193,61 +163,9 @@ def strip_inline_code(text: str) -> str:
                      for line in text.splitlines())
 
 
-def _validate_intent(rel: str, line_no: int, marker: str, text: str,
-                     out: list[Violation], verbs: frozenset[str]) -> None:
-    """Apply P-001 to a placeholder's intent text.
-
-    ``marker`` is shown verbatim in the message ("TODO:", "FIXME:",
-    or "reason"). ``text`` is the wording that follows it (already
-    stripped of surrounding whitespace). ``verbs`` is the active
-    imperative-verb allowlist for this run.
-    """
-    if not text:
-        out.append(Violation(rel, line_no, "P-001",
-            f"Placeholder `{marker}` is empty — describe the pending action "
-            "(e.g. `Activate when target is created.`)."))
-        return
-
-    # Strip soft prefixes (e.g. "please ") so they don't shadow the verb.
-    lowered = text.lower()
-    for prefix in INTENT_PREFIXES:
-        if lowered.startswith(prefix):
-            text = text[len(prefix):]
-            lowered = text.lower()
-            break
-
-    if not text:
-        out.append(Violation(rel, line_no, "P-001",
-            f"Placeholder `{marker}` has no actionable wording after `please`."))
-        return
-
-    # Extract the leading word (or hyphenated compound like
-    # ``cross-reference``). Compare case-insensitively.
-    head_match = re.match(r"[A-Za-z][A-Za-z-]*", text)
-    head = head_match.group(0).lower() if head_match else ""
-    if head not in verbs:
-        sample = ", ".join(sorted(list(verbs))[:6])
-        out.append(Violation(rel, line_no, "P-001",
-            f"Placeholder `{marker}` must start with an imperative verb "
-            f"(got `{head or text[:20]}`). Allowed verbs include: {sample}…. "
-            "Extend with `--allow-verb <verb>` if needed."))
-        return
-
-    if not text.rstrip().endswith("."):
-        out.append(Violation(rel, line_no, "P-001",
-            f"Placeholder `{marker}` wording must end with a period "
-            f"(got `{text.rstrip()[-30:]}`)."))
-        return
-
-
 def _validate_body(rel: str, open_line: int, body: list[tuple[int, str]],
-                   out: list[Violation],
-                   bullets: list[tuple[int, str]] | None = None) -> int:
-    """Apply P-002/P-003/P-005 to a body and return valid bullet count.
-
-    When ``bullets`` is provided, every valid bullet is appended as
-    ``(line, target)`` for later cross-block duplicate analysis (P-007).
-    """
+                   out: list[Violation]) -> int:
+    """Apply P-002/P-003/P-005 to a body and return valid bullet count."""
     bullet_count = 0
     for ln, content in body:
         if not content.strip():
@@ -271,30 +189,14 @@ def _validate_body(rel: str, open_line: int, body: list[tuple[int, str]],
                 f"Placeholder link `{target}` must point at a `.md` file."))
             continue
         bullet_count += 1
-        if bullets is not None:
-            bullets.append((ln, target))
     return bullet_count
 
 
-def lint_file(path: Path, repo_root: Path,
-              valid_bullets: list[tuple[str, int, str]] | None = None,
-              intent_verbs: frozenset[str] = DEFAULT_INTENT_VERBS,
-              ) -> list[Violation]:
-    """Lint one markdown file.
-
-    When ``valid_bullets`` is provided, every successfully-validated
-    bullet is appended as ``(rel_file, line, target)`` so the caller
-    can run cross-file duplicate detection (P-007).
-
-    ``intent_verbs`` controls the imperative-verb allowlist for P-001;
-    defaults to ``DEFAULT_INTENT_VERBS`` and can be widened from the
-    CLI via ``--allow-verb``.
-    """
+def lint_file(path: Path, repo_root: Path) -> list[Violation]:
     rel = str(path.relative_to(repo_root))
     text = path.read_text(encoding="utf-8")
     lines = strip_inline_code(strip_code_fences(text)).splitlines()
     out: list[Violation] = []
-    file_bullets: list[tuple[int, str]] = []
 
     i = 0
     n = len(lines)
@@ -311,16 +213,7 @@ def lint_file(path: Path, repo_root: Path,
         tag_open = TAG_OPEN_RE.search(line)
         if tag_open:
             open_line = i + 1
-            # P-001: validate `reason="…"` wording. A missing attribute
-            # is itself a P-001 ("placeholder has no documented intent").
-            reason_match = TAG_REASON_RE.search(line)
-            reason_text = reason_match.group("text").strip() if reason_match else ""
-            if not reason_match:
-                out.append(Violation(rel, open_line, "P-001",
-                    "`<spec-placeholder>` is missing a `reason=\"…\"` attribute "
-                    "describing why the link is pending."))
-            else:
-                _validate_intent(rel, open_line, "reason", reason_text, out, intent_verbs)
+            opener_text = line[tag_open.start():tag_open.end()]
             # Same-line open+close — degenerate empty block.
             if TAG_CLOSE in line[tag_open.end():]:
                 out.append(Violation(rel, open_line, "P-004",
@@ -333,10 +226,11 @@ def lint_file(path: Path, repo_root: Path,
                     "`<spec-placeholder>` opened but never closed "
                     "(missing `</spec-placeholder>`)."))
                 continue
-            bullet_count = _validate_body(rel, open_line, body, out, file_bullets)
+            bullet_count = _validate_body(rel, open_line, body, out)
             if bullet_count == 0:
                 out.append(Violation(rel, open_line, "P-004",
                     "`<spec-placeholder>` block contains no valid bullet rows."))
+            _check_hint(rel, open_line, opener_text, out, form="tag")
             continue
 
         # ---- HTML-comment placeholder (legacy) ----------------------
@@ -344,53 +238,23 @@ def lint_file(path: Path, repo_root: Path,
         if not m:
             i += 1
             continue
-        # P-001: lint the wording that follows the marker.
-        intent_match = PLACEHOLDER_INTENT_RE.search(line)
-        if intent_match:
-            marker = intent_match.group("marker") + ":"
-            intent_text = intent_match.group("text").strip()
-            # Trim a trailing ``-->`` if the open + close share a line —
-            # P-004 below will catch the structural problem; here we
-            # just need clean intent text.
-            if intent_text.endswith(COMMENT_CLOSE):
-                intent_text = intent_text[: -len(COMMENT_CLOSE)].rstrip()
-            _validate_intent(rel, i + 1, marker, intent_text, out, intent_verbs)
         if COMMENT_CLOSE in line[m.end():] or COMMENT_CLOSE in line[m.start():]:
             out.append(Violation(rel, i + 1, "P-004",
                 "Placeholder comment has no bullet rows; remove or expand it."))
             i += 1
             continue
         open_line = i + 1
+        opener_text = line[m.start():]
         body, i, closed = _consume_block(lines, i + 1, COMMENT_CLOSE)
         if not closed:
             out.append(Violation(rel, open_line, "P-006",
                 "Placeholder comment opened but never closed (missing `-->`)."))
             continue
-        bullet_count = _validate_body(rel, open_line, body, out, file_bullets)
+        bullet_count = _validate_body(rel, open_line, body, out)
         if bullet_count == 0:
             out.append(Violation(rel, open_line, "P-004",
                 "Placeholder block contains no valid bullet rows."))
-
-    # ---- P-007 within-file duplicates ------------------------------
-    # Resolve each bullet to a canonical (file, target_path) key. We
-    # strip the anchor because two placeholders pointing at different
-    # sections of the same target file still collapse to a single
-    # activation step, which is what P-007 is designed to surface.
-    seen: dict[str, tuple[int, str]] = {}
-    for ln, target in file_bullets:
-        key = _canonical_target(rel, target, repo_root)
-        if key in seen:
-            first_ln, first_target = seen[key]
-            out.append(Violation(rel, ln, "P-007",
-                f"Duplicate placeholder target `{target}` — already "
-                f"declared at L{first_ln} as `{first_target}` "
-                "(anchor differences are ignored)."))
-        else:
-            seen[key] = (ln, target)
-
-    if valid_bullets is not None:
-        for ln, target in file_bullets:
-            valid_bullets.append((rel, ln, target))
+        _check_hint(rel, open_line, opener_text, out, form="comment")
 
     return out
 
@@ -418,22 +282,32 @@ def _consume_block(lines: list[str], start: int, close_marker: str
     return body, i, False
 
 
-def _canonical_target(source_rel: str, target: str, repo_root: Path) -> str:
-    """Resolve a placeholder bullet's link to a canonical repo-relative
-    path string. Anchor is stripped so different anchors on the same
-    target file collapse to the same key. Path resolution is purely
-    syntactic (no I/O) — the target file may not exist yet, which is
-    the whole point of placeholders.
+def _check_hint(rel: str, open_line: int, opener_text: str,
+                out: list[Violation], form: str) -> None:
+    """Enforce P-008: opener must contain an ``@path:line`` hint.
+
+    ``opener_text`` is the raw substring of the opening line starting
+    at the placeholder marker (``<!-- TODO ...`` or
+    ``<spec-placeholder ...>``). We only scan the opener line so the
+    rule is local: misplacing the hint in the body still fails, which
+    is intentional — it keeps the back-pointer adjacent to the marker
+    where reviewers grep.
     """
-    path_part = target.split("#", 1)[0]
-    source_dir = (repo_root / source_rel).parent
-    try:
-        resolved = (source_dir / path_part).resolve()
-        return str(resolved.relative_to(repo_root.resolve()))
-    except (ValueError, OSError):
-        # Fall back to the literal path if it escapes the repo root —
-        # still gives consistent grouping for duplicate detection.
-        return path_part
+    if HINT_RE.search(opener_text):
+        return
+    if form == "tag":
+        fix = (
+            "add a back-pointer attribute, e.g. "
+            "`<spec-placeholder reason=\"... @spec/04-database/01-schema.md:42\">`"
+        )
+    else:
+        fix = (
+            "add a back-pointer to the marker line, e.g. "
+            "`<!-- TODO: activate when target lands @spec/04-database/01-schema.md:42`"
+        )
+    out.append(Violation(rel, open_line, "P-008",
+        "Placeholder opener is missing a `@path/to/file.ext:LINE` "
+        f"back-pointer hint; {fix}."))
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -444,10 +318,6 @@ def main(argv: list[str] | None = None) -> int:
         help="Repository root for relative path reporting (default: cwd).")
     ap.add_argument("--json", action="store_true",
         help="Emit findings as JSON instead of human text.")
-    ap.add_argument("--allow-verb", action="append", default=[],
-        metavar="VERB",
-        help="Add an extra imperative verb to the P-001 allowlist "
-             "(repeatable). Use lowercase, hyphens allowed.")
     args = ap.parse_args(argv)
 
     root = Path(args.root).resolve()
@@ -456,36 +326,9 @@ def main(argv: list[str] | None = None) -> int:
         print(f"error: --root {args.root!r} is not a directory", file=sys.stderr)
         return 2
 
-    intent_verbs = DEFAULT_INTENT_VERBS | {v.lower() for v in args.allow_verb}
-
     violations: list[Violation] = []
-    cross_file_bullets: list[tuple[str, int, str]] = []
     for md in iter_markdown_files(root):
-        violations.extend(lint_file(md, repo_root, cross_file_bullets, intent_verbs))
-
-    # ---- P-007 cross-file duplicates -------------------------------
-    # Group every valid bullet across the scan by canonical target.
-    # Within-file duplicates are already reported above, so we only
-    # surface groups whose entries span ≥2 distinct files. The
-    # *second* and later occurrences are flagged, pointing back at
-    # the first declaration site for fast triage.
-    by_target: dict[str, list[tuple[str, int, str]]] = {}
-    for rel, ln, target in cross_file_bullets:
-        by_target.setdefault(_canonical_target(rel, target, repo_root), []).append(
-            (rel, ln, target)
-        )
-    for key, entries in by_target.items():
-        files_seen = {e[0] for e in entries}
-        if len(files_seen) < 2:
-            continue
-        first_rel, first_ln, first_target = entries[0]
-        for rel, ln, target in entries[1:]:
-            if rel == first_rel:
-                continue  # already reported by the within-file pass
-            violations.append(Violation(rel, ln, "P-007",
-                f"Duplicate placeholder target `{target}` — also declared at "
-                f"`{first_rel}:L{first_ln}` as `{first_target}` "
-                "(anchor differences are ignored)."))
+        violations.extend(lint_file(md, repo_root))
 
     if args.json:
         print(json.dumps([asdict(v) for v in violations], indent=2))

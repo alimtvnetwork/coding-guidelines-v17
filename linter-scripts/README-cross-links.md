@@ -45,19 +45,17 @@ python3 linter-scripts/check-placeholder-comments.py --root spec --repo-root .
 
 It enforces the snippet shape documented in `spec/_template.md` §Placeholder cross-references and runs automatically in the pre-commit hook alongside the cross-link checker.
 
-Rule summary (full docs in the script header):
+### Rules at a glance
 
-| Code | Check |
-|------|-------|
-| P-001 | Intent text (`TODO:` / `FIXME:` / `reason="…"`) must start with an allowlisted imperative verb and end with a period |
-| P-002 | Body lines must be `- [text](link)` bullets |
-| P-003 | Links must be relative `.md` paths (no `http(s)://`, no anchor-only) |
-| P-004 | Block must contain ≥1 valid bullet |
-| P-005 | No blank lines inside the block |
-| P-006 | Every opening marker must have a matching closer |
-| P-007 | No duplicate placeholder targets — within a file or across files (anchor ignored, paths resolved) |
-
-Extend the P-001 verb allowlist for a single run with `--allow-verb <verb>` (repeatable). The default set (`activate`, `add`, `link`, `replace`, `wire`, `update`, `write`, `create`, `document`, `cross-reference`) covers the activation-language used in the spec template.
+| Rule | Enforces |
+|------|----------|
+| P-001 | HTML-comment placeholders carry a `TODO:`/`FIXME:` marker on the opener. |
+| P-002 | Body lines are `- [text](link)` bullets. |
+| P-003 | Bullet links are relative `.md` paths (no http(s)/anchor-only). |
+| P-004 | Block contains at least one bullet. |
+| P-005 | No blank lines inside the block. |
+| P-006 | Every opener has a matching closer (`-->` / `</spec-placeholder>`). |
+| P-008 | Opener carries an `@path/to/file.ext:LINE` back-pointer hint so reviewers can `grep -n` straight to the spec section blocked on the pending target. |
 
 ## Allowlist (waivers)
 
