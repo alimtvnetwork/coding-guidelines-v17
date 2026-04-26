@@ -799,6 +799,23 @@ def main(argv: list[str] | None = None) -> int:
              "BEFORE the export, so the CSV contains exactly the rows "
              "you'd see in the text/JSON audit. No-op without "
              "--list-changed-files.")
+    ap.add_argument("--similarity-csv-format", default="csv",
+        choices=("csv", "tsv"),
+        help="Field-separator dialect for the --similarity-csv export. "
+             "`csv` (default) writes RFC 4180 with comma separators "
+             "and double-quote quoting (the legacy behaviour, "
+             "byte-for-byte unchanged when the flag is absent). `tsv` "
+             "writes tab-separated values using the stdlib "
+             "`csv.excel_tab` dialect — handy when your paths or "
+             "reasons contain commas (avoids needing quoted cells in "
+             "the spreadsheet) or when piping into tools that prefer "
+             "tabs (`cut -f`, `awk -F'\\t'`, `column -t -s$'\\t'`, "
+             "`q -t`). The header row, column order, and the empty-"
+             "vs-`0` score-cell convention are identical across both "
+             "dialects — only the separator changes. The output file "
+             "extension is NOT auto-rewritten: pass an explicit "
+             "`.tsv` path if you want one. No-op without "
+             "--similarity-csv.")
     ap.add_argument("--similarity-labels", action="store_true",
         help="With --with-similarity, attach a per-kind discriminator "
              "to every rename/copy row so the score's *meaning* is "
