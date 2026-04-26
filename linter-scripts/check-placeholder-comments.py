@@ -501,9 +501,21 @@ def main(argv: list[str] | None = None) -> int:
              "-- <file>`) and print the post-state excerpt under the "
              "human-readable summary so authors can patch without "
              "switching to git. Default 3; 0 disables. Ignored in "
-             "--changed-files mode (no diff-base to query) and in "
-             "--json mode (excerpts would corrupt structured output; "
-             "JSON consumers can render their own from the file/line).")
+             "--changed-files mode (no diff-base to query). In --json "
+             "mode, excerpts are suppressed by default to keep the "
+             "schema byte-identical for legacy consumers; pass "
+             "`--json-excerpts` to emit them as a structured array.")
+    ap.add_argument("--json-excerpts", action="store_true",
+        help="Only meaningful with --json + --diff-base. Adds an "
+             "`excerpt` array to each violation row containing the "
+             "post-state diff window around the violation line. Each "
+             "element is `{\"line\": int, \"kind\": \"+\"|\" \", "
+             "\"text\": str, \"focus\": bool}` — `focus` marks the "
+             "exact violation line so consumers don't need to re-do "
+             "the centering math. The schema is additive: violations "
+             "with no available excerpt simply omit the key, so "
+             "parsers that don't know about it are unaffected. "
+             "Window size is governed by --diff-context.")
     args = ap.parse_args(argv)
 
     root = Path(args.root).resolve()
