@@ -717,6 +717,25 @@ def main(argv: list[str] | None = None) -> int:
              "`--only-changed-status ignored-extension` to debug why a "
              "PR's docs aren't being checked. No-op without "
              "--list-changed-files.")
+    ap.add_argument("--with-similarity", action="store_true",
+        help="With --list-changed-files, include the rename/copy "
+             "similarity metadata in the printed audit. Three extra "
+             "columns are appended: `kind` (`R` for rename, `C` for "
+             "copy, `-` for plain A/M/D rows), `score` (git's 0–100 "
+             "similarity percentage, `-` when absent — e.g. plain "
+             "rows or arrow-form `--changed-files` payloads that "
+             "don't carry a percentage, `?` is reserved for future "
+             "use), and `old` (the OLD-side path on R/C rows, `-` "
+             "otherwise). With --json the metadata is emitted as a "
+             "nested object `{\"kind\":str, \"score\":int|null, "
+             "\"old_path\":str}` under the `similarity` key (or "
+             "`null` when no rename/copy was observed) so dashboards "
+             "can reason about provenance without parsing the text "
+             "table. No-op without --list-changed-files; safe to "
+             "combine with --dedupe-changed-files (first-seen "
+             "semantics also apply to the similarity record) and "
+             "--only-changed-status (filtering runs after the "
+             "metadata is attached).")
     ap.add_argument("--github", dest="github", action="store_true",
         default=None,
         help="Emit one GitHub Actions `::error file=…,line=…,title=…::` "
