@@ -978,19 +978,24 @@ def main(argv: list[str] | None = None) -> int:
 
 def _resolve_changed_md(repo_root: Path, root: Path, *,
                         diff_base: str | None,
-                        changed_files: str | None) -> set[Path]:
+                        changed_files: str | None,
+                        extensions: tuple[str, ...] = DEFAULT_EXTENSIONS,
+                        audit: list[_ChangedFileAudit] | None = None,
+                        ) -> set[Path]:
     """Resolve the set of `.md` files under ``root`` that are changed.
 
     Two input modes:
       * ``diff_base`` → invoke
-        ``git diff --name-status -M -C --diff-filter=AMRC
+        ``git diff --name-status -M -C --diff-filter=AMRCD
         <base>...HEAD`` from ``repo_root``. The triple-dot syntax
         compares HEAD against the merge-base with ``<base>``, which
         matches GitHub's PR diff and survives force-pushes / rebases
-        on the base branch. The ``AMRC`` filter keeps Added,
-        Modified, Renamed, and Copied paths and drops deletes + type
-        changes (a deleted file can't carry a new violation in the
-        post-state). For ``R``/``C`` rows we take the *new* path so
+        on the base branch. The ``AMRCD`` filter keeps Added,
+        Modified, Renamed, Copied, *and* Deleted paths. Deletes are
+        never linted (a deleted file can't carry a new violation in
+        the post-state) but they ARE recorded in the audit trail
+        with status ``ignored-deleted`` so downstream consumers can
+        see the full intake. For ``R``/``C`` rows we take the *new* path so
         the linter re-checks the file under its post-rename location
         — that's where the placeholder block lives now, and a rename
         commit often touches it (e.g. updated back-pointer hints).
@@ -1006,7 +1011,14 @@ def _resolve_changed_md(repo_root: Path, root: Path, *,
         ``git diff --name-status`` output verbatim) or
         ``OLD => NEW`` (matches ``git status -s`` rename arrows). In
         both forms the OLD path is discarded and the NEW path is
-        linted as a normal change.
+        linted as a normal change. A ``D\\tpath`` row in this input
+        is recorded as ``ignored-deleted`` in the audit trail.
+
+    ``audit`` (optional out-parameter): when provided, every path the
+    intake considered is appended as a :class:`_ChangedFileAudit` row
+    classified by extension/root/existence/delete-status. Pass
+    ``None`` (the default) to skip the bookkeeping entirely — the
+    legacy hot path stays allocation-free.
 
     Returned paths are absolute + resolved and filtered to:
       * extension ``.md``
@@ -1016,14 +1028,16 @@ def _resolve_changed_md(repo_root: Path, root: Path, *,
         in a later commit of the same push won't exist)
     """
     # Each entry is the post-state repo-relative path. Rename/copy
-    # rows contribute only their NEW side; deletes contribute nothing
-    # (the diff-filter / parser drops them upstream).
+    # rows contribute only their NEW side. Delete rows are tagged
+    # with a leading ``\x00D\x00`` sentinel so the audit pass can
+    # mark them ``ignored-deleted`` without re-parsing the diff.
     raw: list[str] = []
+    deleted_paths: list[str] = []
     if diff_base:
         try:
             proc = subprocess.run(
                 ["git", "diff", "--name-status", "-M", "-C",
-                 "--diff-filter=AMRC",
+                 "--diff-filter=AMRCD",
                  f"{diff_base}...HEAD"],
                 cwd=repo_root, check=True, capture_output=True, text=True,
             )
@@ -1034,7 +1048,7 @@ def _resolve_changed_md(repo_root: Path, root: Path, *,
                 f"git diff vs. {diff_base!r} failed (exit {e.returncode}): "
                 f"{e.stderr.strip() or '(no stderr)'}"
             ) from e
-        raw = _parse_name_status(proc.stdout)
+        raw = _parse_name_status(proc.stdout, deleted=deleted_paths)
     else:
         assert changed_files is not None
         if changed_files == "-":
@@ -1046,22 +1060,55 @@ def _resolve_changed_md(repo_root: Path, root: Path, *,
                 raise RuntimeError(
                     f"--changed-files {changed_files!r} unreadable: {e}"
                 ) from e
-        raw = _normalise_changed_lines(lines)
+        raw = _normalise_changed_lines(lines, deleted=deleted_paths)
+    allowed_exts = {("." + e.lstrip(".").lower()) for e in extensions}
     out: set[Path] = set()
     for line in raw:
         s = line.strip()
         if not s or s.startswith("#"):
             continue
-        if not s.endswith(".md"):
+        ext = Path(s).suffix.lower()
+        if ext not in allowed_exts:
+            if audit is not None:
+                audit.append(_ChangedFileAudit(
+                    path=s, status="ignored-extension",
+                    reason=(f"extension {ext or '(none)'!r} not in "
+                            f"allowlist {sorted(allowed_exts)}"),
+                ))
             continue
         p = (repo_root / s).resolve()
         try:
             p.relative_to(root)
         except ValueError:
+            if audit is not None:
+                audit.append(_ChangedFileAudit(
+                    path=s, status="ignored-out-of-root",
+                    reason=f"path is outside --root {root}",
+                ))
             continue
         if not p.is_file():
+            if audit is not None:
+                audit.append(_ChangedFileAudit(
+                    path=s, status="ignored-missing",
+                    reason="post-state path is not on disk "
+                           "(reverted later in the push, or "
+                           "filtered by .gitignore on checkout)",
+                ))
             continue
         out.add(p)
+        if audit is not None:
+            audit.append(_ChangedFileAudit(
+                path=s, status="matched",
+                reason="under --root, extension allowed, "
+                       "file present on disk",
+            ))
+    if audit is not None:
+        for d in deleted_paths:
+            audit.append(_ChangedFileAudit(
+                path=d, status="ignored-deleted",
+                reason="git reported D (deleted): no post-state "
+                       "file to lint",
+            ))
     return out
 
 
