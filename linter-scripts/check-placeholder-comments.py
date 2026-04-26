@@ -633,6 +633,92 @@ def main(argv: list[str] | None = None) -> int:
     return 1 if violations else 0
 
 
+def _resolve_changed_md(repo_root: Path, root: Path, *,
+                        diff_base: str | None,
+                        changed_files: str | None) -> set[Path]:
+    """Resolve the set of `.md` files under ``root`` that are changed.
+
+    Two input modes:
+      * ``diff_base`` → invoke
+        ``git diff --name-only --diff-filter=AM <base>...HEAD`` from
+        ``repo_root``. The triple-dot syntax compares HEAD against the
+        merge-base with ``<base>``, which matches GitHub's PR diff and
+        survives force-pushes / rebases on the base branch. The
+        ``AM`` filter keeps Added + Modified paths and drops deletes,
+        renames, and type changes — none of which can introduce a
+        new placeholder violation in the post-state.
+      * ``changed_files`` → read newline-delimited paths from the
+        given file (``-`` = stdin). Blank lines and ``#`` comments are
+        ignored. Useful for CI runners that compute the diff
+        themselves (e.g. ``dorny/paths-filter``) or for local testing
+        without a git invocation.
+
+    Returned paths are absolute + resolved and filtered to:
+      * extension ``.md``
+      * residing under ``root`` (so a README change doesn't trigger a
+        spec scan)
+      * actually present on disk (a Modified path that was reverted
+        in a later commit of the same push won't exist)
+    """
+    raw: list[str] = []
+    if diff_base:
+        try:
+            proc = subprocess.run(
+                ["git", "diff", "--name-only", "--diff-filter=AM",
+                 f"{diff_base}...HEAD"],
+                cwd=repo_root, check=True, capture_output=True, text=True,
+            )
+        except FileNotFoundError as e:
+            raise RuntimeError(f"git not found on PATH: {e}") from e
+        except subprocess.CalledProcessError as e:
+            raise RuntimeError(
+                f"git diff vs. {diff_base!r} failed (exit {e.returncode}): "
+                f"{e.stderr.strip() or '(no stderr)'}"
+            ) from e
+        raw = proc.stdout.splitlines()
+    else:
+        assert changed_files is not None
+        if changed_files == "-":
+            raw = sys.stdin.read().splitlines()
+        else:
+            try:
+                raw = Path(changed_files).read_text(encoding="utf-8").splitlines()
+            except OSError as e:
+                raise RuntimeError(
+                    f"--changed-files {changed_files!r} unreadable: {e}"
+                ) from e
+    out: set[Path] = set()
+    for line in raw:
+        s = line.strip()
+        if not s or s.startswith("#"):
+            continue
+        if not s.endswith(".md"):
+            continue
+        p = (repo_root / s).resolve()
+        try:
+            p.relative_to(root)
+        except ValueError:
+            continue
+        if not p.is_file():
+            continue
+        out.add(p)
+    return out
+
+
+def _collect_bullets_only(path: Path, repo_root: Path,
+                          bullets_out: list[tuple[str, int, str]]) -> None:
+    """Cross-file P-007 helper for diff mode.
+
+    Re-uses ``lint_file`` to extract every valid bullet from an
+    unchanged file but discards the per-file violations. The bullets
+    are needed so a *changed* file's new bullet can collide with a
+    pre-existing target in an unchanged file and still trip P-007.
+    """
+    # ``lint_file`` already appends to ``bullets_out`` via its
+    # ``valid_bullets`` parameter; we drop the violations list.
+    lint_file(path, repo_root, bullets_out, DEFAULT_INTENT_VERBS)
+
+
 def _compute_cache_key(root: Path, intent_verbs: frozenset[str] | set[str]) -> str:
     """Build a SHA-256 fingerprint of every input that affects the verdict.
 
