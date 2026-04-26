@@ -803,17 +803,103 @@ def _resolve_changed_md(repo_root: Path, root: Path, *,
 _NAME_STATUS_RE = re.compile(r"^([AMDRCTUX])(\d{0,3})$")
 
 
+# Git emits paths in C-quoted form (``"path\twith\ttab"``) when
+# ``core.quotePath`` is true (the default) and the path contains a
+# byte that isn't safe for the terminal — tabs, newlines, control
+# chars, non-ASCII bytes when ``core.quotePath=true``. The quoting
+# is a strict subset of C string escapes: surrounding double quotes,
+# backslash escapes for ``\a \b \t \n \v \f \r " \\``, and
+# ``\NNN`` octal triplets for arbitrary bytes. A path that doesn't
+# need escaping is output bare (no quotes). We MUST decode quoted
+# paths before splitting on tab — otherwise an embedded ``\t`` in a
+# valid filename would be mistaken for a column separator.
+#
+# Reference: ``git help config`` → ``core.quotePath``;
+# ``quote.c::quote_c_style_counted`` in git's source.
+_C_OCT_RE = re.compile(r"\\([0-7]{1,3})")
+_C_ESC_TBL = {
+    "a": "\a", "b": "\b", "t": "\t", "n": "\n",
+    "v": "\v", "f": "\f", "r": "\r",
+    '"': '"', "\\": "\\",
+}
+
+
+def _unquote_git_path(field: str) -> str:
+    """Reverse git's C-style path quoting if ``field`` is wrapped in
+    double quotes; otherwise return ``field`` unchanged.
+
+    Tolerant of malformed input: a stray ``\\x`` (where ``x`` is not
+    a recognised escape) is passed through verbatim rather than
+    raising — this matches how a human would copy-paste the row out
+    of ``git status`` and into ``--changed-files``. Also tolerant of
+    a trailing CR (Windows line endings) which can survive
+    ``splitlines()`` when the file is opened in binary or has lone
+    ``\\r`` separators upstream.
+    """
+    s = field
+    # Strip a single trailing CR — harmless on POSIX paths (NUL is
+    # the only forbidden byte besides ``/``) and silently fixes
+    # Windows-runner inputs.
+    if s.endswith("\r"):
+        s = s[:-1]
+    if not (len(s) >= 2 and s.startswith('"') and s.endswith('"')):
+        return s
+    inner = s[1:-1]
+    # First expand ``\NNN`` octal byte escapes (UTF-8-encoded).
+    def _oct_sub(m: "re.Match[str]") -> str:
+        try:
+            return bytes([int(m.group(1), 8)]).decode("utf-8", "replace")
+        except (ValueError, UnicodeDecodeError):
+            return m.group(0)
+    inner = _C_OCT_RE.sub(_oct_sub, inner)
+    # Then expand single-char escapes.
+    out: list[str] = []
+    i = 0
+    while i < len(inner):
+        ch = inner[i]
+        if ch == "\\" and i + 1 < len(inner):
+            esc = inner[i + 1]
+            out.append(_C_ESC_TBL.get(esc, "\\" + esc))
+            i += 2
+            continue
+        out.append(ch)
+        i += 1
+    return "".join(out)
+
+
 def _parse_name_status(stdout: str) -> list[str]:
     """Extract the post-state path from each ``git diff --name-status``
     row, mapping renames + copies to their NEW side.
 
     Unknown / malformed rows are skipped silently — the linter's job
     is to lint placeholders, not to police git plumbing output.
+
+    Hardened against git's path-quoting and whitespace edge cases:
+
+    * Tabs are the field separator. C-quoted paths
+      (``"with\\ttab.md"``) are decoded *before* the tab split would
+      see them, so an embedded literal tab inside a filename can't
+      masquerade as a column separator.
+    * Trailing CR on the row (CRLF input from a Windows-piped diff)
+      is stripped per-field by :func:`_unquote_git_path`.
+    * The R/C arm requires a non-empty *new* path (``cols[2]``) but
+      tolerates an empty *old* path slot — git never emits one, but
+      hand-rolled diff payloads occasionally do, and there's no
+      reason to discard the row when its NEW side is well-formed.
+    * Whitespace-only paths (``"   "``) are kept as-is — POSIX
+      permits them, and ``Path.is_file()`` downstream will resolve
+      whether the file actually exists.
     """
     out: list[str] = []
     for line in stdout.splitlines():
         if not line:
             continue
+        # Drop a trailing CR on the *row* before column splitting so
+        # the last field doesn't get a stray ``\r`` glued onto it.
+        # Per-field stripping handles the in-quote case; this handles
+        # the bare (unquoted) case for the row's last path.
+        if line.endswith("\r"):
+            line = line[:-1]
         cols = line.split("\t")
         if len(cols) < 2:
             continue
@@ -823,12 +909,14 @@ def _parse_name_status(stdout: str) -> list[str]:
         kind = m.group(1)
         if kind in ("R", "C"):
             # Rename / copy: cols = [R<score>, old, new]. Take new.
-            if len(cols) >= 3 and cols[2]:
-                out.append(cols[2])
+            # ``cols[2]`` is required; ``cols[1]`` (old) may be empty
+            # in pathological inputs — we don't need it for linting.
+            if len(cols) >= 3 and cols[2] != "":
+                out.append(_unquote_git_path(cols[2]))
         elif kind in ("A", "M"):
             # Add / modify: cols = [A|M, path]. Take path.
-            if cols[1]:
-                out.append(cols[1])
+            if cols[1] != "":
+                out.append(_unquote_git_path(cols[1]))
         # D / T / U / X intentionally dropped — see docstring.
     return out
 
@@ -841,7 +929,15 @@ def _parse_name_status(stdout: str) -> list[str]:
 #   2. Arrow-separated, matches `git status -s` short output:
 #        spec/old.md => spec/new.md
 #      Whitespace around the arrow is ignored.
-_RENAME_ARROW_RE = re.compile(r"^\s*(?P<old>\S.*?)\s*=>\s*(?P<new>\S.*?)\s*$")
+# The arrow form is intentionally permissive on the surrounding
+# whitespace because it's authored by humans (or by `git status -s`
+# which left-pads the row with two status columns + a space).
+# ``\S`` at each end was too strict — it rejected paths that
+# legitimately start or end with a space (rare but POSIX-legal). We
+# now anchor on ``=>`` and let the path bodies be any non-empty
+# trimmed run; trimming is done *after* the split so embedded
+# whitespace inside the path is preserved.
+_RENAME_ARROW_RE = re.compile(r"^\s*(?P<old>.+?)\s*=>\s*(?P<new>.+?)\s*$")
 
 
 def _normalise_changed_lines(lines: list[str]) -> list[str]:
@@ -852,21 +948,59 @@ def _normalise_changed_lines(lines: list[str]) -> list[str]:
     and blanks are *not* stripped here — the caller does that on the
     normalised output so we don't lose alignment with the source line
     numbers in error messages.
+
+    Hardened against the same whitespace + quoting edge cases as
+    :func:`_parse_name_status`:
+
+    * Tab rows: instead of dropping every empty column (which
+      silently re-indexes ``R\\t\\told\\tnew`` to ``[R, old, new]``
+      and then ``cols[-1]`` is correct, but ``R<score>\\told\\t\\t``
+      would re-index to ``[R<score>, old]`` and steal ``old`` as the
+      "new" path), we keep the column count intact and pick the
+      last non-empty field. Quoted fields are unquoted; trailing
+      CR is stripped.
+    * Arrow rows: the regex no longer requires ``\\S`` at the path
+      boundaries, so a path with a leading/trailing space round-
+      trips correctly. The ``new`` group is unquoted to match what
+      a user pasted from ``git status``.
+    * A line that contains *only* whitespace (or a CR-only line on
+      Windows input) is passed through verbatim so the caller's
+      blank/comment filter can still discard it on the same line
+      number.
     """
     out: list[str] = []
     for line in lines:
+        # Strip a trailing CR for the whole row before any other
+        # parsing. We don't ``rstrip()`` — that would eat legitimate
+        # trailing spaces in a path. Only ``\r`` is dropped.
+        if line.endswith("\r"):
+            line = line[:-1]
         # Tab form: take the last tab-separated column. Works for
         # both `R<score>\told\tnew` (3 cols) and unscored `R\told\tnew`
         # (rare, e.g. when authors hand-edit the file).
         if "\t" in line:
-            cols = [c for c in line.split("\t") if c]
-            if cols:
-                out.append(cols[-1])
+            # Preserve column positions: split without filtering, so
+            # padding tabs from copy-pasted output (e.g. an extra
+            # ``\t`` after the ``R<score>`` token in some tooling)
+            # don't shift our column index. Then pick the last
+            # *non-empty* field as the post-rename path.
+            cols = line.split("\t")
+            new_col = ""
+            for c in reversed(cols):
+                if c != "":
+                    new_col = c
+                    break
+            if new_col:
+                out.append(_unquote_git_path(new_col))
             continue
         # Arrow form: `OLD => NEW`.
         m = _RENAME_ARROW_RE.match(line)
         if m:
-            out.append(m.group("new"))
+            new_path = m.group("new")
+            # Trim at boundaries (regex already did greedy-min) but
+            # don't touch interior whitespace. Then unquote in case
+            # the user pasted a C-quoted form from ``git status``.
+            out.append(_unquote_git_path(new_path.strip()))
             continue
         out.append(line)
     return out
