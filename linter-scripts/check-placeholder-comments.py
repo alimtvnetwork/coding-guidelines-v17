@@ -2074,7 +2074,7 @@ _RENAME_ARROW_RE = re.compile(r"^\s*(?P<old>.+?)\s*=>\s*(?P<new>.+?)\s*$")
 
 def _normalise_changed_lines(lines: list[str],
                              *,
-                             deleted: list[str] | None = None,
+                             deleted: "list[tuple[str, str]] | None" = None,
                              similarities: "dict[str, _RenameSimilarity] | None" = None,
                              ) -> list[str]:
     """Collapse rename-bearing rows in a ``--changed-files`` payload
@@ -2082,11 +2082,15 @@ def _normalise_changed_lines(lines: list[str],
 
     When ``deleted`` is provided and a row is recognisable as a
     delete (``D\\tpath`` — the exact shape ``git diff --name-status``
-    emits), the path is captured into ``deleted`` and the row is
-    NOT forwarded to the caller. Without ``deleted`` (the default),
-    such a row falls through to the generic tab-form branch and the
-    bare path travels downstream to be filtered by extension/root
-    checks — same end result as before this audit-trail addition.
+    emits), the path is captured into ``deleted`` as a
+    ``(path, "changed-files-D")`` tuple and the row is NOT forwarded
+    to the caller. The provenance tag distinguishes it from true
+    diff ``D`` rows so the audit emitter (and the JSON payload that
+    serialises it) can surface a different ``reason`` string per
+    source. Without ``deleted`` (the default), such a row falls
+    through to the generic tab-form branch and the bare path travels
+    downstream to be filtered by extension/root checks — same end
+    result as before this audit-trail addition.
 
     Plain paths (no tab, no ``=>``) pass through unchanged. Comments
     and blanks are *not* stripped here — the caller does that on the
@@ -2148,7 +2152,8 @@ def _normalise_changed_lines(lines: list[str],
                     and len(cols) == 2
                     and cols[0] == "D"
                     and cols[1] != ""):
-                deleted.append(_unquote_git_path(cols[1]))
+                deleted.append((_unquote_git_path(cols[1]),
+                                "changed-files-D"))
                 continue
             new_col = ""
             for c in reversed(cols):
