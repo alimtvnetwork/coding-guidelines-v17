@@ -315,29 +315,49 @@ function buildHtml({ scope, scopeLabel, validator, crossLink, validatorRaw, cros
     .map((file) => {
       const v = validatorByFile.get(file) || [];
       const l = linkByFile.get(file) || [];
+      const fileLink = buildDeepLink(file, 1);
+      const fileHeading = fileLink
+        ? `<a class="file-link" href="${escapeHtml(fileLink)}">${escapeHtml(file)}</a>`
+        : escapeHtml(file);
       const rows = [
         ...v.map(
-          (f) => `
+          (f) => {
+            const link = buildDeepLink(f.file, f.line);
+            const lineCell = link
+              ? `<a class="line-link" href="${escapeHtml(link)}">L${f.line}</a>`
+              : `L${f.line}`;
+            return `
           <tr class="sev-${f.severity}">
-            <td class="num">L${f.line}</td>
+            <td class="num">${lineCell}</td>
             <td class="rule"><code>${escapeHtml(f.rule)}</code></td>
             <td class="kind">${f.severity === "code-red" ? "<span class='dot dot-red'></span> Code Red" : "<span class='dot dot-amber'></span> Style"}</td>
             <td class="msg">${escapeHtml(f.message)}</td>
-          </tr>`
+          </tr>`;
+          }
         ),
         ...l.map(
-          (f) => `
+          (f) => {
+            const sourceLink = buildDeepLink(f.file, f.line);
+            const lineCell = sourceLink
+              ? `<a class="line-link" href="${escapeHtml(sourceLink)}">L${f.line}</a>`
+              : `L${f.line}`;
+            const targetLink = buildTargetLink(f.detail);
+            const detailCell = targetLink
+              ? `${escapeHtml(f.detail)} · <a class="target-link" href="${escapeHtml(targetLink)}">open target</a>`
+              : escapeHtml(f.detail);
+            return `
           <tr class="sev-link">
-            <td class="num">L${f.line}</td>
+            <td class="num">${lineCell}</td>
             <td class="rule"><code>${escapeHtml(f.kind)}</code></td>
             <td class="kind"><span class='dot dot-blue'></span> Link</td>
-            <td class="msg">${escapeHtml(f.detail)}</td>
-          </tr>`
+            <td class="msg">${detailCell}</td>
+          </tr>`;
+          }
         ),
       ].join("");
       return `
         <section class="file-block">
-          <h3>${escapeHtml(file)} <span class="count">(${v.length + l.length})</span></h3>
+          <h3>${fileHeading} <span class="count">(${v.length + l.length})</span></h3>
           <table>
             <thead><tr><th>Line</th><th>Rule</th><th>Kind</th><th>Detail</th></tr></thead>
             <tbody>${rows}</tbody>
