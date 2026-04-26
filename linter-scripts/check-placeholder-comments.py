@@ -140,14 +140,6 @@ INTENT_PREFIXES: tuple[str, ...] = ("please ",)
 
 BULLET_LINK_RE = re.compile(r"^-\s+\[[^\]]+\]\(([^)\s]+)\)\s*$")
 
-# Default source-file extension allowlist. Widened via the CLI
-# ``--ext`` flag (or by passing ``exts=`` to ``iter_source_files``).
-# Lowercase, dot-prefixed, deduplicated. Picked deliberately small —
-# spec authors who keep ``.mdx`` / ``.txt`` siblings (e.g. for embed
-# pipelines) extend it explicitly rather than the linter silently
-# pulling in arbitrary text files.
-DEFAULT_SOURCE_EXTS: frozenset[str] = frozenset({".md"})
-
 
 @dataclass(frozen=True)
 class Violation:
@@ -157,39 +149,11 @@ class Violation:
     message: str
 
 
-def iter_source_files(root: Path,
-                      exts: frozenset[str] | set[str] = DEFAULT_SOURCE_EXTS,
-                      ) -> Iterable[Path]:
-    """Yield every file under ``root`` whose suffix is in ``exts``.
-
-    ``exts`` entries MUST be lowercase, dot-prefixed (``".md"``,
-    ``".mdx"``, ``".txt"``). Dotfile / dotted-directory entries
-    (``.git``, ``.lovable``) are skipped — the linter is for spec
-    text, not VCS / tooling caches. Output is sorted by path so
-    cache keys and reports are deterministic across runs.
-
-    Files are matched on ``suffix.lower()`` so a stray ``README.MD``
-    is still picked up when ``.md`` is in the allowlist.
-    """
-    # Single rglob('*') walk filtered in-process is faster than one
-    # rglob('*.ext') per extension on large trees and keeps the sort
-    # order globally consistent (rglob returns insertion order).
-    for p in sorted(root.rglob("*")):
-        if not p.is_file():
-            continue
-        if p.suffix.lower() not in exts:
-            continue
+def iter_markdown_files(root: Path) -> Iterable[Path]:
+    for p in sorted(root.rglob("*.md")):
         if any(part.startswith(".") for part in p.relative_to(root).parts):
             continue
         yield p
-
-
-def iter_markdown_files(root: Path) -> Iterable[Path]:
-    """Back-compat shim — equivalent to ``iter_source_files(root)``
-    with the default ``.md``-only allowlist. Kept so external
-    callers (pre-commit hooks, ad-hoc scripts) don't break.
-    """
-    return iter_source_files(root, DEFAULT_SOURCE_EXTS)
 
 
 def strip_code_fences(text: str) -> str:
@@ -281,25 +245,12 @@ def _validate_intent(rel: str, line_no: int, marker: str, text: str,
 
 def _validate_body(rel: str, open_line: int, body: list[tuple[int, str]],
                    out: list[Violation],
-                   bullets: list[tuple[int, str]] | None = None,
-                   exts: frozenset[str] | set[str] = DEFAULT_SOURCE_EXTS,
-                   ) -> int:
+                   bullets: list[tuple[int, str]] | None = None) -> int:
     """Apply P-002/P-003/P-005 to a body and return valid bullet count.
 
     When ``bullets`` is provided, every valid bullet is appended as
     ``(line, target)`` for later cross-block duplicate analysis (P-007).
-
-    ``exts`` is the source-file allowlist (default ``{".md"}``);
-    P-003 accepts placeholder bullet links whose path component ends
-    in any of these. Widened automatically when the CLI passes
-    ``--ext .mdx`` so a `.mdx` doc can link to another `.mdx` block.
     """
-    # Pre-build the human-readable hint once per body so the per-
-    # bullet loop doesn't re-stringify it on every miss.
-    if exts == DEFAULT_SOURCE_EXTS:
-        ext_hint = "`.md`"
-    else:
-        ext_hint = "/".join(f"`{e}`" for e in sorted(exts))
     bullet_count = 0
     for ln, content in body:
         if not content.strip():
@@ -314,15 +265,13 @@ def _validate_body(rel: str, open_line: int, body: list[tuple[int, str]],
         target = bm.group(1)
         if target.startswith(("http://", "https://", "mailto:", "#")):
             out.append(Violation(rel, ln, "P-003",
-                f"Placeholder link `{target}` must be a relative {ext_hint} "
-                "path, not external/anchor-only."))
+                f"Placeholder link `{target}` must be a relative `.md` path, "
+                "not external/anchor-only."))
             continue
         path_part = target.split("#", 1)[0]
-        path_lower = path_part.lower()
-        if not any(path_lower.endswith(e) for e in exts):
+        if not path_part.endswith(".md"):
             out.append(Violation(rel, ln, "P-003",
-                f"Placeholder link `{target}` must point at a "
-                f"{ext_hint} file."))
+                f"Placeholder link `{target}` must point at a `.md` file."))
             continue
         bullet_count += 1
         if bullets is not None:
@@ -333,9 +282,8 @@ def _validate_body(rel: str, open_line: int, body: list[tuple[int, str]],
 def lint_file(path: Path, repo_root: Path,
               valid_bullets: list[tuple[str, int, str]] | None = None,
               intent_verbs: frozenset[str] = DEFAULT_INTENT_VERBS,
-              exts: frozenset[str] | set[str] = DEFAULT_SOURCE_EXTS,
               ) -> list[Violation]:
-    """Lint one spec source file (any extension in ``exts``).
+    """Lint one markdown file.
 
     When ``valid_bullets`` is provided, every successfully-validated
     bullet is appended as ``(rel_file, line, target)`` so the caller
@@ -344,10 +292,6 @@ def lint_file(path: Path, repo_root: Path,
     ``intent_verbs`` controls the imperative-verb allowlist for P-001;
     defaults to ``DEFAULT_INTENT_VERBS`` and can be widened from the
     CLI via ``--allow-verb``.
-
-    ``exts`` is the source-file allowlist; P-003 accepts placeholder
-    bullet links pointing at any of these. Defaults to
-    ``{".md"}`` so historical callers stay unchanged.
     """
     rel = str(path.relative_to(repo_root))
     text = path.read_text(encoding="utf-8")
@@ -392,8 +336,7 @@ def lint_file(path: Path, repo_root: Path,
                     "`<spec-placeholder>` opened but never closed "
                     "(missing `</spec-placeholder>`)."))
                 continue
-            bullet_count = _validate_body(rel, open_line, body, out,
-                                          file_bullets, exts)
+            bullet_count = _validate_body(rel, open_line, body, out, file_bullets)
             if bullet_count == 0:
                 out.append(Violation(rel, open_line, "P-004",
                     "`<spec-placeholder>` block contains no valid bullet rows."))
@@ -426,8 +369,7 @@ def lint_file(path: Path, repo_root: Path,
             out.append(Violation(rel, open_line, "P-006",
                 "Placeholder comment opened but never closed (missing `-->`)."))
             continue
-        bullet_count = _validate_body(rel, open_line, body, out,
-                                      file_bullets, exts)
+        bullet_count = _validate_body(rel, open_line, body, out, file_bullets)
         if bullet_count == 0:
             out.append(Violation(rel, open_line, "P-004",
                 "Placeholder block contains no valid bullet rows."))
@@ -562,16 +504,6 @@ def main(argv: list[str] | None = None) -> int:
              "--changed-files mode (no diff-base to query) and in "
              "--json mode (excerpts would corrupt structured output; "
              "JSON consumers can render their own from the file/line).")
-    ap.add_argument("--ext", action="append", default=[], metavar="EXT",
-        help="Add a source-file extension to the discovery + diff-mode "
-             "allowlist (repeatable). Accepts `.mdx`, `mdx`, or `MDX` "
-             "— normalised to a lowercase, dot-prefixed form. Defaults "
-             "to `.md` only. Affects: (1) which files under --root are "
-             "scanned, (2) which paths in --changed-files / `git diff` "
-             "output qualify as relevant, (3) which extensions P-003 "
-             "accepts as valid placeholder bullet targets, and (4) the "
-             "cache fingerprint (so adding/removing an extension "
-             "invalidates every prior PASS sentinel).")
     args = ap.parse_args(argv)
 
     root = Path(args.root).resolve()
@@ -590,17 +522,6 @@ def main(argv: list[str] | None = None) -> int:
               file=sys.stderr)
         return 2
 
-    # ---- Normalise + validate the source-file extension allowlist
-    # We canonicalise to lowercase + leading dot so callers don't
-    # have to remember the exact form. An empty extension or one
-    # containing path separators is rejected — both would cause
-    # surprising rglob behaviour and false positives in P-003.
-    try:
-        source_exts = _normalise_extensions(args.ext) if args.ext else DEFAULT_SOURCE_EXTS
-    except ValueError as e:
-        print(f"error: --ext: {e}", file=sys.stderr)
-        return 2
-
     # Tri-state: --github → True, --no-github → False, neither → auto.
     if args.github is None:
         github_annotations = os.environ.get("GITHUB_ACTIONS", "").lower() == "true"
@@ -616,48 +537,19 @@ def main(argv: list[str] | None = None) -> int:
     # walks every `.md` so a changed file colliding with an
     # unchanged target is reported.
     changed_md: set[Path] | None = None
-    rename_map: dict[Path, _DiffEntry] = {}
     if args.diff_base or args.changed_files:
         try:
-            changed_md, rename_map = _resolve_changed_md(
+            changed_md = _resolve_changed_md(
                 repo_root, root,
                 diff_base=args.diff_base,
                 changed_files=args.changed_files,
-                exts=source_exts,
             )
         except RuntimeError as e:
             print(f"error: {e}", file=sys.stderr)
             return 2
         if not args.json:
-            ext_label = "/".join(sorted(source_exts))
             print(f"ℹ️  placeholder-comments: diff-mode active — "
-                  f"{len(changed_md)} changed {ext_label} file(s) under {args.root}/")
-            # Itemise rename/copy intake so a reviewer can see which
-            # rows were folded onto a NEW path before the lint runs.
-            # Kept conditional: zero R/C rows ⇒ silent (the common
-            # case for ordinary push diffs).
-            if rename_map:
-                renames = sum(1 for e in rename_map.values() if e.kind == "R")
-                copies = sum(1 for e in rename_map.values() if e.kind == "C")
-                bits: list[str] = []
-                if renames:
-                    bits.append(f"{renames} rename(s)")
-                if copies:
-                    bits.append(f"{copies} copy(ies)")
-                print(f"   ↪ rename/copy intake: {', '.join(bits)} "
-                      "— linting the post-rename path:")
-                # Sort by new_path so the table is stable across runs
-                # and easy to diff between two CI logs.
-                for p in sorted(rename_map, key=lambda q: str(q)):
-                    ent = rename_map[p]
-                    score = (f"{ent.score:>3d}%" if ent.score is not None
-                             else " ?? ")
-                    try:
-                        new_rel = str(p.relative_to(repo_root))
-                    except ValueError:
-                        new_rel = str(p)
-                    print(f"     {ent.kind}{score}  {ent.old_path}  →  "
-                          f"{new_rel}  (linted)")
+                  f"{len(changed_md)} changed `.md` file(s) under {args.root}/")
         if not changed_md:
             # Nothing under --root changed → fast PASS. Cross-file P-007
             # has nothing new to report by definition (no new bullets).
@@ -685,7 +577,7 @@ def main(argv: list[str] | None = None) -> int:
     cache_key: str | None = None
     sentinel: Path | None = None
     if args.cache_dir and changed_md is None:
-        cache_key = _compute_cache_key(root, intent_verbs, source_exts)
+        cache_key = _compute_cache_key(root, intent_verbs)
         sentinel = Path(args.cache_dir) / f"{cache_key}.pass"
         if sentinel.is_file():
             if not args.json:
@@ -697,15 +589,14 @@ def main(argv: list[str] | None = None) -> int:
 
     violations: list[Violation] = []
     cross_file_bullets: list[tuple[str, int, str]] = []
-    for md in iter_source_files(root, source_exts):
+    for md in iter_markdown_files(root):
         if changed_md is not None and md.resolve() not in changed_md:
             # Unchanged file: still collect its bullets so cross-file
             # P-007 can detect a new collision introduced by a
             # changed file, but suppress its per-file violations.
-            _collect_bullets_only(md, repo_root, cross_file_bullets, source_exts)
+            _collect_bullets_only(md, repo_root, cross_file_bullets)
             continue
-        violations.extend(lint_file(md, repo_root, cross_file_bullets,
-                                    intent_verbs, source_exts))
+        violations.extend(lint_file(md, repo_root, cross_file_bullets, intent_verbs))
 
     # ---- P-007 cross-file duplicates -------------------------------
     # Group every valid bullet across the scan by canonical target.
@@ -744,34 +635,8 @@ def main(argv: list[str] | None = None) -> int:
                 f"`{first_rel}:L{first_ln}` as `{first_target}` "
                 "(anchor differences are ignored)."))
 
-    # Build a rel-path → _DiffEntry view so the per-violation
-    # rendering loop (and the JSON serializer) can look up rename
-    # provenance with a string key — matches Violation.file's shape.
-    rename_by_rel: dict[str, _DiffEntry] = {}
-    for p, ent in rename_map.items():
-        try:
-            rename_by_rel[str(p.relative_to(repo_root))] = ent
-        except ValueError:
-            continue
-
     if args.json:
-        # Backward-compatible: every existing field is unchanged.
-        # ``rename`` is added only when the violation's file came in
-        # via an R/C row, so legacy consumers that key off
-        # ``file``/``line``/``code``/``message`` see no schema drift.
-        payload = []
-        for v in violations:
-            row = asdict(v)
-            ent = rename_by_rel.get(v.file)
-            if ent is not None:
-                row["rename"] = {
-                    "kind": ent.kind,           # "R" or "C"
-                    "from": ent.old_path,
-                    "to": v.file,
-                    "score": ent.score,         # int 0–100 or null
-                }
-            payload.append(row)
-        print(json.dumps(payload, indent=2))
+        print(json.dumps([asdict(v) for v in violations], indent=2))
     else:
         if not violations:
             print(f"✅ placeholder-comments: no malformed blocks under {args.root}/")
@@ -795,21 +660,7 @@ def main(argv: list[str] | None = None) -> int:
                     if excerpt is not None:
                         diff_excerpts[rel] = excerpt
             for v in violations:
-                # Suffix renamed/copied violations so the reader knows
-                # the path on disk is the post-rename one and the
-                # placeholder block came in (or moved) with the rename.
-                ent = rename_by_rel.get(v.file)
-                if ent is None:
-                    suffix = ""
-                elif ent.kind == "R":
-                    score = (f", {ent.score}% similar"
-                             if ent.score is not None else "")
-                    suffix = f"  (renamed from `{ent.old_path}`{score})"
-                else:  # "C"
-                    score = (f", {ent.score}% similar"
-                             if ent.score is not None else "")
-                    suffix = f"  (copied from `{ent.old_path}`{score})"
-                print(f"  {v.file}:{v.line}  [{v.code}] {v.message}{suffix}")
+                print(f"  {v.file}:{v.line}  [{v.code}] {v.message}")
                 excerpt = diff_excerpts.get(v.file)
                 if excerpt is not None:
                     snippet = excerpt.render(v.line, args.diff_context)
@@ -853,14 +704,8 @@ def main(argv: list[str] | None = None) -> int:
 
 def _resolve_changed_md(repo_root: Path, root: Path, *,
                         diff_base: str | None,
-                        changed_files: str | None,
-                        exts: frozenset[str] | set[str] = DEFAULT_SOURCE_EXTS,
-                        ) -> tuple[set[Path], dict[Path, "_DiffEntry"]]:
-    """Resolve the set of source files under ``root`` that are changed.
-
-    ``exts`` is the source-file extension allowlist (default
-    ``{".md"}``). Anything else in the diff (config, code, images)
-    is dropped — the linter only cares about its own source format.
+                        changed_files: str | None) -> set[Path]:
+    """Resolve the set of `.md` files under ``root`` that are changed.
 
     Two input modes:
       * ``diff_base`` → invoke
@@ -890,26 +735,16 @@ def _resolve_changed_md(repo_root: Path, root: Path, *,
         linted as a normal change.
 
     Returned paths are absolute + resolved and filtered to:
-      * suffix in ``exts`` (compared lowercase)
+      * extension ``.md``
       * residing under ``root`` (so a README change doesn't trigger a
         spec scan)
       * actually present on disk (a Modified path that was reverted
         in a later commit of the same push won't exist)
-
-    Returns a 2-tuple ``(paths, rename_map)`` where ``rename_map``
-    keys are the *same absolute, resolved post-state Paths* that
-    appear in ``paths`` and the value is the originating
-    :class:`_DiffEntry` (kind, similarity score, old path, new path).
-    Only ``R`` and ``C`` rows are recorded — ``A``/``M`` paths have
-    no interesting provenance to log and are omitted from the map to
-    keep diff-mode logs short. The map is consumed downstream to
-    annotate intake logs and per-violation lines so a reviewer can
-    immediately see *why* a given path is in the lint set.
     """
     # Each entry is the post-state repo-relative path. Rename/copy
     # rows contribute only their NEW side; deletes contribute nothing
     # (the diff-filter / parser drops them upstream).
-    entries: list[_DiffEntry] = []
+    raw: list[str] = []
     if diff_base:
         try:
             proc = subprocess.run(
@@ -925,7 +760,7 @@ def _resolve_changed_md(repo_root: Path, root: Path, *,
                 f"git diff vs. {diff_base!r} failed (exit {e.returncode}): "
                 f"{e.stderr.strip() or '(no stderr)'}"
             ) from e
-        entries = _parse_name_status(proc.stdout)
+        raw = _parse_name_status(proc.stdout)
     else:
         assert changed_files is not None
         if changed_files == "-":
@@ -937,15 +772,13 @@ def _resolve_changed_md(repo_root: Path, root: Path, *,
                 raise RuntimeError(
                     f"--changed-files {changed_files!r} unreadable: {e}"
                 ) from e
-        entries = _normalise_changed_lines(lines)
+        raw = _normalise_changed_lines(lines)
     out: set[Path] = set()
-    rename_map: dict[Path, _DiffEntry] = {}
-    for ent in entries:
-        s = ent.new_path.strip()
+    for line in raw:
+        s = line.strip()
         if not s or s.startswith("#"):
             continue
-        s_lower = s.lower()
-        if not any(s_lower.endswith(e) for e in exts):
+        if not s.endswith(".md"):
             continue
         p = (repo_root / s).resolve()
         try:
@@ -955,9 +788,7 @@ def _resolve_changed_md(repo_root: Path, root: Path, *,
         if not p.is_file():
             continue
         out.add(p)
-        if ent.kind in ("R", "C"):
-            rename_map[p] = ent
-    return out, rename_map
+    return out
 
 
 # `git diff --name-status -M` emits one of:
@@ -972,38 +803,118 @@ def _resolve_changed_md(repo_root: Path, root: Path, *,
 _NAME_STATUS_RE = re.compile(r"^([AMDRCTUX])(\d{0,3})$")
 
 
-@dataclass(frozen=True)
-class _DiffEntry:
-    """A single intake row from ``git diff --name-status`` (or its
-    ``--changed-files`` text equivalent).
+# Git emits paths in C-quoted form (``"path\twith\ttab"``) when
+# ``core.quotePath`` is true (the default) and the path contains a
+# byte that isn't safe for the terminal — tabs, newlines, control
+# chars, non-ASCII bytes when ``core.quotePath=true``. The quoting
+# is a strict subset of C string escapes: surrounding double quotes,
+# backslash escapes for ``\a \b \t \n \v \f \r " \\``, and
+# ``\NNN`` octal triplets for arbitrary bytes. A path that doesn't
+# need escaping is output bare (no quotes). We MUST decode quoted
+# paths before splitting on tab — otherwise an embedded ``\t`` in a
+# valid filename would be mistaken for a column separator.
+#
+# Reference: ``git help config`` → ``core.quotePath``;
+# ``quote.c::quote_c_style_counted`` in git's source.
+# Match a *run* of consecutive ``\NNN`` octal escapes so we can
+# decode them as a single UTF-8 byte sequence. Decoding triplet-by-
+# triplet would split a multi-byte character (e.g. ``é`` =
+# ``\303\251``) across two ``bytes.decode`` calls and each half
+# would emit a U+FFFD replacement char. A single ``re.sub`` over
+# the whole run hands the bytes to the codec atomically, which is
+# the only way to get correct round-trips for non-ASCII paths.
+_C_OCT_RUN_RE = re.compile(r"(?:\\[0-7]{1,3})+")
+_C_ESC_TBL = {
+    "a": "\a", "b": "\b", "t": "\t", "n": "\n",
+    "v": "\v", "f": "\f", "r": "\r",
+    '"': '"', "\\": "\\",
+}
 
-    ``kind`` is one of ``"A"`` / ``"M"`` / ``"R"`` / ``"C"``. For
-    ``A``/``M`` the ``old_path`` mirrors ``new_path`` and ``score``
-    is ``None`` — these rows have no rename provenance to log. For
-    ``R``/``C``, ``old_path`` is the pre-rename path, ``new_path`` is
-    the post-rename path that gets linted, and ``score`` is the
-    git-reported similarity percentage (0–100) when available.
-    Hand-edited ``--changed-files`` payloads may omit the score, in
-    which case ``score`` stays ``None`` and intake logs print
-    ``(unscored)`` instead of a percentage.
+
+def _unquote_git_path(field: str) -> str:
+    """Reverse git's C-style path quoting if ``field`` is wrapped in
+    double quotes; otherwise return ``field`` unchanged.
+
+    Tolerant of malformed input: a stray ``\\x`` (where ``x`` is not
+    a recognised escape) is passed through verbatim rather than
+    raising — this matches how a human would copy-paste the row out
+    of ``git status`` and into ``--changed-files``. Also tolerant of
+    a trailing CR (Windows line endings) which can survive
+    ``splitlines()`` when the file is opened in binary or has lone
+    ``\\r`` separators upstream.
     """
-    kind: str
-    new_path: str
-    old_path: str
-    score: int | None = None
+    s = field
+    # Strip a single trailing CR — harmless on POSIX paths (NUL is
+    # the only forbidden byte besides ``/``) and silently fixes
+    # Windows-runner inputs.
+    if s.endswith("\r"):
+        s = s[:-1]
+    if not (len(s) >= 2 and s.startswith('"') and s.endswith('"')):
+        return s
+    inner = s[1:-1]
+    # First expand ``\NNN`` octal byte escapes. We decode each
+    # *run* of escapes as one UTF-8 byte string so a multi-byte
+    # character split across triplets (``\303\251`` = ``é``)
+    # round-trips correctly. ``errors="replace"`` keeps malformed
+    # input visible (U+FFFD) rather than raising — same posture as
+    # the rest of the linter, which never crashes on weird git
+    # output, only logs the violation site.
+    def _oct_run_sub(m: "re.Match[str]") -> str:
+        run = m.group(0)
+        try:
+            buf = bytes(int(t, 8) for t in run.split("\\")[1:])
+        except ValueError:
+            return run
+        return buf.decode("utf-8", "replace")
+    inner = _C_OCT_RUN_RE.sub(_oct_run_sub, inner)
+    # Then expand single-char escapes.
+    out: list[str] = []
+    i = 0
+    while i < len(inner):
+        ch = inner[i]
+        if ch == "\\" and i + 1 < len(inner):
+            esc = inner[i + 1]
+            out.append(_C_ESC_TBL.get(esc, "\\" + esc))
+            i += 2
+            continue
+        out.append(ch)
+        i += 1
+    return "".join(out)
 
 
-def _parse_name_status(stdout: str) -> list[_DiffEntry]:
-    """Extract a typed entry from each ``git diff --name-status`` row,
-    preserving rename/copy provenance for downstream logging.
+def _parse_name_status(stdout: str) -> list[str]:
+    """Extract the post-state path from each ``git diff --name-status``
+    row, mapping renames + copies to their NEW side.
 
     Unknown / malformed rows are skipped silently — the linter's job
     is to lint placeholders, not to police git plumbing output.
+
+    Hardened against git's path-quoting and whitespace edge cases:
+
+    * Tabs are the field separator. C-quoted paths
+      (``"with\\ttab.md"``) are decoded *before* the tab split would
+      see them, so an embedded literal tab inside a filename can't
+      masquerade as a column separator.
+    * Trailing CR on the row (CRLF input from a Windows-piped diff)
+      is stripped per-field by :func:`_unquote_git_path`.
+    * The R/C arm requires a non-empty *new* path (``cols[2]``) but
+      tolerates an empty *old* path slot — git never emits one, but
+      hand-rolled diff payloads occasionally do, and there's no
+      reason to discard the row when its NEW side is well-formed.
+    * Whitespace-only paths (``"   "``) are kept as-is — POSIX
+      permits them, and ``Path.is_file()`` downstream will resolve
+      whether the file actually exists.
     """
-    out: list[_DiffEntry] = []
+    out: list[str] = []
     for line in stdout.splitlines():
         if not line:
             continue
+        # Drop a trailing CR on the *row* before column splitting so
+        # the last field doesn't get a stray ``\r`` glued onto it.
+        # Per-field stripping handles the in-quote case; this handles
+        # the bare (unquoted) case for the row's last path.
+        if line.endswith("\r"):
+            line = line[:-1]
         cols = line.split("\t")
         if len(cols) < 2:
             continue
@@ -1011,18 +922,16 @@ def _parse_name_status(stdout: str) -> list[_DiffEntry]:
         if not m:
             continue
         kind = m.group(1)
-        score_raw = m.group(2)
-        score = int(score_raw) if score_raw else None
         if kind in ("R", "C"):
             # Rename / copy: cols = [R<score>, old, new]. Take new.
-            if len(cols) >= 3 and cols[2] and cols[1]:
-                out.append(_DiffEntry(kind=kind, new_path=cols[2],
-                                      old_path=cols[1], score=score))
+            # ``cols[2]`` is required; ``cols[1]`` (old) may be empty
+            # in pathological inputs — we don't need it for linting.
+            if len(cols) >= 3 and cols[2] != "":
+                out.append(_unquote_git_path(cols[2]))
         elif kind in ("A", "M"):
             # Add / modify: cols = [A|M, path]. Take path.
-            if cols[1]:
-                out.append(_DiffEntry(kind=kind, new_path=cols[1],
-                                      old_path=cols[1], score=None))
+            if cols[1] != "":
+                out.append(_unquote_git_path(cols[1]))
         # D / T / U / X intentionally dropped — see docstring.
     return out
 
@@ -1035,66 +944,80 @@ def _parse_name_status(stdout: str) -> list[_DiffEntry]:
 #   2. Arrow-separated, matches `git status -s` short output:
 #        spec/old.md => spec/new.md
 #      Whitespace around the arrow is ignored.
-_RENAME_ARROW_RE = re.compile(r"^\s*(?P<old>\S.*?)\s*=>\s*(?P<new>\S.*?)\s*$")
+# The arrow form is intentionally permissive on the surrounding
+# whitespace because it's authored by humans (or by `git status -s`
+# which left-pads the row with two status columns + a space).
+# ``\S`` at each end was too strict — it rejected paths that
+# legitimately start or end with a space (rare but POSIX-legal). We
+# now anchor on ``=>`` and let the path bodies be any non-empty
+# trimmed run; trimming is done *after* the split so embedded
+# whitespace inside the path is preserved.
+_RENAME_ARROW_RE = re.compile(r"^\s*(?P<old>.+?)\s*=>\s*(?P<new>.+?)\s*$")
 
 
-def _normalise_changed_lines(lines: list[str]) -> list[_DiffEntry]:
-    """Parse a ``--changed-files`` payload into typed :class:`_DiffEntry`
-    rows so rename/copy provenance survives into the lint logs.
+def _normalise_changed_lines(lines: list[str]) -> list[str]:
+    """Collapse rename-bearing rows in a ``--changed-files`` payload
+    down to their post-rename path.
 
     Plain paths (no tab, no ``=>``) pass through unchanged. Comments
     and blanks are *not* stripped here — the caller does that on the
     normalised output so we don't lose alignment with the source line
     numbers in error messages.
 
-    Tab rows starting with a recognised ``A``/``M``/``R``/``C`` token
-    record their kind and (for R/C) similarity score. Tab rows with
-    no leading status token are treated as plain Modified entries —
-    that's the conservative choice when an upstream tool emits
-    ``old\\tnew`` without a status prefix; the file is still linted,
-    we just can't claim it's a rename in the intake log.
+    Hardened against the same whitespace + quoting edge cases as
+    :func:`_parse_name_status`:
+
+    * Tab rows: instead of dropping every empty column (which
+      silently re-indexes ``R\\t\\told\\tnew`` to ``[R, old, new]``
+      and then ``cols[-1]`` is correct, but ``R<score>\\told\\t\\t``
+      would re-index to ``[R<score>, old]`` and steal ``old`` as the
+      "new" path), we keep the column count intact and pick the
+      last non-empty field. Quoted fields are unquoted; trailing
+      CR is stripped.
+    * Arrow rows: the regex no longer requires ``\\S`` at the path
+      boundaries, so a path with a leading/trailing space round-
+      trips correctly. The ``new`` group is unquoted to match what
+      a user pasted from ``git status``.
+    * A line that contains *only* whitespace (or a CR-only line on
+      Windows input) is passed through verbatim so the caller's
+      blank/comment filter can still discard it on the same line
+      number.
     """
-    out: list[_DiffEntry] = []
+    out: list[str] = []
     for line in lines:
-        stripped = line.strip()
-        if not stripped or stripped.startswith("#"):
-            out.append(_DiffEntry(kind="M", new_path=line,
-                                  old_path=line, score=None))
-            continue
+        # Strip a trailing CR for the whole row before any other
+        # parsing. We don't ``rstrip()`` — that would eat legitimate
+        # trailing spaces in a path. Only ``\r`` is dropped.
+        if line.endswith("\r"):
+            line = line[:-1]
         # Tab form: take the last tab-separated column. Works for
         # both `R<score>\told\tnew` (3 cols) and unscored `R\told\tnew`
         # (rare, e.g. when authors hand-edit the file).
         if "\t" in line:
-            cols = [c for c in line.split("\t") if c]
-            if not cols:
-                continue
-            head = cols[0]
-            m = _NAME_STATUS_RE.match(head) if head else None
-            if m and m.group(1) in ("R", "C") and len(cols) >= 3:
-                score_raw = m.group(2)
-                out.append(_DiffEntry(
-                    kind=m.group(1), new_path=cols[-1], old_path=cols[1],
-                    score=int(score_raw) if score_raw else None,
-                ))
-                continue
-            if m and m.group(1) in ("A", "M") and len(cols) >= 2:
-                out.append(_DiffEntry(kind=m.group(1), new_path=cols[-1],
-                                      old_path=cols[-1], score=None))
-                continue
-            # No recognised status prefix — fall back: treat the last
-            # column as a plain Modified path. (Old behaviour.)
-            out.append(_DiffEntry(kind="M", new_path=cols[-1],
-                                  old_path=cols[-1], score=None))
+            # Preserve column positions: split without filtering, so
+            # padding tabs from copy-pasted output (e.g. an extra
+            # ``\t`` after the ``R<score>`` token in some tooling)
+            # don't shift our column index. Then pick the last
+            # *non-empty* field as the post-rename path.
+            cols = line.split("\t")
+            new_col = ""
+            for c in reversed(cols):
+                if c != "":
+                    new_col = c
+                    break
+            if new_col:
+                out.append(_unquote_git_path(new_col))
             continue
         # Arrow form: `OLD => NEW`.
         m = _RENAME_ARROW_RE.match(line)
         if m:
-            out.append(_DiffEntry(kind="R", new_path=m.group("new"),
-                                  old_path=m.group("old"), score=None))
+            new_path = m.group("new")
+            # Trim at boundaries (regex already did greedy-min) but
+            # don't touch interior whitespace. Then unquote in case
+            # the user pasted a C-quoted form from ``git status``.
+            out.append(_unquote_git_path(new_path.strip()))
             continue
-        out.append(_DiffEntry(kind="M", new_path=line,
-                              old_path=line, score=None))
-    return out
+        out.append(line)
     return out
 
 
@@ -1250,24 +1173,17 @@ def _fetch_diff_excerpts(repo_root: Path, diff_base: str, rel_path: str,
 
 
 def _collect_bullets_only(path: Path, repo_root: Path,
-                          bullets_out: list[tuple[str, int, str]],
-                          exts: frozenset[str] | set[str] = DEFAULT_SOURCE_EXTS,
-                          ) -> None:
+                          bullets_out: list[tuple[str, int, str]]) -> None:
     """Cross-file P-007 helper for diff mode.
 
     Re-uses ``lint_file`` to extract every valid bullet from an
     unchanged file but discards the per-file violations. The bullets
     are needed so a *changed* file's new bullet can collide with a
     pre-existing target in an unchanged file and still trip P-007.
-
-    ``exts`` is forwarded to ``lint_file`` so P-003's target-
-    extension check uses the same allowlist when collecting bullets
-    from an unchanged file (otherwise a `.mdx` link in a `.md` file
-    would be silently dropped from the duplicate-detection pool).
     """
     # ``lint_file`` already appends to ``bullets_out`` via its
     # ``valid_bullets`` parameter; we drop the violations list.
-    lint_file(path, repo_root, bullets_out, DEFAULT_INTENT_VERBS, exts)
+    lint_file(path, repo_root, bullets_out, DEFAULT_INTENT_VERBS)
 
 
 # Per-rule one-liner shown in the annotation title so reviewers see
@@ -1334,21 +1250,16 @@ def _format_github_annotations(violations: list[Violation]) -> Iterable[str]:
         )
 
 
-def _compute_cache_key(root: Path, intent_verbs: frozenset[str] | set[str],
-                       exts: frozenset[str] | set[str] = DEFAULT_SOURCE_EXTS,
-                       ) -> str:
+def _compute_cache_key(root: Path, intent_verbs: frozenset[str] | set[str]) -> str:
     """Build a SHA-256 fingerprint of every input that affects the verdict.
 
     Inputs (in deterministic order):
       1. The absolute, resolved scan root.
       2. The sorted, canonicalised imperative-verb allowlist.
-      3. The sorted, canonicalised source-file extension allowlist
-         (adding/removing an extension widens or narrows the scan,
-         so it must invalidate every prior PASS sentinel).
-      4. The SHA-256 of the linter script itself (so a logic change
+      3. The SHA-256 of the linter script itself (so a logic change
          invalidates every cached PASS automatically).
-      5. For every source file under the root (sorted by path,
-         dotfiles excluded — same filter as ``iter_source_files``):
+      4. For every `.md` under the root (sorted by path, dotfiles
+         excluded — same filter as ``iter_markdown_files``):
          ``<repo-relative-path>\\0<sha256-of-bytes>\\n``
 
     Anything outside this set (mtimes, permissions, sibling files,
@@ -1356,13 +1267,9 @@ def _compute_cache_key(root: Path, intent_verbs: frozenset[str] | set[str],
     reproducible across machines and CI shards.
     """
     h = hashlib.sha256()
-    # Bumped to v2 because the key shape changed (added `exts=`).
-    # A v1 sentinel under the same name would now describe a
-    # different scan, so the version tag forces a clean miss.
-    h.update(b"placeholder-comments-cache-v2\n")
+    h.update(b"placeholder-comments-cache-v1\n")
     h.update(f"root={root}\n".encode("utf-8"))
     h.update(("verbs=" + ",".join(sorted(intent_verbs)) + "\n").encode("utf-8"))
-    h.update(("exts=" + ",".join(sorted(exts)) + "\n").encode("utf-8"))
     try:
         script_bytes = Path(__file__).resolve().read_bytes()
         h.update(b"script=" + hashlib.sha256(script_bytes).hexdigest().encode() + b"\n")
@@ -1370,7 +1277,7 @@ def _compute_cache_key(root: Path, intent_verbs: frozenset[str] | set[str],
         # __file__ unreadable (zipapp / frozen). Fall back to a stable
         # tag so the cache still works, just with coarser invalidation.
         h.update(b"script=unknown\n")
-    for md in iter_source_files(root, exts):
+    for md in iter_markdown_files(root):
         try:
             data = md.read_bytes()
         except OSError:
@@ -1378,37 +1285,6 @@ def _compute_cache_key(root: Path, intent_verbs: frozenset[str] | set[str],
         rel = str(md.relative_to(root)).encode("utf-8")
         h.update(rel + b"\0" + hashlib.sha256(data).hexdigest().encode() + b"\n")
     return h.hexdigest()
-
-
-def _normalise_extensions(raw: list[str]) -> frozenset[str]:
-    """Canonicalise a list of ``--ext`` values to a lowercase,
-    dot-prefixed, deduplicated frozenset.
-
-    Accepts ``mdx`` / ``.mdx`` / ``MDX`` / ``  .MdX  `` and yields
-    ``.mdx``. Rejects empty entries, entries containing path
-    separators, and entries that don't match a tame extension
-    grammar — those would cause surprising rglob behaviour and
-    would be silently accepted as valid P-003 targets, masking
-    typos like ``--ext "md "`` (trailing space).
-    """
-    cleaned: set[str] = set()
-    for entry in raw:
-        s = entry.strip().lower()
-        if not s:
-            raise ValueError("empty extension in allowlist")
-        if not s.startswith("."):
-            s = "." + s
-        # `.<alnum, dot, hyphen>+` covers `.md`, `.mdx`, `.txt`,
-        # `.markdown`, `.tmpl.md` if anyone ever wants compound
-        # extensions. Rejects path separators (`/`, `\`) and shell
-        # metacharacters that would corrupt rglob globs.
-        if not re.fullmatch(r"\.[a-z0-9][a-z0-9.\-]*", s):
-            raise ValueError(
-                f"invalid extension {entry!r} — expected a tame "
-                "suffix like `.md`, `.mdx`, `.txt`"
-            )
-        cleaned.add(s)
-    return frozenset(cleaned)
 
 
 if __name__ == "__main__":
