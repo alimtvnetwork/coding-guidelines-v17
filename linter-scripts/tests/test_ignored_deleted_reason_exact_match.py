@@ -279,12 +279,12 @@ class TextOutputReasonsAreInAllowList(unittest.TestCase):
     """
 
     # The text table's row shape is:
-    #   <path> <whitespace> <status> <whitespace> <reason...>
+    #   <leading-ws> <status> <whitespace> <path> <whitespace> <reason...>
     # Column boundaries are whitespace-padded; the reason cell
     # extends to end-of-line. Anchor on ``ignored-deleted`` to
     # avoid pulling other status rows by accident.
     _ROW_RE = re.compile(
-        r"^(?P<path>\S+)\s+ignored-deleted\s+(?P<reason>.+?)\s*$")
+        r"^\s*ignored-deleted\s+(?P<path>\S+)\s+(?P<reason>.+?)\s*$")
 
     def _extract_reasons(self, stderr: str) -> list[str]:
         out: list[str] = []
@@ -317,12 +317,13 @@ class CsvOutputReasonsAreInAllowList(unittest.TestCase):
         with _Sandbox(_MULTI_DELETE_PAYLOAD) as box:
             csv_path = box.root / "audit.csv"
             proc = box.run("--similarity-csv", str(csv_path))
-        self.assertEqual(proc.returncode, 0, msg=proc.stderr)
-        self.assertTrue(csv_path.is_file(),
-                        msg=f"CSV not produced; stderr:\n{proc.stderr}")
-        with csv_path.open(encoding="utf-8", newline="") as fh:
-            reader = csv.DictReader(fh)
-            rows = list(reader)
+            self.assertEqual(proc.returncode, 0, msg=proc.stderr)
+            self.assertTrue(csv_path.is_file(),
+                            msg=f"CSV not produced; stderr:\n"
+                                f"{proc.stderr}")
+            with csv_path.open(encoding="utf-8", newline="") as fh:
+                reader = csv.DictReader(fh)
+                rows = list(reader)
         deleted = [r for r in rows if r["status"] == "ignored-deleted"]
         self.assertEqual(len(deleted), 3)
         for row in deleted:
@@ -362,6 +363,9 @@ class ReasonsAreIdenticalAcrossSurfaces(unittest.TestCase):
             csv_proc = box.run("--similarity-csv", str(csv_path))
             with csv_path.open(encoding="utf-8", newline="") as fh:
                 csv_rows = list(csv.DictReader(fh))
+        # Reference ``csv_proc`` so a future failure includes its
+        # exit context — silences linters that flag the unused name.
+        self.assertEqual(csv_proc.returncode, 0, msg=csv_proc.stderr)
 
         text_pairs = self._text_pairs(text_proc.stderr)
 
